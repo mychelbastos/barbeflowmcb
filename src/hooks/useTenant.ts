@@ -34,21 +34,34 @@ export const useTenant = () => {
 
   const fetchUserTenants = async () => {
     try {
-      // Fetch only tenants where the user has legitimate access via users_tenant table
-      const { data, error } = await supabase
+      // Use a simpler approach - get user's tenant associations first
+      const { data: userTenants, error: userTenantsError } = await supabase
+        .from('users_tenant')
+        .select('tenant_id, role')
+        .eq('user_id', user?.id);
+
+      if (userTenantsError) throw userTenantsError;
+
+      if (!userTenants || userTenants.length === 0) {
+        setTenants([]);
+        setCurrentTenant(null);
+        setLoading(false);
+        return;
+      }
+
+      // Get tenant details for the user's associated tenants
+      const tenantIds = userTenants.map(ut => ut.tenant_id);
+      const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
-        .select(`
-          *,
-          users_tenant!inner(role)
-        `)
-        .eq('users_tenant.user_id', user?.id)
+        .select('*')
+        .in('id', tenantIds)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (tenantError) throw tenantError;
 
-      setTenants(data || []);
-      if (data && data.length > 0) {
-        setCurrentTenant(data[0]);
+      setTenants(tenantData || []);
+      if (tenantData && tenantData.length > 0) {
+        setCurrentTenant(tenantData[0]);
       }
     } catch (error) {
       console.error('Error fetching tenants:', error);
