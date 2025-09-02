@@ -27,26 +27,39 @@ const Dashboard = () => {
   const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const { user, signOut } = useAuth();
-  const { currentTenant } = useTenant();
+  const { user, signOut, loading: authLoading } = useAuth();
+  const { currentTenant, loading: tenantLoading } = useTenant();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) {
+    // Wait for auth to complete loading before redirecting
+    if (!authLoading && !user) {
+      console.log('No user found after auth loading completed, redirecting to login');
       navigate('/app/login');
       return;
     }
     
-    if (currentTenant) {
+    // Load data when we have both user and tenant, or when tenant loading is complete
+    if (user && !tenantLoading) {
+      console.log('Loading dashboard data...', { user: !!user, currentTenant: !!currentTenant });
       loadDashboardData();
     }
-  }, [user, currentTenant, navigate]);
+  }, [user, currentTenant, navigate, authLoading, tenantLoading]);
 
   const loadDashboardData = async () => {
-    if (!currentTenant) return;
-    
     try {
       setLoading(true);
+      console.log('Loading dashboard data for tenant:', currentTenant?.id);
+      
+      // If no tenant, still load what we can
+      if (!currentTenant) {
+        console.log('No current tenant available');
+        setBookings([]);
+        setServices([]);
+        setStaff([]);
+        setLoading(false);
+        return;
+      }
       
       // Load bookings for today
       const today = new Date();
@@ -79,6 +92,13 @@ const Dashboard = () => {
           .eq('tenant_id', currentTenant.id)
           .eq('active', true)
       ]);
+
+      console.log('Dashboard data loaded:', {
+        bookings: bookingsRes.data?.length || 0,
+        services: servicesRes.data?.length || 0,
+        staff: staffRes.data?.length || 0,
+        errors: [bookingsRes.error, servicesRes.error, staffRes.error].filter(Boolean)
+      });
 
       if (bookingsRes.error) throw bookingsRes.error;
       if (servicesRes.error) throw servicesRes.error;
