@@ -241,6 +241,31 @@ const BookingPublic = () => {
     setStep(4);
   };
 
+  const goToNextStep = () => {
+    setStep(prev => Math.min(prev + 1, 5));
+  };
+
+  const goToPreviousStep = () => {
+    setStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const resetBooking = () => {
+    setSelectedService(null);
+    setSelectedStaff(null);
+    setSelectedDate('');
+    setSelectedCalendarDate(null);
+    setSelectedTime(null);
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerEmail('');
+    setNotes('');
+    setCreatedBooking(null);
+    setAvailableSlots([]);
+    setOccupiedSlots([]);
+    setAllTimeSlots([]);
+    setStep(1);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -452,15 +477,25 @@ END:VCALENDAR`;
                 </div>
               </div>
             </div>
-            <Button 
-              className="w-full" 
-              variant="hero"
-              onClick={() => generateCalendarFile(createdBooking)}
-              disabled={!createdBooking}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Adicionar ao Calendário
-            </Button>
+            <div className="space-y-3">
+              <Button 
+                className="w-full" 
+                variant="hero"
+                onClick={() => generateCalendarFile(createdBooking)}
+                disabled={!createdBooking}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Adicionar ao Calendário
+              </Button>
+              
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={resetBooking}
+              >
+                Fazer Novo Agendamento
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -661,6 +696,13 @@ END:VCALENDAR`;
                 ))
               )}
             </div>
+            
+            {/* Navigation Buttons */}
+            <div className="flex justify-center mt-8">
+              <div className="flex space-x-4 max-w-sm w-full">
+                {/* No back button on step 1 */}
+              </div>
+            </div>
           </div>
         )}
 
@@ -726,6 +768,27 @@ END:VCALENDAR`;
                     </Card>
                   ))
                 )}
+              </div>
+            </div>
+            
+            {/* Navigation Buttons */}
+            <div className="flex justify-center mt-8">
+              <div className="flex space-x-4 max-w-sm w-full">
+                <Button 
+                  variant="outline" 
+                  onClick={goToPreviousStep}
+                  className="flex-1"
+                >
+                  Voltar
+                </Button>
+                <Button 
+                  variant="hero" 
+                  onClick={goToNextStep}
+                  disabled={!selectedService}
+                  className="flex-1"
+                >
+                  Continuar
+                </Button>
               </div>
             </div>
           </div>
@@ -798,6 +861,27 @@ END:VCALENDAR`;
                    )}
                 </CardContent>
               </Card>
+            </div>
+            
+            {/* Navigation Buttons */}
+            <div className="flex justify-center mt-8">
+              <div className="flex space-x-4 max-w-sm w-full">
+                <Button 
+                  variant="outline" 
+                  onClick={goToPreviousStep}
+                  className="flex-1"
+                >
+                  Voltar
+                </Button>
+                <Button 
+                  variant="hero" 
+                  onClick={goToNextStep}
+                  disabled={!selectedDate || !selectedTime}
+                  className="flex-1"
+                >
+                  Continuar
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -905,16 +989,27 @@ END:VCALENDAR`;
                   </CardContent>
                 </Card>
 
-                <Button type="submit" size="lg" className="w-full" variant="hero" disabled={submitting}>
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    "Confirmar Agendamento"
-                  )}
-                </Button>
+                <div className="flex space-x-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={goToPreviousStep}
+                    className="flex-1"
+                    disabled={submitting}
+                  >
+                    Voltar
+                  </Button>
+                  <Button type="submit" size="lg" className="flex-1" variant="hero" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Confirmar Agendamento"
+                    )}
+                  </Button>
+                </div>
               </form>
             </div>
           </div>
