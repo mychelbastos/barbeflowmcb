@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { 
   Calendar, 
   Clock, 
@@ -21,6 +22,8 @@ import {
   CheckCircle,
   Loader2
 } from "lucide-react";
+import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
+import type { DateValue } from "react-aria-components";
 
 const BookingPublic = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -32,6 +35,7 @@ const BookingPublic = () => {
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<DateValue | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,7 +165,9 @@ const BookingPublic = () => {
     // Set default date to tomorrow if today is too late
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    setSelectedDate(tomorrow.toISOString().split('T')[0]);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    setSelectedDate(tomorrowStr);
+    setSelectedCalendarDate(parseDate(tomorrowStr));
     
     setStep(2);
   };
@@ -170,7 +176,27 @@ const BookingPublic = () => {
     setSelectedStaff(staffId === "any" ? null : staffId);
     setSelectedTime(null);
     setAvailableSlots([]);
+    
+    // Set default date if not already set
+    if (!selectedDate) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      setSelectedDate(tomorrowStr);
+      setSelectedCalendarDate(parseDate(tomorrowStr));
+    }
+    
     setStep(3);
+  };
+
+  const handleDateSelect = (date: DateValue | null) => {
+    setSelectedCalendarDate(date);
+    if (date) {
+      const dateStr = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+      setSelectedDate(dateStr);
+    }
+    setSelectedTime(null);
+    setAvailableSlots([]);
   };
 
   const handleTimeSelect = (time: string) => {
@@ -561,13 +587,14 @@ const BookingPublic = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="mb-4"
-                  />
+                  <div className="mb-4">
+                    <CalendarRac
+                      value={selectedCalendarDate}
+                      onChange={handleDateSelect}
+                      minValue={today(getLocalTimeZone())}
+                      className="rounded-lg border border-border p-2 mx-auto w-fit"
+                    />
+                  </div>
                   
                   {slotsLoading ? (
                     <div className="text-center py-8">
