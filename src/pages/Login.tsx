@@ -16,15 +16,14 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
-  const hasNavigated = useRef(false);
 
+  // Only redirect if user is already logged in when component mounts
   useEffect(() => {
-    if (user && !hasNavigated.current) {
-      console.log('User detected, navigating to dashboard:', user);
-      hasNavigated.current = true;
-      navigate('/app/dashboard', { replace: true });
+    if (user) {
+      console.log('User already logged in, redirecting...');
+      window.location.href = '/app/dashboard';
     }
-  }, [user, navigate]);
+  }, []); // Empty dependency array - only runs once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,11 +35,12 @@ const Login = () => {
         ? await signUp(email, password)
         : await signIn(email, password);
 
-      console.log('Login result:', { error, user });
+      console.log('Login result:', { error });
 
       if (!error && !isSignUp) {
-        console.log('Login successful, should redirect');
-        // The useEffect should handle the navigation when user state updates
+        console.log('Login successful, redirecting to dashboard');
+        // Use window.location.href for a hard redirect
+        window.location.href = '/app/dashboard';
       }
     } catch (err) {
       console.error('Auth error:', err);
