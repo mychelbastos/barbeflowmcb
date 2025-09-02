@@ -48,6 +48,7 @@ const BookingPublic = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
+  const [createdBooking, setCreatedBooking] = useState<any>(null);
 
   useEffect(() => {
     if (slug) {
@@ -249,6 +250,7 @@ const BookingPublic = () => {
       if (error) throw error;
 
       if (data.success) {
+        setCreatedBooking(data.booking);
         setStep(5);
         toast({
           title: "Agendamento confirmado!",
@@ -267,7 +269,85 @@ const BookingPublic = () => {
     }
   };
 
+  const formatBookingDateTime = (booking: any) => {
+    if (!booking?.starts_at) return { date: 'Data não disponível', time: 'Horário não disponível' };
+    
+    const startDate = new Date(booking.starts_at);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+    let dateText = '';
+    if (startDate.toDateString() === today.toDateString()) {
+      dateText = 'Hoje';
+    } else if (startDate.toDateString() === tomorrow.toDateString()) {
+      dateText = 'Amanhã';
+    } else {
+      dateText = startDate.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      });
+    }
+    
+    const timeText = startDate.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return { date: dateText, time: timeText };
+  };
+
+  const generateCalendarFile = (booking: any) => {
+    if (!booking) return;
+
+    const startDate = new Date(booking.starts_at);
+    const endDate = new Date(booking.ends_at);
+    
+    // Format for ICS file (YYYYMMDDTHHMMSSZ)
+    const formatICSDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+    
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Booking//Booking Event//EN
+BEGIN:VEVENT
+UID:booking-${booking.id}@${tenant?.slug || 'barbearia'}
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART:${formatICSDate(startDate)}
+DTEND:${formatICSDate(endDate)}
+SUMMARY:${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}
+DESCRIPTION:Agendamento confirmado\\n\\nServiço: ${booking.service?.name || 'N/A'}\\nProfissional: ${booking.staff?.name || 'N/A'}\\nCliente: ${booking.customer?.name || 'N/A'}\\nTelefone: ${booking.customer?.phone || 'N/A'}${booking.notes ? `\\nObservações: ${booking.notes}` : ''}
+LOCATION:${tenant?.address || tenant?.name || 'Barbearia'}
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:Lembrete: ${booking.service?.name || 'Agendamento'} em 30 minutos
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `agendamento-${booking.id}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Arquivo baixado!",
+      description: "O arquivo do calendário foi baixado. Abra-o para adicionar o agendamento ao seu calendário.",
+    });
+  };
+
   if (step === 5) {
+    const bookingDateTime = formatBookingDateTime(createdBooking);
+    
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-success/20 shadow-large">
@@ -285,23 +365,31 @@ const BookingPublic = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Serviço:</span>
-                  <span className="font-medium">Corte + Barba</span>
+                  <span className="font-medium">{createdBooking?.service?.name || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Profissional:</span>
-                  <span className="font-medium">Carlos Silva</span>
+                  <span className="font-medium">{createdBooking?.staff?.name || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Data:</span>
-                  <span className="font-medium">Hoje, 15:30</span>
+                  <span className="font-medium">{bookingDateTime.date}, {bookingDateTime.time}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Valor:</span>
-                  <span className="font-medium text-accent">R$ 40,00</span>
+                  <span className="font-medium text-accent">
+                    R$ {((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
-            <Button className="w-full" variant="hero">
+            <Button 
+              className="w-full" 
+              variant="hero"
+              onClick={() => generateCalendarFile(createdBooking)}
+              disabled={!createdBooking}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
               Adicionar ao Calendário
             </Button>
           </CardContent>
