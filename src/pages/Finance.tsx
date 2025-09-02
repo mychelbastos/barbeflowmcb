@@ -125,7 +125,7 @@ export default function Finance() {
       if (error) throw error;
 
       setBookings(bookingsData || []);
-      calculateFinanceMetrics(bookingsData || []);
+      await calculateFinanceMetrics(bookingsData || []);
     } catch (error) {
       console.error('Error loading finance data:', error);
     } finally {
@@ -133,9 +133,11 @@ export default function Finance() {
     }
   };
 
-  const calculateFinanceMetrics = (bookingsData: any[]) => {
-    // All bookings are already confirmed (filtered in query)
-    const confirmedBookings = bookingsData;
+  const calculateFinanceMetrics = async (bookingsData: any[]) => {
+    // Separate confirmed (future) from completed (past) bookings
+    const now = new Date();
+    const confirmedBookings = bookingsData.filter(b => b.status === 'confirmed');
+    const completedBookings = bookingsData.filter(b => b.status === 'completed');
     
     // Load all bookings in period to calculate no-show rate
     const loadAllBookingsForNoShow = async () => {
@@ -152,22 +154,41 @@ export default function Finance() {
       return totalBookings > 0 ? (noShowBookings.length / totalBookings) * 100 : 0;
     };
 
-    // Revenue metrics
-    const revenueExpected = confirmedBookings.reduce((sum, booking) => 
+    // Revenue expected from all confirmed and completed bookings
+    const revenueExpected = bookingsData.reduce((sum, booking) => 
       sum + (booking.service?.price_cents || 0), 0
     );
 
-    // For demo purposes, assume 80% received (in real app, use payments table)
-    const revenueReceived = Math.round(revenueExpected * 0.8);
+    // Calculate actual revenue received from payments table
+    const loadPaymentsData = async () => {
+      const bookingIds = completedBookings.map(b => b.id);
+      
+      if (bookingIds.length === 0) {
+        return 0;
+      }
 
-    const bookingsCount = confirmedBookings.length;
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('amount_cents, status')
+        .in('booking_id', bookingIds)
+        .eq('status', 'paid');
+
+      return payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
+    };
+
+    // Fallback: use completed bookings value if no payments data
+    let revenueReceived = completedBookings.reduce((sum, booking) => 
+      sum + (booking.service?.price_cents || 0), 0
+    );
+
+    const bookingsCount = bookingsData.length;
     const avgTicket = bookingsCount > 0 ? revenueExpected / bookingsCount : 0;
 
     // Daily revenue chart
-    const dailyRevenue = generateDailyRevenue(confirmedBookings);
+    const dailyRevenue = generateDailyRevenue(bookingsData);
 
-    // Top services
-    const serviceStats = confirmedBookings.reduce((acc, booking) => {
+    // Top services from all bookings
+    const serviceStats = bookingsData.reduce((acc, booking) => {
       const serviceName = booking.service?.name || 'Serviço';
       const price = booking.service?.price_cents || 0;
       
@@ -185,8 +206,8 @@ export default function Finance() {
       .sort((a: any, b: any) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    // Staff performance
-    const staffStats = confirmedBookings.reduce((acc, booking) => {
+    // Staff performance from all bookings
+    const staffStats = bookingsData.reduce((acc, booking) => {
       const staffName = booking.staff?.name || 'Staff';
       const price = booking.service?.price_cents || 0;
       
@@ -203,11 +224,19 @@ export default function Finance() {
     const staffPerformance = Object.values(staffStats)
       .sort((a: any, b: any) => b.revenue - a.revenue);
 
-    // Load no-show rate asynchronously
-    loadAllBookingsForNoShow().then(noShowRate => {
+    // Load payments and no-show rate asynchronously
+    try {
+      const [actualPayments, noShowRate] = await Promise.all([
+        loadPaymentsData(),
+        loadAllBookingsForNoShow()
+      ]);
+
+      // Use actual payments if available, otherwise use completed bookings value
+      const finalRevenueReceived = actualPayments > 0 ? actualPayments : revenueReceived;
+
       setData({
         revenue_expected: revenueExpected,
-        revenue_received: revenueReceived,
+        revenue_received: finalRevenueReceived,
         bookings_count: bookingsCount,
         no_show_rate: noShowRate,
         avg_ticket: avgTicket,
@@ -215,7 +244,9 @@ export default function Finance() {
         top_services: topServices as any,
         staff_performance: staffPerformance as any,
       });
-    });
+    } catch (error) {
+      console.error('Error calculating finance metrics:', error);
+    }
   };
 
   const generateDailyRevenue = (bookings: any[]) => {
@@ -228,8 +259,10 @@ export default function Finance() {
         format(new Date(b.starts_at), 'yyyy-MM-dd') === dayString
       );
       
+      // Expected from all bookings, received only from completed ones
       const expected = dayBookings.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0);
-      const received = Math.round(expected * 0.8); // Demo calculation
+      const completedBookings = dayBookings.filter(b => b.status === 'completed');
+      const received = completedBookings.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0);
       
       days.push({
         date: format(current, 'dd/MM'),
@@ -383,6 +416,9 @@ export default function Finance() {
                       : '0% do previsto'
                     }
                   </span>
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    Serviços Concluídos
+                  </Badge>
                 </div>
               </div>
               <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">

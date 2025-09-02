@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [periodBookings, setPeriodBookings] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
+  const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   
   // Modal states
@@ -123,6 +124,10 @@ const Dashboard = () => {
       setPeriodBookings(periodBookingsRes.data || []);
       setServices(servicesRes.data || []);
       setStaff(staffRes.data || []);
+      
+      // Calculate revenue after setting period bookings
+      const revenueValue = await calculateRevenue(periodBookingsRes.data || []);
+      setRevenue(revenueValue);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -130,9 +135,36 @@ const Dashboard = () => {
     }
   };
 
-  // Calculate revenue from confirmed bookings only
-  const calculateRevenue = () => {
-    return periodBookings.reduce((sum, booking) => {
+  // Helper function to calculate revenue from completed bookings only (actual revenue)
+  const calculateRevenue = async (bookingsList: any[]) => {
+    if (!bookingsList.length) return 0;
+    
+    // Get only completed bookings for actual revenue
+    const completedBookings = bookingsList.filter(booking => booking.status === 'completed');
+    
+    if (completedBookings.length === 0) return 0;
+    
+    try {
+      // Try to get actual payments for completed bookings
+      const bookingIds = completedBookings.map(b => b.id);
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('amount_cents, status')
+        .in('booking_id', bookingIds)
+        .eq('status', 'paid');
+
+      const actualPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
+      
+      // If we have payment data, use it; otherwise use completed bookings value
+      if (actualPayments > 0) {
+        return actualPayments;
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
+    
+    // Fallback: calculate from completed bookings value
+    return completedBookings.reduce((sum, booking) => {
       return sum + (booking.service?.price_cents || 0);
     }, 0);
   };
@@ -238,7 +270,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Faturamento (Período)</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {loading ? "..." : `R$ ${(calculateRevenue() / 100).toFixed(2)}`}
+                  {loading ? "..." : `R$ ${(revenue / 100).toFixed(2)}`}
                 </p>
                 <div className="flex items-center mt-2">
                   <Badge variant="secondary" className="text-xs px-2 py-1">
