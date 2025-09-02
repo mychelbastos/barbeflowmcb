@@ -133,6 +133,60 @@ export type Database = {
           },
         ]
       }
+      cash_entries: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          id: string
+          kind: string
+          notes: string | null
+          occurred_at: string
+          source: string | null
+          staff_id: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          occurred_at?: string
+          source?: string | null
+          staff_id?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          occurred_at?: string
+          source?: string | null
+          staff_id?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_entries_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -378,14 +432,17 @@ export type Database = {
       }
       staff_services: {
         Row: {
+          commission_percent: number | null
           service_id: string
           staff_id: string
         }
         Insert: {
+          commission_percent?: number | null
           service_id: string
           staff_id: string
         }
         Update: {
+          commission_percent?: number | null
           service_id?: string
           staff_id?: string
         }
