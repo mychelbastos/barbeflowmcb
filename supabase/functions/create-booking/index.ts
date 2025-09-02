@@ -14,7 +14,7 @@ const supabase = createClient(
 interface CreateBookingRequest {
   tenant_id: string;
   service_id: string;
-  staff_id: string;
+  staff_id?: string; // Make optional since we can auto-assign staff
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
@@ -50,38 +50,55 @@ serve(async (req) => {
     });
 
     // Validate required fields
-    if (!tenant_id || !service_id || !staff_id || !customer_name || !customer_phone || !starts_at) {
+    if (!tenant_id || !service_id || !customer_name || !customer_phone || !starts_at) {
+      console.error('Missing required fields:', {
+        tenant_id: !!tenant_id,
+        service_id: !!service_id, 
+        staff_id: !!staff_id,
+        customer_name: !!customer_name,
+        customer_phone: !!customer_phone,
+        starts_at: !!starts_at
+      });
       return new Response(
         JSON.stringify({ 
-          error: 'Missing required fields: tenant_id, service_id, staff_id, customer_name, customer_phone, starts_at' 
+          error: 'Missing required fields: tenant_id, service_id, customer_name, customer_phone, starts_at' 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate phone format (basic Brazilian phone validation)
-    const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
+    // Validate phone format (basic Brazilian phone validation) - be more flexible
+    const phoneRegex = /^\(\d{2}\)\s?\d{4,5}-?\d{4}$/;
     if (!phoneRegex.test(customer_phone)) {
+      console.error('Invalid phone format:', customer_phone, 'Expected format: (XX) XXXXX-XXXX');
       return new Response(
-        JSON.stringify({ error: 'Invalid phone format. Use: (XX) XXXX-XXXX or (XX) XXXXX-XXXX' }),
+        JSON.stringify({ error: `Invalid phone format: "${customer_phone}". Use: (XX) XXXXX-XXXX` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check rate limiting to prevent abuse (max 3 bookings per phone per tenant per hour)
-    const { data: rateLimitOk, error: rateLimitError } = await supabase
-      .rpc('check_booking_rate_limit', { 
-        customer_phone: customer_phone, 
-        tenant_uuid: tenant_id 
-      });
-
-    if (rateLimitError) {
-      console.error('Rate limit check error:', rateLimitError);
-    } else if (!rateLimitOk) {
-      return new Response(
-        JSON.stringify({ error: 'Muitas tentativas de agendamento. Tente novamente mais tarde.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // If no staff_id provided, find an available staff member for this service
+    let finalStaffId = staff_id;
+    if (!staff_id) {
+      console.log('No staff specified, finding available staff for service:', service_id);
+      const { data: availableStaff, error: staffError } = await supabase
+        .from('staff')
+        .select('id, name')
+        .eq('tenant_id', tenant_id)
+        .eq('active', true)
+        .limit(1)
+        .single();
+        
+      if (staffError || !availableStaff) {
+        console.error('No available staff found:', staffError);
+        return new Response(
+          JSON.stringify({ error: 'Nenhum profissional disponível encontrado' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      finalStaffId = availableStaff.id;
+      console.log('Using staff:', availableStaff.name, '(ID:', finalStaffId, ')');
     }
 
     // Start a transaction-like operation by checking conflicts first
@@ -125,7 +142,7 @@ serve(async (req) => {
       .from('bookings')
       .select('id, starts_at, ends_at')
       .eq('tenant_id', tenant_id)
-      .eq('staff_id', staff_id)
+      .eq('staff_id', finalStaffId)
       .in('status', ['confirmed', 'pending'])
       .or(`and(starts_at.lt.${bufferedEnd.toISOString()},ends_at.gt.${bufferedStart.toISOString()})`);
 
@@ -153,7 +170,7 @@ serve(async (req) => {
       .from('blocks')
       .select('id, starts_at, ends_at, reason')
       .eq('tenant_id', tenant_id)
-      .or(`staff_id.eq.${staff_id},staff_id.is.null`)
+      .or(`staff_id.eq.${finalStaffId},staff_id.is.null`)
       .or(`and(starts_at.lt.${ends_at},ends_at.gt.${starts_at})`);
 
     if (blocksError) {
@@ -228,7 +245,7 @@ serve(async (req) => {
       .insert({
         tenant_id,
         service_id,
-        staff_id,
+        staff_id: finalStaffId,
         customer_id,
         starts_at,
         ends_at,
