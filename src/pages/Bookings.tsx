@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
   Calendar, 
@@ -43,25 +43,67 @@ import {
   CheckCircle,
   XCircle
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const bookingSchema = z.object({
+  customer_name: z.string().min(1, "Nome do cliente é obrigatório"),
+  customer_phone: z.string().min(1, "Telefone é obrigatório"),
+  customer_email: z.string().email().optional().or(z.literal("")),
+  service_id: z.string().min(1, "Serviço é obrigatório"),
+  staff_id: z.string().optional(),
+  date: z.string().min(1, "Data é obrigatória"),
+  time: z.string().min(1, "Horário é obrigatório"),
+  notes: z.string().optional(),
+});
+
+type BookingFormData = z.infer<typeof bookingSchema>;
 
 export default function Bookings() {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+
+  const form = useForm<BookingFormData>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      customer_name: "",
+      customer_phone: "",
+      customer_email: "",
+      service_id: "",
+      staff_id: "",
+      date: "",
+      time: "",
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     if (currentTenant) {
-      loadBookings();
+      loadData();
     }
   }, [currentTenant]);
 
@@ -69,31 +111,51 @@ export default function Bookings() {
     filterBookings();
   }, [bookings, searchTerm, statusFilter, dateFilter]);
 
-  const loadBookings = async () => {
+  const loadData = async () => {
     if (!currentTenant) return;
 
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          service:services(name, color, duration_minutes, price_cents),
-          staff:staff(name, color),
-          customer:customers(name, phone, email)
-        `)
-        .eq('tenant_id', currentTenant.id)
-        .order('starts_at', { ascending: false });
+      const [bookingsRes, servicesRes, staffRes] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select(`
+            *,
+            service:services(name, color, duration_minutes, price_cents),
+            staff:staff(name, color),
+            customer:customers(name, phone, email)
+          `)
+          .eq('tenant_id', currentTenant.id)
+          .order('starts_at', { ascending: false }),
+        
+        supabase
+          .from('services')
+          .select('*')
+          .eq('tenant_id', currentTenant.id)
+          .eq('active', true)
+          .order('name'),
+        
+        supabase
+          .from('staff')
+          .select('*')
+          .eq('tenant_id', currentTenant.id)
+          .eq('active', true)
+          .order('name')
+      ]);
 
-      if (error) throw error;
+      if (bookingsRes.error) throw bookingsRes.error;
+      if (servicesRes.error) throw servicesRes.error;
+      if (staffRes.error) throw staffRes.error;
 
-      setBookings(data || []);
+      setBookings(bookingsRes.data || []);
+      setServices(servicesRes.data || []);
+      setStaff(staffRes.data || []);
     } catch (error) {
-      console.error('Error loading bookings:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar agendamentos",
+        description: "Erro ao carregar dados",
         variant: "destructive",
       });
     } finally {
@@ -144,7 +206,7 @@ export default function Bookings() {
         description: `Agendamento marcado como ${getStatusLabel(newStatus)}`,
       });
 
-      loadBookings();
+      loadData();
     } catch (error) {
       console.error('Error updating booking status:', error);
       toast({
@@ -152,6 +214,83 @@ export default function Bookings() {
         description: "Erro ao atualizar status do agendamento",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSubmit = async (values: BookingFormData) => {
+    if (!currentTenant) return;
+
+    try {
+      setFormLoading(true);
+
+      // Find or create customer
+      let customerId: string;
+      
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', values.customer_phone)
+        .eq('tenant_id', currentTenant.id)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            name: values.customer_name,
+            phone: values.customer_phone,
+            email: values.customer_email || null,
+            tenant_id: currentTenant.id,
+          })
+          .select('id')
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
+      }
+
+      // Get service details for duration
+      const selectedService = services.find(s => s.id === values.service_id);
+      if (!selectedService) throw new Error('Serviço não encontrado');
+
+      // Create booking datetime
+      const startDateTime = new Date(`${values.date}T${values.time}`);
+      const endDateTime = addMinutes(startDateTime, selectedService.duration_minutes);
+
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          customer_id: customerId,
+          service_id: values.service_id,
+          staff_id: values.staff_id || null,
+          starts_at: startDateTime.toISOString(),
+          ends_at: endDateTime.toISOString(),
+          notes: values.notes || null,
+          tenant_id: currentTenant.id,
+          status: 'confirmed',
+          created_via: 'admin',
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento criado",
+        description: `Agendamento para ${values.customer_name} foi criado com sucesso.`,
+      });
+
+      form.reset();
+      setShowBookingForm(false);
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar agendamento",
+        variant: "destructive",
+      });
+    } finally {
+      setFormLoading(false);
     }
   };
 
@@ -195,7 +334,12 @@ export default function Bookings() {
           </p>
         </div>
         
-        <Button>
+        <Button
+          onClick={() => {
+            form.reset();
+            setShowBookingForm(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Novo Agendamento
         </Button>
@@ -473,6 +617,191 @@ export default function Bookings() {
               Fechar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Booking Form Dialog */}
+      <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Novo Agendamento</DialogTitle>
+            <DialogDescription>
+              Criar um novo agendamento para cliente
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              {/* Customer Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="customer_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Cliente *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: João Silva" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="customer_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(11) 99999-9999" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="customer_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="cliente@email.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Service and Staff */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="service_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Serviço *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um serviço" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {services.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: service.color }}
+                                />
+                                <span>{service.name} - {service.duration_minutes}min - R$ {(service.price_cents / 100).toFixed(2)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="staff_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profissional</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Qualquer profissional" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Qualquer profissional</SelectItem>
+                          {staff.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Horário *</FormLabel>
+                      <FormControl>
+                        <Input type="time" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Notes */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Observações sobre o agendamento..." 
+                        className="resize-none"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowBookingForm(false)}
+                  disabled={formLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? "Criando..." : "Criar Agendamento"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

@@ -68,26 +68,29 @@ export default function Customers() {
       const { data, error } = await supabase
         .from('customers')
         .select(`
-          *,
-          bookings:bookings(
-            count,
-            service:services(price_cents),
-            starts_at
-          )
+          *
         `)
         .eq('tenant_id', currentTenant.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Calculate customer stats
-      const customersWithStats = (data || []).map(customer => {
-        const bookings = customer.bookings || [];
-        const totalBookings = bookings.length;
-        const totalSpent = bookings.reduce((sum: number, booking: any) => 
+      // Get booking stats for each customer
+      const customersWithStats = await Promise.all((data || []).map(async (customer) => {
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            starts_at,
+            service:services(price_cents)
+          `)
+          .eq('customer_id', customer.id);
+
+        const totalBookings = bookings?.length || 0;
+        const totalSpent = bookings?.reduce((sum: number, booking: any) => 
           sum + (booking.service?.price_cents || 0), 0
-        );
-        const lastVisit = bookings.length > 0 
+        ) || 0;
+        const lastVisit = bookings && bookings.length > 0 
           ? new Date(Math.max(...bookings.map((b: any) => new Date(b.starts_at).getTime())))
           : null;
 
@@ -97,7 +100,7 @@ export default function Customers() {
           totalSpent,
           lastVisit,
         };
-      });
+      }));
 
       setCustomers(customersWithStats);
     } catch (error) {
