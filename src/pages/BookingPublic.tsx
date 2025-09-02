@@ -222,8 +222,10 @@ const BookingPublic = () => {
       
       // Combine date and time into ISO string for starts_at
       const [hours, minutes] = selectedTime.split(':');
-      const startsAt = new Date(selectedDate);
-      startsAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      // Parse the selected date properly to avoid timezone issues
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const startsAt = new Date(year, month - 1, day, parseInt(hours), parseInt(minutes), 0, 0);
       
       console.log('Submitting booking with:', {
         slug: slug,
@@ -231,7 +233,10 @@ const BookingPublic = () => {
         staff_id: selectedStaff,
         customer_name: customerName,
         customer_phone: customerPhone,
-        starts_at: startsAt.toISOString()
+        starts_at: startsAt.toISOString(),
+        selected_date_string: selectedDate,
+        selected_time: selectedTime,
+        constructed_date: startsAt
       });
       
       const { data, error } = await supabase.functions.invoke('create-booking', {
