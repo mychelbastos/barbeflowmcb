@@ -8,6 +8,11 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Finance from "./pages/Finance";
 import Agenda from "./pages/Agenda";
+import Bookings from "./pages/Bookings";
+import Services from "./pages/Services";
+import Staff from "./pages/Staff";
+import Customers from "./pages/Customers";
+import Settings from "./pages/Settings";
 import BookingPublic from "./pages/BookingPublic";
 import NotFound from "./pages/NotFound";
 import AuthWatcher from "./components/AuthWatcher";
@@ -15,13 +20,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
-
-// Placeholder pages for routes that don't exist yet
-const Bookings = () => <div className="p-6">Bookings page (coming soon)</div>;
-const Services = () => <div className="p-6">Services page (coming soon)</div>;
-const Staff = () => <div className="p-6">Staff page (coming soon)</div>;
-const Customers = () => <div className="p-6">Customers page (coming soon)</div>;
-const Settings = () => <div className="p-6">Settings page (coming soon)</div>;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
