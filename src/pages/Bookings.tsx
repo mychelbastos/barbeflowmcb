@@ -264,7 +264,7 @@ export default function Bookings() {
         .insert({
           customer_id: customerId,
           service_id: values.service_id,
-          staff_id: values.staff_id || null,
+          staff_id: values.staff_id === "none" ? null : values.staff_id || null,
           starts_at: startDateTime.toISOString(),
           ends_at: endDateTime.toISOString(),
           notes: values.notes || null,
@@ -723,7 +723,7 @@ export default function Bookings() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Qualquer profissional</SelectItem>
+                          <SelectItem value="none">Qualquer profissional</SelectItem>
                           {staff.map((member) => (
                             <SelectItem key={member.id} value={member.id}>
                               {member.name}
