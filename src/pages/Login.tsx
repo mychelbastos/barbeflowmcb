@@ -27,15 +27,22 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = isSignUp 
-      ? await signUp(email, password)
-      : await signIn(email, password);
+    try {
+      const { error } = isSignUp 
+        ? await signUp(email, password)
+        : await signIn(email, password);
 
-    if (!error && !isSignUp) {
-      navigate('/app/dashboard');
+      if (!error && !isSignUp) {
+        // Force navigation after successful login
+        setTimeout(() => {
+          navigate('/app/dashboard');
+        }, 100);
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
