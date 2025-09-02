@@ -72,7 +72,7 @@ export default function Finance() {
   const { dateRange } = useDateRange();
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [staffFilter, setStaffFilter] = useState<string>('');
+  const [staffFilter, setStaffFilter] = useState<string>('all');
   const [staff, setStaff] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
 
@@ -332,7 +332,7 @@ export default function Finance() {
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {staff.map(member => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name}
