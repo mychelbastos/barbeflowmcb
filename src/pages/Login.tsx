@@ -19,7 +19,8 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/app/dashboard');
+      console.log('User detected, navigating to dashboard:', user);
+      navigate('/app/dashboard', { replace: true });
     }
   }, [user, navigate]);
 
@@ -28,15 +29,16 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login...');
       const { error } = isSignUp 
         ? await signUp(email, password)
         : await signIn(email, password);
 
+      console.log('Login result:', { error, user });
+
       if (!error && !isSignUp) {
-        // Force navigation after successful login
-        setTimeout(() => {
-          navigate('/app/dashboard');
-        }, 100);
+        console.log('Login successful, should redirect');
+        // The useEffect should handle the navigation when user state updates
       }
     } catch (err) {
       console.error('Auth error:', err);
