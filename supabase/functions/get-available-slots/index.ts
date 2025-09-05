@@ -205,8 +205,10 @@ serve(async (req) => {
         .eq('tenant_id', tenant_id)
         .eq('staff_id', slot.staff_id)
         .gte('starts_at', `${date}T00:00:00`)
-        .lt('starts_at', `${date}T23:59:59`)
+        .lte('starts_at', `${date}T23:59:59.999`)
         .in('status', ['confirmed', 'pending']);
+      
+      console.log(`Checking bookings for staff ${slot.staff_id} on ${date}:`, bookings);
 
       if (!bookingsError && bookings) {
         // Check conflicts with existing bookings (with buffer)
@@ -234,7 +236,9 @@ serve(async (req) => {
           .eq('tenant_id', tenant_id)
           .or(`staff_id.eq.${slot.staff_id},staff_id.is.null`)
           .gte('starts_at', `${date}T00:00:00`)
-          .lt('starts_at', `${date}T23:59:59`);
+          .lte('ends_at', `${date}T23:59:59.999`);
+
+        console.log(`Checking blocks for staff ${slot.staff_id} on ${date}:`, blocks);
 
         if (!blocksError && blocks) {
           for (const block of blocks) {
