@@ -142,7 +142,12 @@ const Login = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Quer testar antes? Acesse a demonstração:
               </p>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => window.location.href = '/booking/barbearia-premium'}
+              >
                 Ver Demo da Barbearia
               </Button>
             </div>
