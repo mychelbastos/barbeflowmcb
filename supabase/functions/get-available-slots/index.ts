@@ -54,7 +54,7 @@ serve(async (req) => {
 
     const settings = tenant.settings || {};
     const timezone = settings.timezone || 'America/Bahia';
-    const bufferTime = settings.buffer_time || 10; // minutes
+    const bufferTime = settings.buffer_time !== undefined ? settings.buffer_time : 10; // minutes
     const slotDuration = settings.slot_duration || 15; // minutes
 
     // Parse target date and ensure it's not in the past
@@ -171,6 +171,9 @@ serve(async (req) => {
           }
 
           if (!isInBreak) {
+            // Convert to UTC for consistent storage and comparison
+            const slotStartUTC = new Date(currentSlot.getTime());
+            const slotEndUTC = new Date(slotEnd.getTime());
             const timeString = currentSlot.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
             // Add to all possible slots if not already added
@@ -179,8 +182,8 @@ serve(async (req) => {
               allPossibleSlots.push({
                 staff_id: staff.id,
                 staff_name: staff.name,
-                starts_at: currentSlot.toISOString(),
-                ends_at: slotEnd.toISOString(),
+                starts_at: slotStartUTC.toISOString(),
+                ends_at: slotEndUTC.toISOString(),
                 time: timeString
               });
             }
@@ -198,14 +201,19 @@ serve(async (req) => {
       let isAvailable = true;
       let conflictReason = '';
 
-      // Get existing bookings for this staff on this date
+      // Get existing bookings for this staff that could conflict with slots on this date
+      // We need to check bookings that start before end of day and end after start of day
+      const dayStart = `${date}T00:00:00.000Z`;
+      const dayEnd = `${date}T23:59:59.999Z`;
+      
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('starts_at, ends_at, service:services(name), customer:customers(name)')
         .eq('tenant_id', tenant_id)
         .eq('staff_id', slot.staff_id)
-        .gte('starts_at', `${date}T00:00:00`)
-        .lte('starts_at', `${date}T23:59:59.999`)
+        // Get bookings that overlap with this day (start before day ends AND end after day starts)
+        .lte('starts_at', dayEnd)
+        .gte('ends_at', dayStart)
         .in('status', ['confirmed', 'pending']);
       
       console.log(`Checking bookings for staff ${slot.staff_id} on ${date}:`, bookings);
@@ -228,15 +236,19 @@ serve(async (req) => {
         }
       }
 
-      // Check conflicts with blocks if still available
-      if (isAvailable) {
-        const { data: blocks, error: blocksError } = await supabase
-          .from('blocks')
-          .select('starts_at, ends_at, reason')
-          .eq('tenant_id', tenant_id)
-          .or(`staff_id.eq.${slot.staff_id},staff_id.is.null`)
-          .gte('starts_at', `${date}T00:00:00`)
-          .lte('ends_at', `${date}T23:59:59.999`);
+        // Check conflicts with blocks if still available
+        if (isAvailable) {
+          const dayStart = `${date}T00:00:00.000Z`;
+          const dayEnd = `${date}T23:59:59.999Z`;
+          
+          const { data: blocks, error: blocksError } = await supabase
+            .from('blocks')
+            .select('starts_at, ends_at, reason')
+            .eq('tenant_id', tenant_id)
+            .or(`staff_id.eq.${slot.staff_id},staff_id.is.null`)
+            // Get blocks that overlap with this day
+            .lte('starts_at', dayEnd)
+            .gte('ends_at', dayStart);
 
         console.log(`Checking blocks for staff ${slot.staff_id} on ${date}:`, blocks);
 
