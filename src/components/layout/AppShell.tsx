@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { TenantSelector } from "@/components/TenantSelector";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -269,6 +270,7 @@ export default function AppShell() {
                       {currentTenant?.name || 'BarberSync'}
                     </h1>
                   </div>
+                  <TenantSelector />
                 </div>
               </div>
               
@@ -331,6 +333,7 @@ export default function AppShell() {
               <div className="flex items-center justify-between px-6 h-14">
                 <div className="flex items-center space-x-4">
                   <SidebarTrigger />
+                  <TenantSelector />
                   <div className="text-sm text-muted-foreground">
                     {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
                   </div>

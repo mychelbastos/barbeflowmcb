@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { NewTenantModal } from "@/components/modals/NewTenantModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,8 @@ import {
   Upload,
   Image as ImageIcon,
   Globe,
-  Smartphone
+  Smartphone,
+  Plus
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -73,10 +76,12 @@ const timezones = [
 ];
 
 export default function Settings() {
-  const { currentTenant } = useTenant();
+  const { currentTenant, tenants } = useTenant();
+  const { isSuperAdmin } = useSuperAdmin();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
+  const [showNewTenantModal, setShowNewTenantModal] = useState(false);
 
   const tenantForm = useForm<TenantFormData>({
     resolver: zodResolver(tenantSchema),
@@ -220,11 +225,14 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="scheduling">Agendamento</TabsTrigger>
           <TabsTrigger value="notifications">Notificações</TabsTrigger>
           <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="multi-tenant">Multi-Barbearia</TabsTrigger>
+          )}
         </TabsList>
 
         {/* General Settings */}
@@ -690,7 +698,82 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Multi-Tenant Management (Only for Super Admins) */}
+        {isSuperAdmin && (
+          <TabsContent value="multi-tenant">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Globe className="h-5 w-5 mr-2" />
+                  Gerenciamento Multi-Barbearia
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h3 className="font-medium text-yellow-800 mb-2">⚠️ Área Administrativa</h3>
+                  <p className="text-sm text-yellow-700">
+                    Esta área é exclusiva para super administradores do sistema. 
+                    Para ter acesso, seu email deve estar configurado na lista de super admins.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Suas Barbearias</h3>
+                  <div className="space-y-3">
+                    {tenants.map((tenant) => (
+                      <div
+                        key={tenant.id}
+                        className="flex items-center justify-between p-4 border border-border rounded-lg"
+                      >
+                        <div>
+                          <h4 className="font-medium">{tenant.name}</h4>
+                          <p className="text-sm text-muted-foreground">@{tenant.slug}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Criado em {new Date(tenant.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {currentTenant?.id === tenant.id && (
+                            <Badge variant="default">Ativo</Badge>
+                          )}
+                          <Badge variant="outline">Admin</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Button onClick={() => setShowNewTenantModal(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Nova Barbearia
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Configuração de Super Admin</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-800 mb-2">Como configurar acesso</h4>
+                    <div className="text-sm text-blue-700 space-y-2">
+                      <p>1. Abra o arquivo: <code className="bg-blue-100 px-1 rounded">src/hooks/useSuperAdmin.ts</code></p>
+                      <p>2. Adicione seu email na constante <code className="bg-blue-100 px-1 rounded">SUPER_ADMIN_EMAILS</code></p>
+                      <p>3. Salve o arquivo e recarregue a página</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
+
+      <NewTenantModal
+        open={showNewTenantModal}
+        onOpenChange={setShowNewTenantModal}
+      />
     </div>
   );
 }
