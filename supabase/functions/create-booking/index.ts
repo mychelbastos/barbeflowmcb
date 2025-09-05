@@ -288,7 +288,7 @@ serve(async (req) => {
       .select('id, starts_at, ends_at, service:services(name), customer:customers(name)')
       .eq('tenant_id', tenant_id)
       .eq('staff_id', finalStaffId)
-      .in('status', ['confirmed', 'pending'])
+      .in('status', ['confirmed', 'pending', 'completed'])
       .or(`and(starts_at.lt.${bufferedEnd.toISOString()},ends_at.gt.${bufferedStart.toISOString()})`);
 
     if (conflictError) {

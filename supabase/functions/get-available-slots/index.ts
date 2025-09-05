@@ -216,7 +216,7 @@ serve(async (req) => {
         // Get bookings that overlap with this day (start before day ends AND end after day starts)
         .lte('starts_at', dayEnd)
         .gte('ends_at', dayStart)
-        .in('status', ['confirmed', 'pending']);
+        .in('status', ['confirmed', 'pending', 'completed']);
       
       console.log(`Checking bookings for staff ${slot.staff_id} on ${date}:`, bookings);
 
