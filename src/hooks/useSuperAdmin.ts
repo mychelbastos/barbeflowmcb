@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Lista de emails que têm acesso ao sistema de multi-barbearia
 const SUPER_ADMIN_EMAILS = [
-  // Adicione seu email aqui para ter acesso ao sistema de multi-barbearia
-  "admin@barbersync.com", // Substitua pelo seu email real
+  "mycheldesigner@gmail.com", // Email do administrador principal
 ];
 
 export const useSuperAdmin = () => {
