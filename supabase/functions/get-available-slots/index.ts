@@ -19,6 +19,40 @@ interface GetSlotsRequest {
   staff_id?: string;
 }
 
+// Timezone offset map (in hours, negative = behind UTC)
+const timezoneOffsets: Record<string, number> = {
+  'America/Sao_Paulo': -3,
+  'America/Bahia': -3,
+  'America/Fortaleza': -3,
+  'America/Recife': -3,
+  'America/Manaus': -4,
+  'America/Cuiaba': -4,
+  'America/Porto_Velho': -4,
+  'America/Boa_Vista': -4,
+  'America/Rio_Branco': -5,
+  'UTC': 0,
+};
+
+function getTimezoneOffset(timezone: string): number {
+  return timezoneOffsets[timezone] ?? -3; // Default to Bahia timezone
+}
+
+// Convert local time string (HH:MM) + date to UTC Date object
+function localTimeToUTC(date: string, time: string, timezoneOffset: number): Date {
+  const [hours, minutes] = time.split(':').map(Number);
+  const localDate = new Date(`${date}T${time}:00`);
+  // Add the offset (negative offset means we ADD hours to get UTC)
+  const utcTime = localDate.getTime() - (timezoneOffset * 60 * 60 * 1000);
+  return new Date(utcTime);
+}
+
+// Convert UTC Date to local time string (HH:MM)
+function utcToLocalTime(utcDate: Date, timezoneOffset: number): string {
+  // Subtract the offset (negative offset means we SUBTRACT hours to get local)
+  const localTime = new Date(utcDate.getTime() + (timezoneOffset * 60 * 60 * 1000));
+  return localTime.toTimeString().slice(0, 5);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -55,17 +89,21 @@ serve(async (req) => {
 
     const settings = tenant.settings || {};
     const timezone = settings.timezone || 'America/Bahia';
+    const timezoneOffset = getTimezoneOffset(timezone);
     const bufferTime = settings.buffer_time !== undefined ? settings.buffer_time : 10; // minutes
     const slotDuration = settings.slot_duration || 15; // minutes
 
-    // Parse target date and ensure it's not in the past
+    console.log(`Timezone: ${timezone}, Offset: ${timezoneOffset}, Buffer: ${bufferTime}min, SlotDuration: ${slotDuration}min`);
+
+    // Parse target date and ensure it's not in the past (in local timezone)
     const targetDate = new Date(date + 'T00:00:00');
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const nowUTC = new Date();
+    const nowLocal = new Date(nowUTC.getTime() + (timezoneOffset * 60 * 60 * 1000));
+    const todayLocal = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
     
-    if (targetDate < today) {
+    if (targetDate < todayLocal) {
       return new Response(
-        JSON.stringify({ available_slots: [] }),
+        JSON.stringify({ available_slots: [], occupied_slots: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -96,7 +134,7 @@ serve(async (req) => {
 
     if (!availableStaff?.length) {
       return new Response(
-        JSON.stringify({ available_slots: [] }),
+        JSON.stringify({ available_slots: [], occupied_slots: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -123,13 +161,58 @@ serve(async (req) => {
       serviceDuration = service.duration_minutes;
     }
 
+    // Get all bookings for the day (in UTC range that covers the local day)
+    // Local day starts at 00:00 local = 00:00 + offset UTC
+    // Local day ends at 23:59 local = 23:59 + offset UTC
+    const dayStartUTC = localTimeToUTC(date, '00:00', timezoneOffset);
+    const dayEndUTC = localTimeToUTC(date, '23:59', timezoneOffset);
+
+    console.log(`Day range in UTC: ${dayStartUTC.toISOString()} to ${dayEndUTC.toISOString()}`);
+
+    // Get all bookings for the relevant staff on this day
+    const staffIds = availableStaff.map(s => s.id);
+    
+    const { data: allBookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('id, staff_id, starts_at, ends_at, service:services(name), customer:customers(name)')
+      .eq('tenant_id', tenant_id)
+      .in('staff_id', staffIds)
+      .lte('starts_at', dayEndUTC.toISOString())
+      .gte('ends_at', dayStartUTC.toISOString())
+      .in('status', ['confirmed', 'pending', 'completed']);
+
+    if (bookingsError) {
+      console.error('Error fetching bookings:', bookingsError);
+    }
+
+    console.log(`Found ${allBookings?.length || 0} bookings for the day`);
+    allBookings?.forEach(b => {
+      const localStart = utcToLocalTime(new Date(b.starts_at), timezoneOffset);
+      const localEnd = utcToLocalTime(new Date(b.ends_at), timezoneOffset);
+      console.log(`Booking: ${b.customer?.name} - ${localStart} to ${localEnd} (UTC: ${b.starts_at} to ${b.ends_at})`);
+    });
+
+    // Get all blocks for the day
+    const { data: allBlocks, error: blocksError } = await supabase
+      .from('blocks')
+      .select('id, staff_id, starts_at, ends_at, reason')
+      .eq('tenant_id', tenant_id)
+      .lte('starts_at', dayEndUTC.toISOString())
+      .gte('ends_at', dayStartUTC.toISOString());
+
+    if (blocksError) {
+      console.error('Error fetching blocks:', blocksError);
+    }
+
+    console.log(`Found ${allBlocks?.length || 0} blocks for the day`);
+
     const availableSlots: any[] = [];
     const occupiedSlots: any[] = [];
-    const allPossibleSlots: any[] = [];
+    const processedTimes = new Set<string>();
     
     console.log(`Processing slots for ${availableStaff.length} staff members on ${date}`);
 
-    // First, generate all possible time slots for all staff members
+    // Process each staff member
     for (const staff of availableStaff) {
       // Get staff schedule for the day
       const { data: schedules, error: scheduleError } = await supabase
@@ -141,156 +224,155 @@ serve(async (req) => {
         .eq('active', true);
 
       if (scheduleError || !schedules?.length) {
-        console.log(`No schedule found for staff ${staff.id} on day ${dayOfWeek}`);
+        console.log(`No schedule found for staff ${staff.name} on day ${dayOfWeek}`);
         continue;
       }
 
-      for (const schedule of schedules) {
-        // Convert schedule times to date objects for the target date
-        const startTime = new Date(`${date}T${schedule.start_time}`);
-        const endTime = new Date(`${date}T${schedule.end_time}`);
+      // Get bookings for this staff
+      const staffBookings = allBookings?.filter(b => b.staff_id === staff.id) || [];
+      const staffBlocks = allBlocks?.filter(b => b.staff_id === staff.id || b.staff_id === null) || [];
 
-        // Generate all possible time slots within working hours
-        const currentSlot = new Date(startTime);
-        
-        while (currentSlot.getTime() + (serviceDuration * 60 * 1000) <= endTime.getTime()) {
-          const slotEnd = new Date(currentSlot.getTime() + (serviceDuration * 60 * 1000));
+      for (const schedule of schedules) {
+        // Schedule times are in local timezone
+        const scheduleStartLocal = schedule.start_time; // e.g., "07:00"
+        const scheduleEndLocal = schedule.end_time; // e.g., "19:00"
+
+        // Parse schedule times
+        const [startHour, startMin] = scheduleStartLocal.split(':').map(Number);
+        const [endHour, endMin] = scheduleEndLocal.split(':').map(Number);
+
+        // Generate slots in local time
+        let currentHour = startHour;
+        let currentMin = startMin;
+
+        while (currentHour * 60 + currentMin + serviceDuration <= endHour * 60 + endMin) {
+          const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
           
+          // Skip if we already processed this time slot
+          if (processedTimes.has(timeString)) {
+            currentMin += slotDuration;
+            if (currentMin >= 60) {
+              currentHour += Math.floor(currentMin / 60);
+              currentMin = currentMin % 60;
+            }
+            continue;
+          }
+
+          // Calculate slot times in UTC
+          const slotStartUTC = localTimeToUTC(date, timeString, timezoneOffset);
+          const slotEndUTC = new Date(slotStartUTC.getTime() + (serviceDuration * 60 * 1000));
+
           // Skip if slot is in the past
-          if (currentSlot <= now) {
-            currentSlot.setMinutes(currentSlot.getMinutes() + slotDuration);
+          if (slotStartUTC <= nowUTC) {
+            currentMin += slotDuration;
+            if (currentMin >= 60) {
+              currentHour += Math.floor(currentMin / 60);
+              currentMin = currentMin % 60;
+            }
             continue;
           }
 
           // Check if slot conflicts with break time
           let isInBreak = false;
           if (schedule.break_start && schedule.break_end) {
-            const breakStart = new Date(`${date}T${schedule.break_start}`);
-            const breakEnd = new Date(`${date}T${schedule.break_end}`);
-            
-            if (currentSlot < breakEnd && slotEnd > breakStart) {
+            const [breakStartHour, breakStartMin] = schedule.break_start.split(':').map(Number);
+            const [breakEndHour, breakEndMin] = schedule.break_end.split(':').map(Number);
+            const breakStartMins = breakStartHour * 60 + breakStartMin;
+            const breakEndMins = breakEndHour * 60 + breakEndMin;
+            const slotStartMins = currentHour * 60 + currentMin;
+            const slotEndMins = slotStartMins + serviceDuration;
+
+            if (slotStartMins < breakEndMins && slotEndMins > breakStartMins) {
               isInBreak = true;
             }
           }
 
-          if (!isInBreak) {
-            // Convert to UTC for consistent storage and comparison
-            const slotStartUTC = new Date(currentSlot.getTime());
-            const slotEndUTC = new Date(slotEnd.getTime());
-            const timeString = currentSlot.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          if (isInBreak) {
+            currentMin += slotDuration;
+            if (currentMin >= 60) {
+              currentHour += Math.floor(currentMin / 60);
+              currentMin = currentMin % 60;
+            }
+            continue;
+          }
+
+          // Check conflicts with existing bookings
+          let isAvailable = true;
+          let conflictReason = '';
+
+          for (const booking of staffBookings) {
+            const bookingStartUTC = new Date(booking.starts_at);
+            const bookingEndUTC = new Date(booking.ends_at);
             
-            // Add to all possible slots if not already added
-            const existingSlot = allPossibleSlots.find(slot => slot.time === timeString);
-            if (!existingSlot) {
-              allPossibleSlots.push({
-                staff_id: staff.id,
-                staff_name: staff.name,
-                starts_at: slotStartUTC.toISOString(),
-                ends_at: slotEndUTC.toISOString(),
-                time: timeString
+            // Add buffer time to booking
+            const bufferedStartUTC = new Date(bookingStartUTC.getTime() - (bufferTime * 60 * 1000));
+            const bufferedEndUTC = new Date(bookingEndUTC.getTime() + (bufferTime * 60 * 1000));
+            
+            // Check if slot overlaps with buffered booking
+            if (slotStartUTC < bufferedEndUTC && slotEndUTC > bufferedStartUTC) {
+              isAvailable = false;
+              const bookingLocalTime = utcToLocalTime(bookingStartUTC, timezoneOffset);
+              conflictReason = `Agendado para ${booking.customer?.name || 'Cliente'} às ${bookingLocalTime}`;
+              console.log(`CONFLICT: Slot ${timeString} conflicts with booking at ${bookingLocalTime} (${booking.customer?.name})`);
+              break;
+            }
+          }
+
+          // Check conflicts with blocks if still available
+          if (isAvailable) {
+            for (const block of staffBlocks) {
+              const blockStartUTC = new Date(block.starts_at);
+              const blockEndUTC = new Date(block.ends_at);
+              
+              if (slotStartUTC < blockEndUTC && slotEndUTC > blockStartUTC) {
+                isAvailable = false;
+                conflictReason = block.reason || 'Horário bloqueado';
+                console.log(`BLOCK CONFLICT: Slot ${timeString} conflicts with block`);
+                break;
+              }
+            }
+          }
+
+          // Add slot to appropriate list
+          const slotData = {
+            staff_id: staff.id,
+            staff_name: staff.name,
+            starts_at: slotStartUTC.toISOString(),
+            ends_at: slotEndUTC.toISOString(),
+            time: timeString
+          };
+
+          if (isAvailable) {
+            // Only add if not already in available slots
+            if (!availableSlots.find(s => s.time === timeString)) {
+              availableSlots.push(slotData);
+            }
+          } else {
+            // Only add if not already in occupied slots
+            if (!occupiedSlots.find(s => s.time === timeString)) {
+              occupiedSlots.push({
+                ...slotData,
+                available: false,
+                reason: conflictReason
               });
             }
           }
 
-          currentSlot.setMinutes(currentSlot.getMinutes() + slotDuration);
-        }
-      }
-    }
+          processedTimes.add(timeString);
 
-    // Now check availability for each possible slot
-    for (const slot of allPossibleSlots) {
-      const slotStart = new Date(slot.starts_at);
-      const slotEnd = new Date(slot.ends_at);
-      let isAvailable = true;
-      let conflictReason = '';
-
-      // Get existing bookings for this staff that could conflict with slots on this date
-      // We need to check bookings that start before end of day and end after start of day
-      const dayStart = `${date}T00:00:00.000Z`;
-      const dayEnd = `${date}T23:59:59.999Z`;
-      
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('starts_at, ends_at, service:services(name), customer:customers(name)')
-        .eq('tenant_id', tenant_id)
-        .eq('staff_id', slot.staff_id)
-        // Get bookings that overlap with this day (start before day ends AND end after day starts)
-        .lte('starts_at', dayEnd)
-        .gte('ends_at', dayStart)
-        .in('status', ['confirmed', 'pending', 'completed']);
-      
-      console.log(`Checking bookings for staff ${slot.staff_id} on ${date}:`, bookings);
-
-      if (!bookingsError && bookings) {
-        // Check conflicts with existing bookings (with buffer)
-        for (const booking of bookings) {
-          const bookingStart = new Date(booking.starts_at);
-          const bookingEnd = new Date(booking.ends_at);
-          
-          console.log(`Checking conflict: slot ${slotStart.toISOString()} - ${slotEnd.toISOString()} vs booking ${bookingStart.toISOString()} - ${bookingEnd.toISOString()}`);
-          
-          // Add buffer time
-          const bufferedStart = new Date(bookingStart.getTime() - (bufferTime * 60 * 1000));
-          const bufferedEnd = new Date(bookingEnd.getTime() + (bufferTime * 60 * 1000));
-          
-          console.log(`With buffer: slot vs booking with buffer ${bufferedStart.toISOString()} - ${bufferedEnd.toISOString()}`);
-          
-          if (slotStart < bufferedEnd && slotEnd > bufferedStart) {
-            isAvailable = false;
-            conflictReason = `Agendado para ${booking.customer?.name || 'Cliente'} - ${booking.service?.name || 'Serviço'}`;
-            console.log(`CONFLICT DETECTED: ${conflictReason}`);
-            break;
+          // Move to next slot
+          currentMin += slotDuration;
+          if (currentMin >= 60) {
+            currentHour += Math.floor(currentMin / 60);
+            currentMin = currentMin % 60;
           }
         }
-      }
-
-        // Check conflicts with blocks if still available
-        if (isAvailable) {
-          const dayStart = `${date}T00:00:00.000Z`;
-          const dayEnd = `${date}T23:59:59.999Z`;
-          
-          const { data: blocks, error: blocksError } = await supabase
-            .from('blocks')
-            .select('starts_at, ends_at, reason')
-            .eq('tenant_id', tenant_id)
-            .or(`staff_id.eq.${slot.staff_id},staff_id.is.null`)
-            // Get blocks that overlap with this day
-            .lte('starts_at', dayEnd)
-            .gte('ends_at', dayStart);
-
-        console.log(`Checking blocks for staff ${slot.staff_id} on ${date}:`, blocks);
-
-        if (!blocksError && blocks) {
-          for (const block of blocks) {
-            const blockStart = new Date(block.starts_at);
-            const blockEnd = new Date(block.ends_at);
-            
-            console.log(`Checking block conflict: slot ${slotStart.toISOString()} - ${slotEnd.toISOString()} vs block ${blockStart.toISOString()} - ${blockEnd.toISOString()}`);
-            
-            if (slotStart < blockEnd && slotEnd > blockStart) {
-              isAvailable = false;
-              conflictReason = block.reason || 'Horário bloqueado';
-              console.log(`BLOCK CONFLICT DETECTED: ${conflictReason}`);
-              break;
-            }
-          }
-        }
-      }
-
-      if (isAvailable) {
-        availableSlots.push(slot);
-      } else {
-        occupiedSlots.push({
-          ...slot,
-          available: false,
-          reason: conflictReason
-        });
       }
     }
 
     // Sort slots by time
-    availableSlots.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-    occupiedSlots.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+    availableSlots.sort((a, b) => a.time.localeCompare(b.time));
+    occupiedSlots.sort((a, b) => a.time.localeCompare(b.time));
 
     console.log(`Generated ${availableSlots.length} available slots and ${occupiedSlots.length} occupied slots for ${date}`);
     console.log('Available slots:', availableSlots.map(s => s.time));
@@ -313,8 +395,3 @@ serve(async (req) => {
     );
   }
 });
-
-function parseTime(timeString: string): number {
-  const [hours, minutes] = timeString.split(':').map(Number);
-  return hours * 60 + minutes;
-}
