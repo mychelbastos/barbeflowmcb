@@ -546,10 +546,7 @@ export type Database = {
         Args: { customer_phone: string; tenant_uuid: string }
         Returns: boolean
       }
-      is_tenant_admin: {
-        Args: { tenant_uuid: string }
-        Returns: boolean
-      }
+      is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }
       user_belongs_to_tenant: {
         Args: { tenant_uuid: string }
         Returns: boolean
