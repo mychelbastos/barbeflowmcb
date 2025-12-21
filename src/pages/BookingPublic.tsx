@@ -3,29 +3,25 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { 
   Calendar, 
   Clock, 
   Scissors, 
-  Star, 
   MapPin, 
   Phone, 
-  Mail,
   User,
-  CheckCircle,
+  Check,
   Loader2,
-  X
+  ChevronLeft,
+  ChevronRight,
+  CalendarPlus,
+  Sparkles
 } from "lucide-react";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import { formatInTimeZone } from "date-fns-tz";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateValue } from "react-aria-components";
 
@@ -49,7 +45,6 @@ const BookingPublic = () => {
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(1);
   
-  // Form data
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -72,7 +67,6 @@ const BookingPublic = () => {
     try {
       setLoading(true);
       
-      // Get tenant by slug
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('*')
@@ -90,7 +84,6 @@ const BookingPublic = () => {
 
       setTenant(tenantData);
 
-      // Load services and staff
       const [servicesRes, staffRes] = await Promise.all([
         supabase
           .from('services')
@@ -129,12 +122,6 @@ const BookingPublic = () => {
 
     try {
       setSlotsLoading(true);
-      console.log('Loading slots for:', {
-        tenant_id: tenant.id,
-        service_id: selectedService,
-        staff_id: selectedStaff || null,
-        date: selectedDate
-      });
       
       const { data, error } = await supabase.functions.invoke('get-available-slots', {
         body: {
@@ -145,32 +132,18 @@ const BookingPublic = () => {
         },
       });
 
-      if (error) {
-        console.error('Error from function:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Received slots data:', data);
-      
-      // Separate available and occupied slots
       const available = data.available_slots || [];
       const occupied = data.occupied_slots || [];
-      
-      console.log('Available slots:', available.length);
-      console.log('Occupied slots:', occupied.length);
       
       setAvailableSlots(available);
       setOccupiedSlots(occupied);
       
-      // Create combined list for display - merge all slots properly
       const slotMap = new Map();
-      
-      // Add all available slots
       available.forEach((slot: any) => {
         slotMap.set(slot.time, { ...slot, available: true });
       });
-      
-      // Mark occupied slots as unavailable (override if same time)
       occupied.forEach((occupiedSlot: any) => {
         slotMap.set(occupiedSlot.time, { 
           ...occupiedSlot, 
@@ -179,7 +152,6 @@ const BookingPublic = () => {
         });
       });
       
-      // Convert to array and sort
       const allSlots = Array.from(slotMap.values());
       allSlots.sort((a, b) => a.time.localeCompare(b.time));
       setAllTimeSlots(allSlots);
@@ -203,7 +175,6 @@ const BookingPublic = () => {
     setOccupiedSlots([]);
     setAllTimeSlots([]);
     
-    // Set default date to tomorrow if today is too late
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -220,7 +191,6 @@ const BookingPublic = () => {
     setOccupiedSlots([]);
     setAllTimeSlots([]);
     
-    // Set default date if not already set
     if (!selectedDate) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -247,10 +217,6 @@ const BookingPublic = () => {
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
     setStep(4);
-  };
-
-  const goToNextStep = () => {
-    setStep(prev => Math.min(prev + 1, 5));
   };
 
   const goToPreviousStep = () => {
@@ -289,24 +255,9 @@ const BookingPublic = () => {
     try {
       setSubmitting(true);
       
-      // Combine date and time into ISO string for starts_at
       const [hours, minutes] = selectedTime.split(':');
-      
-      // Parse the selected date properly to avoid timezone issues
       const [year, month, day] = selectedDate.split('-').map(Number);
       const startsAt = new Date(year, month - 1, day, parseInt(hours), parseInt(minutes), 0, 0);
-      
-      console.log('Submitting booking with:', {
-        slug: slug,
-        service_id: selectedService,
-        staff_id: selectedStaff,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        starts_at: startsAt.toISOString(),
-        selected_date_string: selectedDate,
-        selected_time: selectedTime,
-        constructed_date: startsAt
-      });
       
       const { data, error } = await supabase.functions.invoke('create-booking', {
         body: {
@@ -343,61 +294,38 @@ const BookingPublic = () => {
     }
   };
 
-  // Format dates and times consistently with timezone
   const TIMEZONE = 'America/Bahia';
   
   const formatDateForDisplay = (dateString: string) => {
-    if (!dateString) return 'Data não disponível';
-    
+    if (!dateString) return '';
     try {
       const date = new Date(dateString + 'T00:00:00');
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
+      const todayDate = new Date();
+      const tomorrow = new Date(todayDate);
+      tomorrow.setDate(todayDate.getDate() + 1);
       
-      if (date.toDateString() === today.toDateString()) {
+      if (date.toDateString() === todayDate.toDateString()) {
         return 'Hoje';
       } else if (date.toDateString() === tomorrow.toDateString()) {
         return 'Amanhã';
       } else {
-        return formatInTimeZone(date, TIMEZONE, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+        return formatInTimeZone(date, TIMEZONE, "EEE, d 'de' MMM", { locale: ptBR });
       }
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Data inválida';
+    } catch {
+      return '';
     }
   };
 
-  const formatTimeForDisplay = (time: string) => {
-    if (!time) return 'Horário não disponível';
-    return time;
-  };
-
   const formatBookingDateTime = (booking: any) => {
-    if (!booking?.starts_at) return { date: 'Data não disponível', time: 'Horário não disponível' };
-    
+    if (!booking?.starts_at) return { date: '', time: '' };
     try {
       const startDate = new Date(booking.starts_at);
       const bahiaTime = formatInTimeZone(startDate, TIMEZONE, "yyyy-MM-dd HH:mm", { locale: ptBR });
       const [datePart, timePart] = bahiaTime.split(' ');
-      
-      const dateFormatted = formatDateForDisplay(datePart);
-      const timeFormatted = timePart;
-      
-      return { date: dateFormatted, time: timeFormatted };
-    } catch (error) {
-      console.error('Error formatting booking date time:', error);
-      return { date: 'Data não disponível', time: 'Horário não disponível' };
+      return { date: formatDateForDisplay(datePart), time: timePart };
+    } catch {
+      return { date: '', time: '' };
     }
-  };
-
-  const formatSelectedDateTime = () => {
-    if (!selectedDate || !selectedTime) return 'Data e horário não selecionados';
-    
-    const dateFormatted = formatDateForDisplay(selectedDate);
-    const timeFormatted = formatTimeForDisplay(selectedTime);
-    
-    return `${dateFormatted} às ${timeFormatted}`;
   };
 
   const generateCalendarFile = (booking: any) => {
@@ -406,7 +334,6 @@ const BookingPublic = () => {
     const startDate = new Date(booking.starts_at);
     const endDate = new Date(booking.ends_at);
     
-    // Format for ICS file (YYYYMMDDTHHMMSSZ)
     const formatICSDate = (date: Date) => {
       return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
@@ -420,13 +347,8 @@ DTSTAMP:${formatICSDate(new Date())}
 DTSTART:${formatICSDate(startDate)}
 DTEND:${formatICSDate(endDate)}
 SUMMARY:${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}
-DESCRIPTION:Agendamento confirmado\\n\\nServiço: ${booking.service?.name || 'N/A'}\\nProfissional: ${booking.staff?.name || 'N/A'}\\nCliente: ${booking.customer?.name || 'N/A'}\\nTelefone: ${booking.customer?.phone || 'N/A'}${booking.notes ? `\\nObservações: ${booking.notes}` : ''}
+DESCRIPTION:Agendamento confirmado
 LOCATION:${tenant?.address || tenant?.name || 'Barbearia'}
-BEGIN:VALARM
-TRIGGER:-PT30M
-ACTION:DISPLAY
-DESCRIPTION:Lembrete: ${booking.service?.name || 'Agendamento'} em 30 minutos
-END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 
@@ -440,672 +362,402 @@ END:VCALENDAR`;
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Arquivo baixado!",
-      description: "O arquivo do calendário foi baixado. Abra-o para adicionar o agendamento ao seu calendário.",
-    });
   };
 
+  const selectedServiceData = services.find(s => s.id === selectedService);
+  const selectedStaffData = staff.find(s => s.id === selectedStaff);
+
+  // Step indicator
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center">
+          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            step >= i ? 'bg-white' : 'bg-white/20'
+          }`} />
+          {i < 4 && <div className={`w-8 h-px mx-1 transition-all ${step > i ? 'bg-white/50' : 'bg-white/10'}`} />}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Confirmation Screen
   if (step === 5) {
     const bookingDateTime = formatBookingDateTime(createdBooking);
     
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
-        <Card className="w-full max-w-md border-success/20 shadow-large rounded-2xl overflow-hidden">
-          <CardContent className="px-6 py-8 text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-success/20 to-success/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-soft">
-              <CheckCircle className="h-10 w-10 text-success" />
+      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check className="h-10 w-10 text-emerald-400" strokeWidth={3} />
+          </div>
+          
+          <h1 className="text-2xl font-semibold mb-2">Agendamento confirmado</h1>
+          <p className="text-zinc-400 mb-8">Você receberá uma confirmação por WhatsApp</p>
+          
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 mb-8 text-left">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 text-sm">Serviço</span>
+                <span className="font-medium">{createdBooking?.service?.name}</span>
+              </div>
+              <div className="h-px bg-zinc-800" />
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 text-sm">Profissional</span>
+                <span className="font-medium">{createdBooking?.staff?.name || 'Qualquer disponível'}</span>
+              </div>
+              <div className="h-px bg-zinc-800" />
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 text-sm">Data e hora</span>
+                <span className="font-medium">{bookingDateTime.date} às {bookingDateTime.time}</span>
+              </div>
+              <div className="h-px bg-zinc-800" />
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 text-sm">Valor</span>
+                <span className="font-semibold text-emerald-400">
+                  R$ {((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}
+                </span>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-foreground mb-3">
-              Agendamento Confirmado!
-            </h1>
-            <p className="text-muted-foreground mb-8 text-base leading-relaxed px-2">
-              Seu horário foi reservado com sucesso. Você receberá uma confirmação por WhatsApp.
-            </p>
-            
-            <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/10 rounded-2xl shadow-soft mb-8">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Scissors className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-sm text-muted-foreground">Serviço</span>
-                    </div>
-                    <span className="font-semibold text-foreground">{createdBooking?.service?.name || 'N/A'}</span>
-                  </div>
-                  
-                  <Separator className="opacity-50" />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-accent" />
-                      </div>
-                      <span className="text-sm text-muted-foreground">Profissional</span>
-                    </div>
-                    <span className="font-semibold text-foreground">{createdBooking?.staff?.name || 'Qualquer disponível'}</span>
-                  </div>
-                  
-                  <Separator className="opacity-50" />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Calendar className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="text-sm text-muted-foreground">Data e hora</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-foreground">{bookingDateTime.date}</div>
-                      <div className="text-sm font-medium text-primary">{bookingDateTime.time}</div>
-                    </div>
-                  </div>
-                  
-                  <Separator className="opacity-50" />
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Valor total</span>
-                    <span className="text-xl font-bold bg-gradient-accent bg-clip-text text-transparent">
-                      R$ {((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <div className="space-y-4 px-2">
-              <Button 
-                className="w-full h-14 text-base font-semibold rounded-2xl" 
-                variant="hero"
-                onClick={() => generateCalendarFile(createdBooking)}
-                disabled={!createdBooking}
-              >
-                <Calendar className="h-5 w-5 mr-3" />
-                Adicionar ao Calendário
-              </Button>
-              
-              <Button 
-                className="w-full h-12 text-base rounded-xl" 
-                variant="outline"
-                onClick={resetBooking}
-              >
-                Fazer Novo Agendamento
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          <div className="space-y-3">
+            <Button 
+              onClick={() => generateCalendarFile(createdBooking)}
+              className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
+            >
+              <CalendarPlus className="h-4 w-4 mr-2" />
+              Adicionar ao calendário
+            </Button>
+            <Button 
+              variant="ghost"
+              onClick={resetBooking}
+              className="w-full h-12 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl"
+            >
+              Fazer novo agendamento
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header Premium */}
-      <header className="relative h-48 sm:h-64 bg-gradient-hero overflow-hidden">
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-8 lg:px-8 h-full flex items-end pb-6 sm:pb-10">
-          <div className="text-primary-foreground w-full">
-            <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 tracking-tight">{tenant?.name || "Carregando..."}</h1>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-1 sm:space-y-0 text-xs sm:text-sm opacity-95">
+    <div className="min-h-screen bg-zinc-950 text-white">
+      {/* Header */}
+      <header className="border-b border-zinc-800/50">
+        <div className="max-w-lg mx-auto px-4 py-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center">
+              <Scissors className="h-6 w-6 text-white/80" />
+            </div>
+            <div>
+              <h1 className="font-semibold text-lg">{tenant?.name || "Carregando..."}</h1>
               {tenant?.address && (
-                <div className="flex items-center">
-                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
-                  <span className="truncate">{tenant.address}</span>
-                </div>
-              )}
-              {tenant?.phone && (
-                <div className="flex items-center">
-                  <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
-                  <span>{tenant.phone}</span>
-                </div>
+                <p className="text-zinc-500 text-sm flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {tenant.address}
+                </p>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Booking Summary Premium - Show after step 1 */}
-        {step > 1 && (
-          <Card className="mb-10 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 shadow-medium rounded-2xl overflow-hidden">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold flex items-center text-foreground">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mr-3">
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                </div>
-                Resumo do Agendamento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid gap-6 sm:grid-cols-2">
-                {selectedService && (
-                  <div className="flex items-center space-x-4 p-3 rounded-xl bg-background/60 border border-primary/10">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-soft"
-                      style={{ 
-                        backgroundColor: `${services.find(s => s.id === selectedService)?.color}20`,
-                        color: services.find(s => s.id === selectedService)?.color 
-                      }}
-                    >
-                      <Scissors className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Serviço</p>
-                      <p className="font-semibold text-foreground truncate">{services.find(s => s.id === selectedService)?.name}</p>
-                    </div>
-                  </div>
-                )}
-                
-                {(selectedStaff || step >= 3) && (
-                  <div className="flex items-center space-x-4 p-3 rounded-xl bg-background/60 border border-accent/10">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-soft"
-                      style={{ 
-                        backgroundColor: selectedStaff ? `${staff.find(s => s.id === selectedStaff)?.color}20` : 'hsl(var(--muted))',
-                        color: selectedStaff ? staff.find(s => s.id === selectedStaff)?.color : 'hsl(var(--muted-foreground))'
-                      }}
-                    >
-                      <User className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Profissional</p>
-                      <p className="font-semibold text-foreground truncate">
-                        {selectedStaff ? staff.find(s => s.id === selectedStaff)?.name : 'Qualquer disponível'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {selectedDate && step >= 3 && (
-                  <div className="flex items-center space-x-4 p-3 rounded-xl bg-background/60 border border-primary/10">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shadow-soft">
-                      <Calendar className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Data</p>
-                      <p className="font-semibold text-foreground">
-                        {formatDateForDisplay(selectedDate)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {selectedTime && (
-                  <div className="flex items-center space-x-4 p-3 rounded-xl bg-background/60 border border-accent/10">
-                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shadow-soft">
-                      <Clock className="h-6 w-6 text-accent" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Horário</p>
-                      <p className="font-semibold text-foreground">{selectedTime}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {selectedService && (
-                <>
-                  <Separator className="my-6 opacity-30" />
-                  <div className="flex justify-between items-center p-4 rounded-xl bg-accent/5 border border-accent/20">
-                    <span className="text-base font-medium text-muted-foreground">Valor do serviço</span>
-                    <span className="text-2xl font-bold bg-gradient-accent bg-clip-text text-transparent">
-                      R$ {((services.find(s => s.id === selectedService)?.price_cents || 0) / 100).toFixed(2)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
+      <div className="max-w-lg mx-auto px-4 py-8">
+        <StepIndicator />
 
-        {/* Progress Indicator Premium */}
-        <div className="flex items-center justify-center mb-8 px-4">
-          <div className="flex items-center space-x-3 sm:space-x-6 px-4 py-3 bg-background border rounded-2xl shadow-soft">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-300 shadow-soft ${
-                  step >= i 
-                    ? 'bg-gradient-primary text-primary-foreground scale-110' 
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}>
-                  {i}
-                </div>
-                {i < 4 && (
-                  <div className={`w-8 sm:w-16 h-1 mx-1 sm:mx-3 rounded-full transition-all duration-300 ${
-                    step > i 
-                      ? 'bg-gradient-primary shadow-accent' 
-                      : 'bg-muted'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Step 1: Select Service Premium */}
+        {/* Step 1: Select Service */}
         {step === 1 && (
-          <div className="px-4 sm:px-0">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
-                Escolha seu serviço
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-md mx-auto">
-                Selecione o serviço que deseja agendar
-              </p>
+          <div className="animate-in fade-in duration-300">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold mb-2">Escolha o serviço</h2>
+              <p className="text-zinc-500 text-sm">Selecione o que você precisa</p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-3xl mx-auto">
-              {loading ? (
-                <div className="col-span-full text-center py-12">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                  <p className="text-muted-foreground text-lg">Carregando serviços...</p>
-                </div>
-              ) : services.length === 0 ? (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-muted-foreground text-lg">Nenhum serviço disponível no momento.</p>
-                </div>
-              ) : (
-                services.map((service) => (
-                  <Card 
-                    key={service.id} 
-                    className="cursor-pointer border-border/50 hover:border-primary/50 hover:shadow-large transition-all duration-500 rounded-2xl overflow-hidden bg-gradient-to-br from-background to-background/80 hover:scale-[1.02] active:scale-[0.98] w-full"
+            {loading ? (
+              <div className="flex flex-col items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-zinc-500 mb-4" />
+                <p className="text-zinc-500">Carregando serviços...</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {services.map((service) => (
+                  <button
+                    key={service.id}
                     onClick={() => handleServiceSelect(service.id)}
+                    className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
                   >
-                    <CardContent className="p-4 sm:p-6 lg:p-8">
-                      <div className="flex items-start justify-between mb-4 sm:mb-6">
-                        <div 
-                          className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-soft flex-shrink-0"
-                          style={{ 
-                            backgroundColor: `${service.color}20`,
-                            color: service.color 
-                          }}
-                        >
-                          <Scissors className="h-6 w-6 sm:h-8 sm:w-8" />
-                        </div>
-                        <div className="bg-gradient-accent px-3 py-1 sm:px-4 sm:py-2 rounded-full ml-2">
-                          <span className="text-accent-foreground font-bold text-sm sm:text-lg">
-                            R$ {(service.price_cents / 100).toFixed(2)}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium mb-1 group-hover:text-white transition-colors">{service.name}</h3>
+                        <p className="text-zinc-500 text-sm line-clamp-2 mb-3">{service.description}</p>
+                        <div className="flex items-center gap-3 text-xs text-zinc-600">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {service.duration_minutes}min
                           </span>
                         </div>
                       </div>
-                      <h3 className="font-bold text-lg sm:text-xl text-foreground mb-2 sm:mb-3 leading-tight">{service.name}</h3>
-                      <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 leading-relaxed">{service.description}</p>
-                      <div className="flex items-center text-xs sm:text-sm text-muted-foreground bg-muted/30 px-3 py-2 rounded-xl w-fit">
-                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        <span className="font-medium">{service.duration_minutes} minutos</span>
+                      <div className="text-right shrink-0">
+                        <span className="text-lg font-semibold text-emerald-400">
+                          R$ {(service.price_cents / 100).toFixed(0)}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 2: Select Staff */}
+        {step === 2 && (
+          <div className="animate-in fade-in duration-300">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold mb-2">Escolha o profissional</h2>
+              <p className="text-zinc-500 text-sm">Quem você prefere?</p>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Any option */}
+              <button
+                onClick={() => handleStaffSelect("any")}
+                className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30 rounded-xl flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium group-hover:text-white transition-colors">Qualquer disponível</h3>
+                    <p className="text-zinc-500 text-sm">Primeiro horário livre</p>
+                  </div>
+                </div>
+              </button>
+
+              {staff.map((member) => (
+                <button
+                  key={member.id}
+                  onClick={() => handleStaffSelect(member.id)}
+                  className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${member.color}20` }}
+                    >
+                      <User className="h-5 w-5" style={{ color: member.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium group-hover:text-white transition-colors">{member.name}</h3>
+                      {member.bio && <p className="text-zinc-500 text-sm line-clamp-1">{member.bio}</p>}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={goToPreviousStep}
+              className="flex items-center gap-2 text-zinc-500 hover:text-white mt-8 mx-auto transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </button>
+          </div>
+        )}
+
+        {/* Step 3: Select Date & Time */}
+        {step === 3 && (
+          <div className="animate-in fade-in duration-300">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold mb-2">Escolha o horário</h2>
+              <p className="text-zinc-500 text-sm">Selecione data e hora</p>
+            </div>
+            
+            {/* Mini summary */}
+            <div className="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
+              <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
+                <Scissors className="h-4 w-4 text-zinc-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{selectedServiceData?.name}</p>
+                <p className="text-zinc-500 text-xs">
+                  {selectedStaffData?.name || 'Qualquer profissional'} • {selectedServiceData?.duration_minutes}min
+                </p>
+              </div>
+              <span className="text-emerald-400 font-medium text-sm">
+                R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}
+              </span>
+            </div>
+            
+            {/* Calendar */}
+            <div className="mb-6">
+              <CalendarRac
+                value={selectedCalendarDate}
+                onChange={handleDateSelect}
+                minValue={today(getLocalTimeZone())}
+                className="w-full [&_.rdp]:w-full [&_.rdp-months]:w-full [&_.rdp-month]:w-full [&_.rdp-table]:w-full"
+              />
+            </div>
+            
+            {/* Time slots */}
+            <div>
+              <h3 className="text-sm font-medium text-zinc-400 mb-4">
+                {selectedDate ? formatDateForDisplay(selectedDate) : 'Selecione uma data'}
+              </h3>
+              
+              {slotsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+                </div>
+              ) : allTimeSlots.length === 0 ? (
+                <div className="text-center py-8 text-zinc-500">
+                  <Clock className="h-8 w-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">{selectedDate ? "Nenhum horário disponível" : "Selecione uma data"}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {allTimeSlots.map((slot) => (
+                    <button
+                      key={slot.time}
+                      onClick={slot.available ? () => handleTimeSelect(slot.time) : undefined}
+                      disabled={!slot.available}
+                      className={`py-3 px-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        slot.available 
+                          ? 'bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800 text-white' 
+                          : 'bg-zinc-900/30 text-zinc-700 cursor-not-allowed line-through'
+                      }`}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
+            
+            <button
+              onClick={goToPreviousStep}
+              className="flex items-center gap-2 text-zinc-500 hover:text-white mt-8 mx-auto transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </button>
           </div>
         )}
 
-        {/* Step 2: Select Staff Premium */}
-        {step === 2 && (
-          <div className="px-2 sm:px-0">
-            <div className="text-center mb-8 sm:mb-10">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3 sm:mb-4 tracking-tight">
-                Escolha o profissional
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-md mx-auto px-2">
-                Selecione quem você prefere que faça o atendimento
-              </p>
+        {/* Step 4: Contact Info */}
+        {step === 4 && (
+          <div className="animate-in fade-in duration-300">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold mb-2">Seus dados</h2>
+              <p className="text-zinc-500 text-sm">Para confirmar o agendamento</p>
             </div>
             
-            <div className="max-w-xl mx-auto space-y-4 sm:space-y-6">
-              <Card className="border-accent/30 bg-gradient-to-br from-accent/10 to-accent/5 shadow-medium rounded-2xl overflow-hidden mx-2 sm:mx-0">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                      <Star className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
-                    </div>
-                    <h3 className="font-semibold text-foreground mb-3 text-sm sm:text-base">Sem preferência?</h3>
-                    <Button 
-                      variant="hero" 
-                      onClick={() => handleStaffSelect("any")}
-                      className="h-10 sm:h-12 px-6 sm:px-8 rounded-xl font-semibold text-sm sm:text-base w-full sm:w-auto"
-                    >
-                      Qualquer profissional disponível
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="relative py-3 sm:py-4 mx-4">
-                <Separator className="absolute top-1/2 left-0 right-0" />
-                <div className="relative flex justify-center">
-                  <span className="bg-background px-3 sm:px-4 text-xs sm:text-sm text-muted-foreground font-medium">
-                    ou escolha um profissional específico
-                  </span>
+            {/* Summary */}
+            <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
+                  <Scissors className="h-4 w-4 text-zinc-400" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{selectedServiceData?.name}</p>
+                  <p className="text-zinc-500 text-xs">
+                    {selectedStaffData?.name || 'Qualquer profissional'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-zinc-500" />
+                  <span className="text-zinc-400">{formatDateForDisplay(selectedDate)}</span>
+                  <span className="text-zinc-600">•</span>
+                  <Clock className="h-4 w-4 text-zinc-500" />
+                  <span className="text-zinc-400">{selectedTime}</span>
+                </div>
+                <span className="text-emerald-400 font-semibold">
+                  R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}
+                </span>
+              </div>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">Nome completo</label>
+                <Input
+                  placeholder="Seu nome"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  required
+                  className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                />
               </div>
               
-              <div className="space-y-3 sm:space-y-4 mx-2 sm:mx-0">
-                {loading ? (
-                  <div className="text-center py-8 sm:py-12">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                      <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
-                    </div>
-                    <p className="text-muted-foreground text-base sm:text-lg">Carregando profissionais...</p>
-                  </div>
-                ) : (
-                  staff.map((member) => (
-                    <Card 
-                      key={member.id}
-                      className="cursor-pointer border-border/50 hover:border-primary/50 hover:shadow-large transition-all duration-500 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-background to-background/80 hover:scale-[1.01] active:scale-[0.99] w-full"
-                      onClick={() => handleStaffSelect(member.id)}
-                    >
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex items-center space-x-3 sm:space-x-6">
-                          <div 
-                            className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-soft flex-shrink-0"
-                            style={{ 
-                              backgroundColor: `${member.color}20`,
-                              color: member.color 
-                            }}
-                          >
-                            <User className="h-7 w-7 sm:h-10 sm:w-10" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-lg sm:text-xl text-foreground mb-1 sm:mb-2 truncate">{member.name}</h3>
-                            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed line-clamp-2">{member.bio}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">WhatsApp</label>
+                <Input
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  required
+                  className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                />
               </div>
-            </div>
-            
-            {/* Navigation Buttons Premium */}
-            <div className="flex justify-center mt-8 sm:mt-12 px-4">
-              <div className="flex space-x-3 sm:space-x-4 w-full max-w-xs sm:max-w-sm">
+              
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">E-mail <span className="text-zinc-600">(opcional)</span></label>
+                <Input
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">Observações <span className="text-zinc-600">(opcional)</span></label>
+                <Textarea
+                  placeholder="Alguma observação?"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600 resize-none"
+                />
+              </div>
+              
+              <div className="pt-4 space-y-3">
                 <Button 
-                  variant="outline" 
+                  type="submit" 
+                  disabled={submitting || !customerName || !customerPhone}
+                  className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Confirmando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Confirmar agendamento
+                    </>
+                  )}
+                </Button>
+                
+                <button
+                  type="button"
                   onClick={goToPreviousStep}
-                  className="flex-1 h-11 sm:h-12 rounded-xl font-semibold text-sm sm:text-base"
+                  className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors"
                 >
+                  <ChevronLeft className="h-4 w-4" />
                   Voltar
-                </Button>
-                <Button 
-                  variant="hero" 
-                  onClick={goToNextStep}
-                  disabled={!selectedService}
-                  className="flex-1 h-11 sm:h-12 rounded-xl font-semibold text-sm sm:text-base"
-                >
-                  Continuar
-                </Button>
+                </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Select Time Premium */}
-        {step === 3 && (
-          <div className="px-2 sm:px-0">
-            <div className="text-center mb-8 sm:mb-10">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3 sm:mb-4 tracking-tight">
-                Escolha data e horário
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-md mx-auto px-2">
-                Selecione o melhor horário para você
-              </p>
-            </div>
-            
-            <div className="max-w-2xl mx-auto">
-              <Card className="shadow-large rounded-2xl overflow-hidden border-border/50 mx-2 sm:mx-0">
-                <CardHeader className="pb-4 sm:pb-6">
-                  <CardTitle className="text-xl sm:text-2xl font-bold flex items-center text-foreground">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-xl flex items-center justify-center mr-3 sm:mr-4">
-                      <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                    </div>
-                    Selecione a data
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 sm:px-6 pb-6 sm:pb-8">
-                  <div className="mb-6 sm:mb-8">
-                    <CalendarRac
-                      value={selectedCalendarDate}
-                      onChange={handleDateSelect}
-                      minValue={today(getLocalTimeZone())}
-                      className="rounded-xl sm:rounded-2xl border border-border/50 p-2 sm:p-4 mx-auto w-fit shadow-soft"
-                    />
-                  </div>
-                  
-                   {slotsLoading ? (
-                     <div className="text-center py-8 sm:py-12">
-                       <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                         <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
-                       </div>
-                       <p className="text-muted-foreground text-base sm:text-lg">Carregando horários disponíveis...</p>
-                     </div>
-                   ) : allTimeSlots.length === 0 ? (
-                     <div className="text-center py-8 sm:py-12 text-muted-foreground">
-                       <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                         <Clock className="h-6 w-6 sm:h-8 sm:w-8" />
-                       </div>
-                       <p className="text-base sm:text-lg">
-                         {selectedDate ? "Nenhum horário disponível para esta data." : "Selecione uma data para ver os horários."}
-                       </p>
-                     </div>
-                   ) : (
-                      <div>
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 sm:mb-6 text-center">Horários disponíveis</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                          {allTimeSlots.map((slot) => (
-                            <Button
-                              key={slot.time}
-                              variant={slot.available ? "outline" : "secondary"}
-                              onClick={slot.available ? () => handleTimeSelect(slot.time) : undefined}
-                              disabled={!slot.available}
-                              className={`h-12 sm:h-14 relative rounded-xl font-semibold transition-all duration-300 text-sm sm:text-base ${
-                                slot.available 
-                                  ? "border-border/50 hover:border-primary hover:bg-primary/10 hover:scale-105 active:scale-95 shadow-soft hover:shadow-medium" 
-                                  : "bg-destructive/10 border-destructive/30 text-destructive/80 cursor-not-allowed opacity-75"
-                              }`}
-                            >
-                              {slot.available ? (
-                                <span>{slot.time}</span>
-                              ) : (
-                                <div className="flex items-center space-x-1 sm:space-x-2">
-                                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  <span className="text-xs sm:text-sm">{slot.time}</span>
-                                </div>
-                              )}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                   )}
-                </CardContent>
-              </Card>
-            </div>
-            
-            {/* Navigation Buttons Premium */}
-            <div className="flex justify-center mt-8 sm:mt-12 px-4">
-              <div className="flex space-x-3 sm:space-x-4 w-full max-w-xs sm:max-w-sm">
-                <Button 
-                  variant="outline" 
-                  onClick={goToPreviousStep}
-                  className="flex-1 h-11 sm:h-12 rounded-xl font-semibold text-sm sm:text-base"
-                >
-                  Voltar
-                </Button>
-                <Button 
-                  variant="hero" 
-                  onClick={goToNextStep}
-                  disabled={!selectedDate || !selectedTime}
-                  className="flex-1 h-11 sm:h-12 rounded-xl font-semibold text-sm sm:text-base"
-                >
-                  Continuar
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Contact Information Premium */}
-        {step === 4 && (
-          <div className="px-2 sm:px-0">
-            <div className="text-center mb-8 sm:mb-10">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3 sm:mb-4 tracking-tight">
-                Seus dados de contato
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-md mx-auto px-2">
-                Precisamos dessas informações para confirmar seu agendamento
-              </p>
-            </div>
-            
-            <div className="max-w-xl mx-auto">
-              <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-                <Card className="shadow-large rounded-2xl overflow-hidden border-border/50 mx-2 sm:mx-0">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl font-bold flex items-center text-foreground">
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center mr-3">
-                        <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      </div>
-                      Informações de contato
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label htmlFor="name" className="text-sm sm:text-base font-semibold">Nome completo *</Label>
-                      <Input
-                        id="name"
-                        placeholder="Seu nome completo"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        required
-                        className="h-12 sm:h-14 text-sm sm:text-base rounded-xl border-border/50 focus:border-primary"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label htmlFor="phone" className="text-sm sm:text-base font-semibold">WhatsApp *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="(11) 99999-9999"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        required
-                        className="h-12 sm:h-14 text-sm sm:text-base rounded-xl border-border/50 focus:border-primary"
-                      />
-                      <p className="text-xs sm:text-sm text-muted-foreground pl-1">
-                        📱 Enviaremos a confirmação por WhatsApp
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label htmlFor="email" className="text-sm sm:text-base font-semibold">E-mail (opcional)</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
-                        className="h-12 sm:h-14 text-sm sm:text-base rounded-xl border-border/50 focus:border-primary"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2 sm:space-y-3">
-                      <Label htmlFor="notes" className="text-sm sm:text-base font-semibold">Observações (opcional)</Label>
-                      <Textarea
-                        id="notes"
-                        placeholder="Alguma observação especial?"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        rows={3}
-                        className="text-sm sm:text-base rounded-xl border-border/50 focus:border-primary resize-none"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Summary Premium */}
-                <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 shadow-large rounded-2xl overflow-hidden mx-2 sm:mx-0">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg sm:text-xl font-bold flex items-center text-foreground">
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary/20 rounded-lg flex items-center justify-center mr-3">
-                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      </div>
-                      Resumo do agendamento
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 sm:p-6 lg:p-8">
-                    <div className="space-y-4 sm:space-y-5">
-                      <div className="flex justify-between items-center py-1 sm:py-2">
-                        <span className="text-sm sm:text-base text-muted-foreground font-medium">Serviço</span>
-                        <span className="font-bold text-foreground text-right text-sm sm:text-base">
-                          {services.find(s => s.id === selectedService)?.name || 'Não selecionado'}
-                        </span>
-                      </div>
-                      <Separator className="opacity-30" />
-                      <div className="flex justify-between items-center py-1 sm:py-2">
-                        <span className="text-sm sm:text-base text-muted-foreground font-medium">Profissional</span>
-                        <span className="font-bold text-foreground text-right text-sm sm:text-base">
-                          {selectedStaff ? staff.find(s => s.id === selectedStaff)?.name : 'Qualquer disponível'}
-                        </span>
-                      </div>
-                      <Separator className="opacity-30" />
-                      <div className="flex justify-between items-center py-1 sm:py-2">
-                        <span className="text-sm sm:text-base text-muted-foreground font-medium">Data e hora</span>
-                        <div className="text-right">
-                          <div className="font-bold text-foreground text-sm sm:text-base">{formatSelectedDateTime()}</div>
-                        </div>
-                      </div>
-                      <Separator className="opacity-30" />
-                      <div className="flex justify-between items-center py-2 sm:py-3 px-3 sm:px-4 bg-accent/10 rounded-xl">
-                        <span className="text-base sm:text-lg font-bold text-foreground">Total</span>
-                        <span className="text-xl sm:text-2xl font-bold bg-gradient-accent bg-clip-text text-transparent">
-                          R$ {((services.find(s => s.id === selectedService)?.price_cents || 0) / 100).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex space-x-3 sm:space-x-4 pt-4 px-2 sm:px-0">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={goToPreviousStep}
-                    className="flex-1 h-12 sm:h-14 rounded-xl font-semibold text-sm sm:text-base"
-                    disabled={submitting}
-                  >
-                    Voltar
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="flex-1 h-12 sm:h-14 rounded-xl font-bold text-sm sm:text-base" 
-                    variant="hero" 
-                    disabled={submitting}
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 animate-spin" />
-                        <span className="hidden sm:inline">Processando...</span>
-                        <span className="sm:hidden">...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
-                        <span className="hidden sm:inline">Confirmar Agendamento</span>
-                        <span className="sm:hidden">Confirmar</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </div>
+            </form>
           </div>
         )}
       </div>
