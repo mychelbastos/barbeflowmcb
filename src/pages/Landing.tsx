@@ -99,7 +99,7 @@ const Landing = () => {
               </Button>
             </Link>
             <Link to="#demo">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 h-12 px-8 text-base text-zinc-300">
+              <Button size="lg" variant="ghost" className="w-full sm:w-auto bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 h-12 px-8 text-base text-zinc-100">
                 Ver Demonstração
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
