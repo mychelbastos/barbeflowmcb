@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,28 +29,32 @@ export function DateRangeSelector({ className, showTitle = true }: DateRangeSele
   } = useDateRange();
 
   return (
-    <Card className={className}>
+    <div className={`bg-zinc-900/50 border border-zinc-800/50 rounded-2xl ${className}`}>
       {showTitle && (
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center">
-            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mr-3">
-              <Filter className="h-4 w-4 text-primary" />
+        <div className="p-5 border-b border-zinc-800/50">
+          <h2 className="text-lg font-semibold text-zinc-100 flex items-center">
+            <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center mr-3">
+              <Filter className="h-4 w-4 text-emerald-400" />
             </div>
             Período de Análise
-          </CardTitle>
-        </CardHeader>
+          </h2>
+        </div>
       )}
-      <CardContent className={showTitle ? "pt-0" : "p-6"}>
+      <div className={showTitle ? "p-5" : "p-5"}>
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label>Período</Label>
+            <Label className="text-zinc-400 text-sm">Período</Label>
             <Select value={preset} onValueChange={setPreset}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 focus:border-emerald-500/50 focus:ring-emerald-500/20">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-zinc-900 border-zinc-800">
                 {presetOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem 
+                    key={option.value} 
+                    value={option.value}
+                    className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}
@@ -62,19 +65,21 @@ export function DateRangeSelector({ className, showTitle = true }: DateRangeSele
           {preset === 'custom' && (
             <>
               <div className="space-y-2">
-                <Label>Data Inicial</Label>
+                <Label className="text-zinc-400 text-sm">Data Inicial</Label>
                 <Input 
                   type="date" 
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="h-11 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 focus:border-emerald-500/50 focus:ring-emerald-500/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Data Final</Label>
+                <Label className="text-zinc-400 text-sm">Data Final</Label>
                 <Input 
                   type="date" 
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="h-11 bg-zinc-800/50 border-zinc-700/50 text-zinc-100 focus:border-emerald-500/50 focus:ring-emerald-500/20"
                 />
               </div>
             </>
@@ -82,15 +87,15 @@ export function DateRangeSelector({ className, showTitle = true }: DateRangeSele
         </div>
 
         {/* Display current range */}
-        <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/50">
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4 mr-2" />
+        <div className="mt-4 p-3 bg-zinc-800/30 rounded-xl border border-zinc-700/30">
+          <div className="flex items-center text-sm text-zinc-400">
+            <Calendar className="h-4 w-4 mr-2 text-zinc-500" />
             <span>
-              Analisando de <strong>{format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })}</strong> até <strong>{format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}</strong>
+              Analisando de <strong className="text-emerald-400">{format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })}</strong> até <strong className="text-emerald-400">{format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}</strong>
             </span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
