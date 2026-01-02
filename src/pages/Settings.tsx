@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { NewTenantModal } from "@/components/modals/NewTenantModal";
@@ -23,7 +24,12 @@ import {
   Image as ImageIcon,
   Globe,
   Smartphone,
-  Plus
+  Plus,
+  Link2,
+  Unlink,
+  CheckCircle,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +50,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const tenantSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -79,6 +91,7 @@ export default function Settings() {
   const { currentTenant, tenants } = useTenant();
   const { isSuperAdmin } = useSuperAdmin();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [showNewTenantModal, setShowNewTenantModal] = useState(false);
@@ -86,6 +99,12 @@ export default function Settings() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  
+  // Mercado Pago states
+  const [mpConnected, setMpConnected] = useState(false);
+  const [mpLoading, setMpLoading] = useState(true);
+  const [mpConnecting, setMpConnecting] = useState(false);
+  const [mpDisconnecting, setMpDisconnecting] = useState(false);
 
   const tenantForm = useForm<TenantFormData>({
     resolver: zodResolver(tenantSchema),
@@ -113,13 +132,133 @@ export default function Settings() {
     },
   });
 
+  // Check URL params for MP connection status
+  useEffect(() => {
+    const mpConnectedParam = searchParams.get('mp_connected');
+    const mpErrorParam = searchParams.get('mp_error');
+
+    if (mpConnectedParam === '1') {
+      toast({
+        title: "Mercado Pago conectado!",
+        description: "Sua conta foi vinculada com sucesso.",
+      });
+      setSearchParams({});
+      setActiveTab('payments');
+    }
+
+    if (mpErrorParam) {
+      const errorMessages: Record<string, string> = {
+        missing_params: 'Parâmetros ausentes na resposta',
+        invalid_state: 'Estado de autenticação inválido',
+        expired: 'Sessão expirada, tente novamente',
+        config_error: 'Erro de configuração do servidor',
+        token_exchange_failed: 'Falha ao obter tokens',
+        no_token: 'Token não recebido',
+        db_error: 'Erro ao salvar conexão',
+        server_error: 'Erro interno do servidor',
+      };
+      toast({
+        title: "Erro ao conectar Mercado Pago",
+        description: errorMessages[mpErrorParam] || 'Erro desconhecido',
+        variant: "destructive",
+      });
+      setSearchParams({});
+      setActiveTab('payments');
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (currentTenant) {
       loadTenantData();
+      loadMpConnection();
       setLogoUrl(currentTenant.logo_url || null);
       setCoverUrl(currentTenant.cover_url || null);
     }
   }, [currentTenant]);
+
+  const loadMpConnection = async () => {
+    if (!currentTenant) return;
+    
+    try {
+      setMpLoading(true);
+      const { data, error } = await supabase
+        .from('mercadopago_connections')
+        .select('id')
+        .eq('tenant_id', currentTenant.id)
+        .maybeSingle();
+
+      setMpConnected(!!data && !error);
+    } catch (error) {
+      console.error('Error checking MP connection:', error);
+      setMpConnected(false);
+    } finally {
+      setMpLoading(false);
+    }
+  };
+
+  const handleMpConnect = async () => {
+    if (!currentTenant) return;
+
+    try {
+      setMpConnecting(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('mp-oauth-start', {
+        body: { tenant_id: currentTenant.id },
+      });
+
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de autorização não recebida');
+      }
+    } catch (error: any) {
+      console.error('Error starting MP OAuth:', error);
+      toast({
+        title: "Erro ao conectar",
+        description: error.message || "Não foi possível iniciar a conexão com o Mercado Pago",
+        variant: "destructive",
+      });
+      setMpConnecting(false);
+    }
+  };
+
+  const handleMpDisconnect = async () => {
+    if (!currentTenant) return;
+
+    try {
+      setMpDisconnecting(true);
+      
+      const { error } = await supabase.functions.invoke('mp-disconnect', {
+        body: { tenant_id: currentTenant.id },
+      });
+
+      if (error) throw error;
+      
+      setMpConnected(false);
+      
+      // Reset payment settings in form
+      settingsForm.setValue('allow_online_payment', false);
+      settingsForm.setValue('require_prepayment', false);
+      
+      toast({
+        title: "Mercado Pago desconectado",
+        description: "Sua conta foi desvinculada com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Error disconnecting MP:', error);
+      toast({
+        title: "Erro ao desconectar",
+        description: error.message || "Não foi possível desconectar o Mercado Pago",
+        variant: "destructive",
+      });
+    } finally {
+      setMpDisconnecting(false);
+    }
+  };
 
   const loadTenantData = () => {
     if (!currentTenant) return;
@@ -139,7 +278,7 @@ export default function Settings() {
       slot_duration: settings.slot_duration || 15,
       cancellation_hours: settings.cancellation_hours || 2,
       whatsapp_enabled: settings.whatsapp_enabled || false,
-      email_notifications: settings.email_notifications || true,
+      email_notifications: settings.email_notifications !== false,
       allow_online_payment: settings.allow_online_payment || false,
       require_prepayment: settings.require_prepayment || false,
       prepayment_percentage: settings.prepayment_percentage || 0,
@@ -836,35 +975,127 @@ export default function Settings() {
                 Pagamentos
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              {/* Mercado Pago Connection Status */}
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      mpConnected ? 'bg-emerald-500/10' : 'bg-muted'
+                    }`}>
+                      {mpLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      ) : mpConnected ? (
+                        <CheckCircle className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Mercado Pago</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {mpLoading ? 'Verificando...' : mpConnected ? 'Conta conectada' : 'Não conectado'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {!mpLoading && (
+                    mpConnected ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleMpDisconnect}
+                        disabled={mpDisconnecting}
+                      >
+                        {mpDisconnecting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Desconectando...
+                          </>
+                        ) : (
+                          <>
+                            <Unlink className="h-4 w-4 mr-2" />
+                            Desconectar
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={handleMpConnect}
+                        disabled={mpConnecting}
+                      >
+                        {mpConnecting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Conectando...
+                          </>
+                        ) : (
+                          <>
+                            <Link2 className="h-4 w-4 mr-2" />
+                            Conectar Mercado Pago
+                          </>
+                        )}
+                      </Button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
               <Form {...settingsForm}>
                 <form onSubmit={settingsForm.handleSubmit(handleSettingsSubmit)} className="space-y-6">
-                  <FormField
-                    control={settingsForm.control}
-                    name="allow_online_payment"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center">
-                            <FormLabel className="text-base mr-2">
-                              Pagamento Online
-                            </FormLabel>
-                            <Badge variant="secondary">Em breve</Badge>
+                  <TooltipProvider>
+                    <FormField
+                      control={settingsForm.control}
+                      name="allow_online_payment"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <FormLabel className="text-base">
+                                Pagamento via Site
+                              </FormLabel>
+                              {mpConnected && (
+                                <Badge variant="outline" className="text-emerald-600 border-emerald-600">
+                                  Disponível
+                                </Badge>
+                              )}
+                            </div>
+                            <FormDescription>
+                              Permitir que clientes paguem online pelo site
+                            </FormDescription>
                           </div>
-                          <FormDescription>
-                            Permitir pagamento online via cartão
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                          <FormControl>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={(checked) => {
+                                      field.onChange(checked);
+                                      // If disabling online payment, also disable prepayment
+                                      if (!checked) {
+                                        settingsForm.setValue('require_prepayment', false);
+                                      }
+                                    }}
+                                    disabled={!mpConnected}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {!mpConnected && (
+                                <TooltipContent>
+                                  <p>Conecte sua conta Mercado Pago para ativar</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </TooltipProvider>
 
                   <FormField
                     control={settingsForm.control}
@@ -883,14 +1114,14 @@ export default function Settings() {
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            disabled
+                            disabled={!settingsForm.watch('allow_online_payment')}
                           />
                         </FormControl>
                       </FormItem>
                     )}
                   />
 
-                  {settingsForm.watch("require_prepayment") && (
+                  {settingsForm.watch("allow_online_payment") && (
                     <FormField
                       control={settingsForm.control}
                       name="prepayment_percentage"
@@ -904,11 +1135,10 @@ export default function Settings() {
                               max={100}
                               {...field}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              disabled
                             />
                           </FormControl>
                           <FormDescription>
-                            Percentual do valor total a ser pago antecipadamente
+                            Percentual do valor total a ser pago (0 = valor integral)
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -916,16 +1146,19 @@ export default function Settings() {
                     />
                   )}
 
-                  <div className="rounded-lg bg-muted p-4">
-                    <h4 className="font-medium mb-2">Configurar Gateway de Pagamento</h4>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Para aceitar pagamentos online, você precisa configurar um gateway de pagamento.
-                    </p>
-                    <Button variant="outline" disabled>
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Configurar Pagar.me
-                    </Button>
-                  </div>
+                  {!mpConnected && (
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-800 dark:text-amber-200">Conecte o Mercado Pago</h4>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                            Para aceitar pagamentos online, você precisa conectar sua conta do Mercado Pago.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex justify-end">
                     <Button type="submit" disabled={loading}>
