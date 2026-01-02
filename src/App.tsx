@@ -15,6 +15,7 @@ import Staff from "./pages/Staff";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import BookingPublic from "./pages/BookingPublic";
+import PaymentReturn from "./pages/PaymentReturn";
 import NotFound from "./pages/NotFound";
 import AuthWatcher from "./components/AuthWatcher";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -52,7 +53,10 @@ const App = () => (
             <Route path="settings" element={<Settings />} />
           </Route>
           
+          {/* Public booking routes */}
           <Route path="/:slug" element={<BookingPublic />} />
+          <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

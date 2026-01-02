@@ -1,1 +1,22 @@
 project_id = "iagzodcwctvydmgrwjsy"
+
+[functions.get-available-slots]
+verify_jwt = false
+
+[functions.create-booking]
+verify_jwt = false
+
+[functions.mp-oauth-start]
+verify_jwt = false
+
+[functions.mp-oauth-callback]
+verify_jwt = false
+
+[functions.mp-disconnect]
+verify_jwt = false
+
+[functions.mp-create-checkout]
+verify_jwt = false
+
+[functions.mp-webhook]
+verify_jwt = false

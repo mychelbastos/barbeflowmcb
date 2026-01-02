@@ -18,12 +18,16 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarPlus,
-  Sparkles
+  Sparkles,
+  CreditCard,
+  Banknote
 } from "lucide-react";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import { formatInTimeZone } from "date-fns-tz";
 import { ptBR } from "date-fns/locale";
 import type { DateValue } from "react-aria-components";
+
+type PaymentMethod = 'on_site' | 'online' | null;
 
 const BookingPublic = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -50,6 +54,12 @@ const BookingPublic = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [createdBooking, setCreatedBooking] = useState<any>(null);
+  
+  // Payment related states
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
+  const [allowOnlinePayment, setAllowOnlinePayment] = useState(false);
+  const [requirePrepayment, setRequirePrepayment] = useState(false);
+  const [prepaymentPercentage, setPrepaymentPercentage] = useState(0);
 
   useEffect(() => {
     if (slug) {
@@ -83,6 +93,12 @@ const BookingPublic = () => {
       }
 
       setTenant(tenantData);
+      
+      // Extract payment settings
+      const settings = (tenantData.settings || {}) as Record<string, any>;
+      setAllowOnlinePayment(settings.allow_online_payment || false);
+      setRequirePrepayment(settings.require_prepayment || false);
+      setPrepaymentPercentage(settings.prepayment_percentage || 0);
 
       const [servicesRes, staffRes] = await Promise.all([
         supabase
@@ -216,11 +232,33 @@ const BookingPublic = () => {
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
-    setStep(4);
+    // If online payment is enabled and not required, show payment method selection
+    if (allowOnlinePayment && !requirePrepayment) {
+      setStep(4); // Payment method selection step
+    } else if (allowOnlinePayment && requirePrepayment) {
+      // Skip to contact info, payment is mandatory online
+      setPaymentMethod('online');
+      setStep(5);
+    } else {
+      // No online payment, go directly to contact info
+      setPaymentMethod('on_site');
+      setStep(5);
+    }
+  };
+
+  const handlePaymentMethodSelect = (method: PaymentMethod) => {
+    setPaymentMethod(method);
+    setStep(5); // Go to contact info
   };
 
   const goToPreviousStep = () => {
-    setStep(prev => Math.max(prev - 1, 1));
+    if (step === 5 && allowOnlinePayment && !requirePrepayment) {
+      setStep(4); // Go back to payment method selection
+    } else if (step === 5) {
+      setStep(3); // Go back to time selection
+    } else {
+      setStep(prev => Math.max(prev - 1, 1));
+    }
   };
 
   const resetBooking = () => {
@@ -237,6 +275,7 @@ const BookingPublic = () => {
     setAvailableSlots([]);
     setOccupiedSlots([]);
     setAllTimeSlots([]);
+    setPaymentMethod(null);
     setStep(1);
   };
 
@@ -275,8 +314,27 @@ const BookingPublic = () => {
       if (error) throw error;
 
       if (data.success) {
-        setCreatedBooking(data.booking);
-        setStep(5);
+        const booking = data.booking;
+        
+        // If user chose online payment, create checkout and redirect
+        if (paymentMethod === 'online') {
+          const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('mp-create-checkout', {
+            body: { booking_id: booking.id },
+          });
+
+          if (checkoutError) throw checkoutError;
+
+          if (checkoutData?.checkout_url) {
+            window.location.href = checkoutData.checkout_url;
+            return;
+          } else {
+            throw new Error('URL de checkout não recebida');
+          }
+        }
+        
+        // On-site payment or no payment - show confirmation
+        setCreatedBooking(booking);
+        setStep(6);
         toast({
           title: "Agendamento confirmado!",
           description: "Você receberá uma confirmação em breve.",
@@ -367,22 +425,25 @@ END:VCALENDAR`;
   const selectedServiceData = services.find(s => s.id === selectedService);
   const selectedStaffData = staff.find(s => s.id === selectedStaff);
 
+  // Calculate total steps based on payment settings
+  const totalSteps = allowOnlinePayment && !requirePrepayment ? 5 : 4;
+  
   // Step indicator
   const StepIndicator = () => (
     <div className="flex items-center justify-center gap-2 mb-8">
-      {[1, 2, 3, 4].map((i) => (
+      {Array.from({ length: totalSteps }, (_, i) => i + 1).map((i) => (
         <div key={i} className="flex items-center">
           <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
             step >= i ? 'bg-white' : 'bg-white/20'
           }`} />
-          {i < 4 && <div className={`w-8 h-px mx-1 transition-all ${step > i ? 'bg-white/50' : 'bg-white/10'}`} />}
+          {i < totalSteps && <div className={`w-8 h-px mx-1 transition-all ${step > i ? 'bg-white/50' : 'bg-white/10'}`} />}
         </div>
       ))}
     </div>
   );
 
   // Confirmation Screen
-  if (step === 5) {
+  if (step === 6) {
     const bookingDateTime = formatBookingDateTime(createdBooking);
     
     return (
@@ -663,8 +724,58 @@ END:VCALENDAR`;
           </div>
         )}
 
-        {/* Step 4: Contact Info */}
-        {step === 4 && (
+        {/* Step 4: Payment Method Selection (only if online payment enabled but not required) */}
+        {step === 4 && allowOnlinePayment && !requirePrepayment && (
+          <div className="animate-in fade-in duration-300">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-semibold mb-2">Como deseja pagar?</h2>
+              <p className="text-zinc-500 text-sm">Escolha a forma de pagamento</p>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => handlePaymentMethodSelect('on_site')}
+                className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center">
+                    <Banknote className="h-5 w-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium group-hover:text-white transition-colors">Pagar no local</h3>
+                    <p className="text-zinc-500 text-sm">Pague ao chegar na barbearia</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handlePaymentMethodSelect('online')}
+                className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium group-hover:text-white transition-colors">Pagar online</h3>
+                    <p className="text-zinc-500 text-sm">Pague agora via Mercado Pago</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            
+            <button
+              onClick={goToPreviousStep}
+              className="flex items-center gap-2 text-zinc-500 hover:text-white mt-8 mx-auto transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </button>
+          </div>
+        )}
+
+        {/* Step 5: Contact Info */}
+        {step === 5 && (
           <div className="animate-in fade-in duration-300">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold mb-2">Seus dados</h2>
@@ -696,6 +807,21 @@ END:VCALENDAR`;
                   R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}
                 </span>
               </div>
+              {paymentMethod && (
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800 text-sm">
+                  {paymentMethod === 'online' ? (
+                    <>
+                      <CreditCard className="h-4 w-4 text-emerald-400" />
+                      <span className="text-zinc-400">Pagamento online</span>
+                    </>
+                  ) : (
+                    <>
+                      <Banknote className="h-4 w-4 text-amber-400" />
+                      <span className="text-zinc-400">Pagamento no local</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
