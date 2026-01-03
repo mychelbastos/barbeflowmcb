@@ -1,13 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { initMercadoPago, CardPayment } from '@mercadopago/sdk-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, AlertCircle, Check } from 'lucide-react';
-
-declare global {
-  interface Window {
-    MercadoPago: any;
-  }
-}
 
 interface PayerInfo {
   email: string;
@@ -42,25 +37,22 @@ export const MercadoPagoCheckout = ({
 }: MercadoPagoCheckoutProps) => {
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [cardFormInstance, setCardFormInstance] = useState<any>(null);
-  const cardFormRef = useRef<HTMLDivElement>(null);
-  const mpInstanceRef = useRef<any>(null);
+  const [sdkReady, setSdkReady] = useState(false);
 
   useEffect(() => {
-    loadMercadoPagoSDK();
+    loadPublicKey();
+    
     return () => {
-      // Cleanup
-      if (cardFormInstance) {
-        try {
-          cardFormInstance.unmount();
-        } catch (e) {
-          console.log('Error unmounting card form:', e);
-        }
+      // Cleanup: unmount brick when component unmounts
+      try {
+        (window as any)?.cardPaymentBrickController?.unmount();
+      } catch (e) {
+        console.log('Cleanup error:', e);
       }
     };
   }, []);
 
-  const loadMercadoPagoSDK = async () => {
+  const loadPublicKey = async () => {
     setStatus('loading');
 
     try {
@@ -73,28 +65,14 @@ export const MercadoPagoCheckout = ({
         throw new Error(keyData?.error || 'Não foi possível obter a chave do Mercado Pago');
       }
 
-      const publicKey = keyData.public_key;
-      console.log('Got public key, loading SDK...');
+      console.log('Got public key, initializing SDK...');
 
-      // Load SDK if not already loaded
-      if (!window.MercadoPago) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://sdk.mercadopago.com/js/v2';
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load Mercado Pago SDK'));
-          document.body.appendChild(script);
-        });
-      }
-
-      // Initialize MP
-      const mp = new window.MercadoPago(publicKey, {
-        locale: 'pt-BR',
-      });
-      mpInstanceRef.current = mp;
-
-      // Create card form
-      await initializeCardForm(mp);
+      // Initialize the SDK with the public key
+      initMercadoPago(keyData.public_key, { locale: 'pt-BR' });
+      
+      setSdkReady(true);
+      setStatus('ready');
+      console.log('SDK initialized successfully');
 
     } catch (error: any) {
       console.error('Error loading MP SDK:', error);
@@ -103,109 +81,22 @@ export const MercadoPagoCheckout = ({
     }
   };
 
-  const initializeCardForm = async (mp: any) => {
-    if (!cardFormRef.current) return;
-
-    try {
-      const cardForm = mp.cardForm({
-        amount: String(amount),
-        iframe: true,
-        form: {
-          id: 'mp-card-form',
-          cardNumber: {
-            id: 'mp-card-number',
-            placeholder: 'Número do cartão',
-          },
-          expirationDate: {
-            id: 'mp-expiration-date',
-            placeholder: 'MM/AA',
-          },
-          securityCode: {
-            id: 'mp-security-code',
-            placeholder: 'CVV',
-          },
-          cardholderName: {
-            id: 'mp-cardholder-name',
-            placeholder: 'Nome no cartão',
-          },
-          installments: {
-            id: 'mp-installments',
-            placeholder: 'Parcelas',
-          },
-          identificationType: {
-            id: 'mp-identification-type',
-          },
-          identificationNumber: {
-            id: 'mp-identification-number',
-            placeholder: 'CPF',
-          },
-          issuer: {
-            id: 'mp-issuer',
-            placeholder: 'Banco emissor',
-          },
-        },
-        callbacks: {
-          onFormMounted: (error: any) => {
-            if (error) {
-              console.error('Form mount error:', error);
-              setErrorMessage('Erro ao montar formulário de pagamento');
-              setStatus('error');
-            } else {
-              console.log('Card form mounted successfully');
-              setStatus('ready');
-            }
-          },
-          onSubmit: (event: any) => {
-            event.preventDefault();
-            handlePayment();
-          },
-          onFetching: (resource: string) => {
-            console.log('Fetching:', resource);
-          },
-          onError: (error: any) => {
-            console.error('Card form error:', error);
-          },
-        },
-      });
-
-      setCardFormInstance(cardForm);
-    } catch (error: any) {
-      console.error('Error initializing card form:', error);
-      setErrorMessage('Erro ao inicializar formulário');
-      setStatus('error');
-    }
-  };
-
-  const handlePayment = async () => {
-    if (!cardFormInstance) {
-      setErrorMessage('Formulário não está pronto');
-      return;
-    }
-
+  const handlePaymentSubmit = async (formData: any) => {
+    console.log('Payment form submitted:', formData);
     setStatus('processing');
     setErrorMessage('');
 
     try {
-      const cardFormData = cardFormInstance.getCardFormData();
-      console.log('Card form data:', cardFormData);
-
-      if (!cardFormData.token) {
-        throw new Error('Não foi possível tokenizar o cartão. Verifique os dados.');
-      }
-
-      // Process payment
+      // Process payment via our backend
       const { data, error } = await supabase.functions.invoke('mp-process-payment', {
         body: {
           booking_id: bookingId,
-          token: cardFormData.token,
-          payment_method_id: cardFormData.paymentMethodId,
-          installments: parseInt(cardFormData.installments) || 1,
+          token: formData.token,
+          payment_method_id: formData.payment_method_id,
+          installments: formData.installments || 1,
           payer: {
-            email: payer.email,
-            identification: cardFormData.identificationType && cardFormData.identificationNumber ? {
-              type: cardFormData.identificationType,
-              number: cardFormData.identificationNumber,
-            } : undefined,
+            email: formData.payer?.email || payer.email,
+            identification: formData.payer?.identification,
           },
         },
       });
@@ -232,6 +123,12 @@ export const MercadoPagoCheckout = ({
     }
   };
 
+  const handlePaymentError = (error: any) => {
+    console.error('Card Payment Brick error:', error);
+    setErrorMessage('Erro no formulário de pagamento');
+    setStatus('error');
+  };
+
   const getStatusMessage = (status: string, statusDetail?: string): string => {
     const messages: Record<string, string> = {
       cc_rejected_bad_filled_card_number: 'Número do cartão incorreto',
@@ -255,8 +152,9 @@ export const MercadoPagoCheckout = ({
 
   const retryPayment = () => {
     setErrorMessage('');
+    setSdkReady(false);
     setStatus('loading');
-    loadMercadoPagoSDK();
+    loadPublicKey();
   };
 
   // Success state
@@ -296,7 +194,7 @@ export const MercadoPagoCheckout = ({
   }
 
   // Error state with retry
-  if (status === 'error' && !cardFormInstance) {
+  if (status === 'error' && !sdkReady) {
     return (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -324,109 +222,66 @@ export const MercadoPagoCheckout = ({
         </span>
       </div>
 
-      {/* Card Form */}
-      <form id="mp-card-form" onSubmit={(e) => { e.preventDefault(); handlePayment(); }}>
-        <div className="space-y-3" ref={cardFormRef}>
-          {/* Card Number */}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Número do cartão</label>
-            <div 
-              id="mp-card-number" 
-              className="h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4"
-            />
-          </div>
-
-          {/* Expiration + CVV */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Validade</label>
-              <div 
-                id="mp-expiration-date" 
-                className="h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">CVV</label>
-              <div 
-                id="mp-security-code" 
-                className="h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4"
-              />
-            </div>
-          </div>
-
-          {/* Cardholder name */}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Nome no cartão</label>
-            <input 
-              id="mp-cardholder-name"
-              type="text"
-              className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white placeholder:text-zinc-600 focus:border-zinc-600 focus:outline-none"
-              placeholder="Como está no cartão"
-            />
-          </div>
-
-          {/* ID Type and Number */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-2">Tipo</label>
-              <select 
-                id="mp-identification-type"
-                className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white focus:border-zinc-600 focus:outline-none"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-zinc-400 mb-2">CPF</label>
-              <input 
-                id="mp-identification-number"
-                type="text"
-                className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white placeholder:text-zinc-600 focus:border-zinc-600 focus:outline-none"
-                placeholder="000.000.000-00"
-              />
-            </div>
-          </div>
-
-          {/* Installments */}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">Parcelas</label>
-            <select 
-              id="mp-installments"
-              className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white focus:border-zinc-600 focus:outline-none"
-            />
-          </div>
-
-          {/* Hidden issuer */}
-          <select id="mp-issuer" className="hidden" />
-
-          {/* Error message */}
-          {errorMessage && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <p className="text-sm text-red-400 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                {errorMessage}
-              </p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            disabled={status === 'processing' || status !== 'ready'}
-            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50 mt-4"
-          >
-            {status === 'processing' ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Processando...
-              </>
-            ) : (
-              <>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pagar R$ {amount.toFixed(2)}
-              </>
-            )}
-          </Button>
+      {/* Error message */}
+      {errorMessage && status === 'error' && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <p className="text-sm text-red-400 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            {errorMessage}
+          </p>
         </div>
-      </form>
+      )}
+
+      {/* Card Payment Brick */}
+      {sdkReady && (
+        <div className="mp-checkout-container">
+          <CardPayment
+            initialization={{
+              amount: amount,
+              payer: {
+                email: payer.email,
+              },
+            }}
+            customization={{
+              paymentMethods: {
+                minInstallments: 1,
+                maxInstallments: 12,
+              },
+              visual: {
+                style: {
+                  theme: 'dark',
+                  customVariables: {
+                    baseColor: '#18181b',
+                    fontSizeExtraSmall: '12px',
+                    fontSizeSmall: '14px',
+                    fontSizeMedium: '16px',
+                    fontSizeLarge: '18px',
+                    borderRadiusMedium: '12px',
+                    borderRadiusLarge: '16px',
+                  },
+                },
+                hideFormTitle: true,
+                hidePaymentButton: false,
+              },
+            }}
+            onSubmit={handlePaymentSubmit}
+            onError={handlePaymentError}
+            onReady={() => {
+              console.log('CardPayment Brick ready');
+            }}
+          />
+        </div>
+      )}
+
+      {/* Processing overlay */}
+      {status === 'processing' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 p-6 rounded-xl text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
+            <p className="text-white">Processando pagamento...</p>
+          </div>
+        </div>
+      )}
 
       {/* Security badge */}
       <div className="flex items-center justify-center gap-2 pt-2">
