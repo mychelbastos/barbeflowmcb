@@ -157,18 +157,67 @@ serve(async (req) => {
       console.error('Error updating payment:', updatePaymentError);
     }
 
-    // If payment is now paid, update booking and create cash entry
+    // If payment is now paid, check if booking is still valid and update accordingly
     if (newStatus === 'paid' && previousStatus !== 'paid') {
-      console.log('Payment approved, updating booking and creating cash entry');
-
-      // Update booking status to confirmed
-      const { error: bookingError } = await supabase
+      console.log('Payment approved, checking booking status');
+      
+      // Get the current booking status
+      const { data: currentBooking, error: bookingFetchError } = await supabase
         .from('bookings')
-        .update({ status: 'confirmed' })
-        .eq('id', payment.booking_id);
+        .select('id, status, starts_at, ends_at, staff_id, tenant_id')
+        .eq('id', payment.booking_id)
+        .single();
+      
+      if (bookingFetchError || !currentBooking) {
+        console.error('Error fetching booking:', bookingFetchError);
+      } else if (currentBooking.status === 'expired') {
+        // Booking expired - need to check if time slot is still available
+        console.log('Booking was expired, checking availability');
+        
+        const { data: conflictingBookings } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('tenant_id', currentBooking.tenant_id)
+          .eq('staff_id', currentBooking.staff_id)
+          .in('status', ['confirmed', 'pending', 'pending_payment', 'completed'])
+          .or(`and(starts_at.lt.${currentBooking.ends_at},ends_at.gt.${currentBooking.starts_at})`);
+        
+        if (conflictingBookings && conflictingBookings.length > 0) {
+          // Time slot is no longer available - refund would be needed
+          console.log('Time slot no longer available, booking cannot be restored');
+          // Update payment status to indicate issue
+          await supabase
+            .from('payments')
+            .update({ 
+              status: 'refund_required',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', paymentId);
+          
+          // Note: Actual refund would need to be handled separately
+        } else {
+          // Time slot still available - restore the booking
+          console.log('Time slot available, restoring booking');
+          const { error: bookingError } = await supabase
+            .from('bookings')
+            .update({ status: 'confirmed' })
+            .eq('id', payment.booking_id);
 
-      if (bookingError) {
-        console.error('Error updating booking:', bookingError);
+          if (bookingError) {
+            console.error('Error updating booking:', bookingError);
+          }
+        }
+      } else {
+        // Normal flow - booking is pending_payment, confirm it
+        console.log('Confirming booking');
+        const { error: bookingError } = await supabase
+          .from('bookings')
+          .update({ status: 'confirmed' })
+          .eq('id', payment.booking_id);
+
+        if (bookingError) {
+          console.error('Error updating booking:', bookingError);
+        }
       }
 
       // Check if cash entry already exists for this booking (idempotency)

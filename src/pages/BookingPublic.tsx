@@ -309,6 +309,7 @@ const BookingPublic = () => {
           customer_email: customerEmail || undefined,
           starts_at: startsAt.toISOString(),
           notes: notes || undefined,
+          payment_method: paymentMethod === 'online' ? 'online' : 'onsite',
         },
       });
 
