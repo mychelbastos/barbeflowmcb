@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.mp-process-payment]
 verify_jwt = false
+
+[functions.expire-pending-bookings]
+verify_jwt = false

@@ -179,7 +179,7 @@ serve(async (req) => {
       .in('staff_id', staffIds)
       .lte('starts_at', dayEndUTC.toISOString())
       .gte('ends_at', dayStartUTC.toISOString())
-      .in('status', ['confirmed', 'pending', 'completed']);
+      .in('status', ['confirmed', 'pending', 'pending_payment', 'completed']);
 
     if (bookingsError) {
       console.error('Error fetching bookings:', bookingsError);

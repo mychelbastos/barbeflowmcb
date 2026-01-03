@@ -34,6 +34,7 @@ interface CreateBookingRequest {
   starts_at: string;
   ends_at?: string;
   notes?: string;
+  payment_method?: 'online' | 'onsite'; // New: indicates if online payment is selected
 }
 
 interface ErrorResponse {
@@ -158,7 +159,7 @@ serve(async (req) => {
       );
     }
 
-    const { slug, service_id, staff_id, customer_name, customer_phone, customer_email, starts_at, notes } = payload;
+    const { slug, service_id, staff_id, customer_name, customer_phone, customer_email, starts_at, notes, payment_method } = payload;
 
     // 1. Resolve tenant by slug
     console.log('Resolving tenant by slug:', slug);
@@ -282,13 +283,13 @@ serve(async (req) => {
 
     console.log('Checking conflicts with buffer:', { bufferTime, bufferedStart, bufferedEnd });
 
-    // Check existing bookings
+    // Check existing bookings - exclude expired bookings from conflict check
     const { data: conflictingBookings, error: conflictError } = await supabase
       .from('bookings')
       .select('id, starts_at, ends_at, service:services(name), customer:customers(name)')
       .eq('tenant_id', tenant_id)
       .eq('staff_id', finalStaffId)
-      .in('status', ['confirmed', 'pending', 'completed'])
+      .in('status', ['confirmed', 'pending', 'pending_payment', 'completed'])
       .or(`and(starts_at.lt.${bufferedEnd.toISOString()},ends_at.gt.${bufferedStart.toISOString()})`);
 
     if (conflictError) {
@@ -401,6 +402,11 @@ serve(async (req) => {
     }
 
     // 7. Create the booking
+    // Status depends on payment method:
+    // - 'pending_payment' for online payment (will be confirmed by webhook when paid)
+    // - 'confirmed' for on-site payment or no payment required
+    const bookingStatus = payment_method === 'online' ? 'pending_payment' : 'confirmed';
+    
     console.log('Creating booking with data:', {
       tenant_id,
       service_id,
@@ -408,9 +414,10 @@ serve(async (req) => {
       customer_id,
       starts_at,
       ends_at,
-      status: 'confirmed',
+      status: bookingStatus,
       notes: notes || null,
-      created_via: 'public'
+      created_via: 'public',
+      payment_method: payment_method || 'onsite'
     });
 
     const { data: booking, error: bookingError } = await supabase
@@ -422,7 +429,7 @@ serve(async (req) => {
         customer_id,
         starts_at,
         ends_at,
-        status: 'confirmed',
+        status: bookingStatus,
         notes: notes || null,
         created_via: 'public'
       })
