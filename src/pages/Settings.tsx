@@ -789,7 +789,7 @@ export default function Settings() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Fuso Horário</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue />
@@ -816,7 +816,7 @@ export default function Settings() {
                           <FormLabel>Duração dos Slots (minutos)</FormLabel>
                           <Select 
                             onValueChange={(value) => field.onChange(parseInt(value))} 
-                            defaultValue={field.value.toString()}
+                            value={field.value.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
