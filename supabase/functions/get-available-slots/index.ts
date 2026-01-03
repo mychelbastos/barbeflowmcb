@@ -304,12 +304,21 @@ serve(async (req) => {
             const bookingStartUTC = new Date(booking.starts_at);
             const bookingEndUTC = new Date(booking.ends_at);
             
-            // Add buffer time to booking
-            const bufferedStartUTC = new Date(bookingStartUTC.getTime() - (bufferTime * 60 * 1000));
-            const bufferedEndUTC = new Date(bookingEndUTC.getTime() + (bufferTime * 60 * 1000));
+            // The new slot cannot:
+            // 1. Start before the existing booking ends + buffer
+            // 2. End after the existing booking starts - buffer
+            // In other words: [slotStart, slotEnd] must not overlap with [bookingStart - buffer, bookingEnd + buffer]
+            // But actually we need to think about it differently:
+            // - A new slot ending at slotEndUTC must end at least bufferTime before bookingStartUTC
+            // - A new slot starting at slotStartUTC must start at least bufferTime after bookingEndUTC
+            // So: conflict if NOT (slotEndUTC + buffer <= bookingStartUTC OR slotStartUTC >= bookingEndUTC + buffer)
+            // Simplified: conflict if slotEndUTC > bookingStartUTC - buffer AND slotStartUTC < bookingEndUTC + buffer
             
-            // Check if slot overlaps with buffered booking
-            if (slotStartUTC < bufferedEndUTC && slotEndUTC > bufferedStartUTC) {
+            const bookingStartWithBuffer = new Date(bookingStartUTC.getTime() - (bufferTime * 60 * 1000));
+            const bookingEndWithBuffer = new Date(bookingEndUTC.getTime() + (bufferTime * 60 * 1000));
+            
+            // Check if this new slot overlaps with the buffered booking period
+            if (slotStartUTC < bookingEndWithBuffer && slotEndUTC > bookingStartWithBuffer) {
               isAvailable = false;
               const bookingLocalTime = utcToLocalTime(bookingStartUTC, timezoneOffset);
               conflictReason = `Agendado para ${booking.customer?.name || 'Cliente'} às ${bookingLocalTime}`;
