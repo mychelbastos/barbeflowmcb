@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.expire-pending-bookings]
 verify_jwt = false
+
+[functions.send-whatsapp-notification]
+verify_jwt = false

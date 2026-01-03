@@ -217,6 +217,31 @@ serve(async (req) => {
 
         if (bookingError) {
           console.error('Error updating booking:', bookingError);
+        } else {
+          // Send WhatsApp notification for payment received
+          try {
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+            const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+              },
+              body: JSON.stringify({
+                type: 'payment_received',
+                booking_id: payment.booking_id,
+                tenant_id: payment.tenant_id,
+              }),
+            });
+            
+            if (!notificationResponse.ok) {
+              console.error('Failed to send WhatsApp notification:', await notificationResponse.text());
+            } else {
+              console.log('WhatsApp notification sent for payment confirmation');
+            }
+          } catch (notifError) {
+            console.error('Error sending WhatsApp notification:', notifError);
+          }
         }
       }
 

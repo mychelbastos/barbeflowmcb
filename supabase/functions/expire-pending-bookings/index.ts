@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,6 +7,32 @@ const corsHeaders = {
 };
 
 const EXPIRATION_MINUTES = 5;
+
+// Helper function to send WhatsApp notification
+async function sendWhatsAppNotification(supabaseUrl: string, anonKey: string, bookingId: string, tenantId: string) {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({
+        type: 'booking_expired',
+        booking_id: bookingId,
+        tenant_id: tenantId,
+      }),
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to send expiration notification for booking ${bookingId}:`, await response.text());
+    } else {
+      console.log(`Expiration notification sent for booking ${bookingId}`);
+    }
+  } catch (error) {
+    console.error(`Error sending expiration notification for booking ${bookingId}:`, error);
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -19,6 +45,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Calculate cutoff time (5 minutes ago)
@@ -83,6 +110,11 @@ serve(async (req) => {
     if (paymentUpdateError) {
       console.error('Error updating payments to expired:', paymentUpdateError);
       // Don't fail the whole operation, just log
+    }
+
+    // Send WhatsApp notifications for each expired booking
+    for (const booking of expiredBookings) {
+      await sendWhatsAppNotification(supabaseUrl, anonKey, booking.id, booking.tenant_id);
     }
 
     console.log(`Successfully expired ${expiredBookings.length} booking(s):`, bookingIds);

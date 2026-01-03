@@ -458,6 +458,35 @@ serve(async (req) => {
       starts_at: booking.starts_at
     });
 
+    // Send WhatsApp notification for confirmed bookings (onsite payment)
+    // For online payment, notification will be sent after payment confirmation
+    if (bookingStatus === 'confirmed') {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const notificationResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          },
+          body: JSON.stringify({
+            type: 'booking_confirmed',
+            booking_id: booking.id,
+            tenant_id: tenant_id,
+          }),
+        });
+        
+        if (!notificationResponse.ok) {
+          console.error('Failed to send WhatsApp notification:', await notificationResponse.text());
+        } else {
+          console.log('WhatsApp notification sent successfully');
+        }
+      } catch (notifError) {
+        // Don't fail the booking if notification fails
+        console.error('Error sending WhatsApp notification:', notifError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
