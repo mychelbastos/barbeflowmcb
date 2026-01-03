@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { initMercadoPago, CardPayment } from '@mercadopago/sdk-react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, AlertCircle, Check } from 'lucide-react';
@@ -25,6 +24,12 @@ interface MercadoPagoCheckoutProps {
 
 type PaymentStatus = 'idle' | 'loading' | 'ready' | 'processing' | 'success' | 'error' | 'pending';
 
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
+
 export const MercadoPagoCheckout = ({
   bookingId,
   tenantSlug,
@@ -37,25 +42,32 @@ export const MercadoPagoCheckout = ({
 }: MercadoPagoCheckoutProps) => {
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [sdkReady, setSdkReady] = useState(false);
+  const brickContainerRef = useRef<HTMLDivElement>(null);
+  const brickControllerRef = useRef<any>(null);
 
   useEffect(() => {
-    loadPublicKey();
-    
+    loadMercadoPago();
+
     return () => {
-      // Cleanup: unmount brick when component unmounts
-      try {
-        (window as any)?.cardPaymentBrickController?.unmount();
-      } catch (e) {
-        console.log('Cleanup error:', e);
+      if (brickControllerRef.current) {
+        try {
+          brickControllerRef.current.unmount();
+        } catch (e) {
+          console.log('Cleanup error:', e);
+        }
       }
     };
   }, []);
 
-  const loadPublicKey = async () => {
+  const loadMercadoPago = async () => {
     setStatus('loading');
 
     try {
+      // Load SDK script if not already loaded
+      if (!window.MercadoPago) {
+        await loadScript('https://sdk.mercadopago.com/js/v2');
+      }
+
       // Get public key from backend
       const { data: keyData, error: keyError } = await supabase.functions.invoke('mp-get-public-key', {
         body: { slug: tenantSlug },
@@ -65,14 +77,59 @@ export const MercadoPagoCheckout = ({
         throw new Error(keyData?.error || 'Não foi possível obter a chave do Mercado Pago');
       }
 
-      console.log('Got public key, initializing SDK...');
+      console.log('Got public key, initializing bricks...');
 
-      // Initialize the SDK with the public key
-      initMercadoPago(keyData.public_key, { locale: 'pt-BR' });
+      // Initialize MercadoPago
+      const mp = new window.MercadoPago(keyData.public_key, {
+        locale: 'pt-BR',
+      });
+
+      // Create CardPayment brick
+      const bricksBuilder = mp.bricks();
       
-      setSdkReady(true);
-      setStatus('ready');
-      console.log('SDK initialized successfully');
+      brickControllerRef.current = await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', {
+        initialization: {
+          amount: amount,
+          payer: {
+            email: payer.email,
+          },
+        },
+        customization: {
+          paymentMethods: {
+            minInstallments: 1,
+            maxInstallments: 12,
+          },
+          visual: {
+            style: {
+              theme: 'dark',
+              customVariables: {
+                baseColor: '#18181b',
+                fontSizeExtraSmall: '12px',
+                fontSizeSmall: '14px',
+                fontSizeMedium: '16px',
+                fontSizeLarge: '18px',
+                borderRadiusMedium: '12px',
+                borderRadiusLarge: '16px',
+              },
+            },
+            hideFormTitle: true,
+          },
+        },
+        callbacks: {
+          onReady: () => {
+            console.log('CardPayment Brick ready');
+            setStatus('ready');
+          },
+          onSubmit: async (formData: any) => {
+            console.log('Payment form submitted:', formData);
+            await handlePaymentSubmit(formData);
+          },
+          onError: (error: any) => {
+            console.error('CardPayment Brick error:', error);
+            setErrorMessage('Erro no formulário de pagamento');
+          },
+        },
+      });
 
     } catch (error: any) {
       console.error('Error loading MP SDK:', error);
@@ -81,13 +138,25 @@ export const MercadoPagoCheckout = ({
     }
   };
 
+  const loadScript = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load MercadoPago SDK'));
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePaymentSubmit = async (formData: any) => {
-    console.log('Payment form submitted:', formData);
     setStatus('processing');
     setErrorMessage('');
 
     try {
-      // Process payment via our backend
       const { data, error } = await supabase.functions.invoke('mp-process-payment', {
         body: {
           booking_id: bookingId,
@@ -123,12 +192,6 @@ export const MercadoPagoCheckout = ({
     }
   };
 
-  const handlePaymentError = (error: any) => {
-    console.error('Card Payment Brick error:', error);
-    setErrorMessage('Erro no formulário de pagamento');
-    setStatus('error');
-  };
-
   const getStatusMessage = (status: string, statusDetail?: string): string => {
     const messages: Record<string, string> = {
       cc_rejected_bad_filled_card_number: 'Número do cartão incorreto',
@@ -152,9 +215,13 @@ export const MercadoPagoCheckout = ({
 
   const retryPayment = () => {
     setErrorMessage('');
-    setSdkReady(false);
+    if (brickControllerRef.current) {
+      try {
+        brickControllerRef.current.unmount();
+      } catch (e) {}
+    }
     setStatus('loading');
-    loadPublicKey();
+    loadMercadoPago();
   };
 
   // Success state
@@ -165,7 +232,7 @@ export const MercadoPagoCheckout = ({
           <Check className="h-8 w-8 text-emerald-400" />
         </div>
         <h3 className="text-lg font-semibold mb-2">Pagamento aprovado!</h3>
-        <p className="text-zinc-400 text-sm">Seu agendamento foi confirmado.</p>
+        <p className="text-muted-foreground text-sm">Seu agendamento foi confirmado.</p>
       </div>
     );
   }
@@ -178,7 +245,7 @@ export const MercadoPagoCheckout = ({
           <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
         </div>
         <h3 className="text-lg font-semibold mb-2">Pagamento em processamento</h3>
-        <p className="text-zinc-400 text-sm">Aguardando confirmação do pagamento.</p>
+        <p className="text-muted-foreground text-sm">Aguardando confirmação do pagamento.</p>
       </div>
     );
   }
@@ -187,22 +254,22 @@ export const MercadoPagoCheckout = ({
   if (status === 'loading' || status === 'idle') {
     return (
       <div className="flex flex-col items-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-500 mb-4" />
-        <p className="text-zinc-400 text-sm">Carregando pagamento seguro...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+        <p className="text-muted-foreground text-sm">Carregando pagamento seguro...</p>
       </div>
     );
   }
 
-  // Error state with retry
-  if (status === 'error' && !sdkReady) {
+  // Error state with retry (before SDK loaded)
+  if (status === 'error' && !brickControllerRef.current) {
     return (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="h-8 w-8 text-red-400" />
         </div>
         <h3 className="text-lg font-semibold mb-2">Erro ao carregar</h3>
-        <p className="text-zinc-400 text-sm mb-4">{errorMessage}</p>
-        <Button onClick={retryPayment} variant="outline" className="border-zinc-700">
+        <p className="text-muted-foreground text-sm mb-4">{errorMessage}</p>
+        <Button onClick={retryPayment} variant="outline">
           Tentar novamente
         </Button>
       </div>
@@ -212,10 +279,10 @@ export const MercadoPagoCheckout = ({
   return (
     <div className="space-y-4">
       {/* Payment info */}
-      <div className="flex items-center justify-between p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+      <div className="flex items-center justify-between p-3 bg-secondary/50 border border-border rounded-xl">
         <div className="flex items-center gap-3">
-          <CreditCard className="h-5 w-5 text-zinc-400" />
-          <span className="text-sm text-zinc-400">{serviceName}</span>
+          <CreditCard className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{serviceName}</span>
         </div>
         <span className="font-semibold text-emerald-400">
           R$ {amount.toFixed(2)}
@@ -232,63 +299,29 @@ export const MercadoPagoCheckout = ({
         </div>
       )}
 
-      {/* Card Payment Brick */}
-      {sdkReady && (
-        <div className="mp-checkout-container">
-          <CardPayment
-            initialization={{
-              amount: amount,
-              payer: {
-                email: payer.email,
-              },
-            }}
-            customization={{
-              paymentMethods: {
-                minInstallments: 1,
-                maxInstallments: 12,
-              },
-              visual: {
-                style: {
-                  theme: 'dark',
-                  customVariables: {
-                    baseColor: '#18181b',
-                    fontSizeExtraSmall: '12px',
-                    fontSizeSmall: '14px',
-                    fontSizeMedium: '16px',
-                    fontSizeLarge: '18px',
-                    borderRadiusMedium: '12px',
-                    borderRadiusLarge: '16px',
-                  },
-                },
-                hideFormTitle: true,
-                hidePaymentButton: false,
-              },
-            }}
-            onSubmit={handlePaymentSubmit}
-            onError={handlePaymentError}
-            onReady={() => {
-              console.log('CardPayment Brick ready');
-            }}
-          />
-        </div>
-      )}
+      {/* Card Payment Brick container */}
+      <div 
+        id="cardPaymentBrick_container" 
+        ref={brickContainerRef}
+        className="mp-checkout-container"
+      />
 
       {/* Processing overlay */}
       {status === 'processing' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 p-6 rounded-xl text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-white mx-auto mb-4" />
-            <p className="text-white">Processando pagamento...</p>
+          <div className="bg-card p-6 rounded-xl text-center border border-border">
+            <Loader2 className="h-8 w-8 animate-spin text-foreground mx-auto mb-4" />
+            <p className="text-foreground">Processando pagamento...</p>
           </div>
         </div>
       )}
 
       {/* Security badge */}
       <div className="flex items-center justify-center gap-2 pt-2">
-        <svg className="h-4 w-4 text-zinc-500" viewBox="0 0 24 24" fill="currentColor">
+        <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
         </svg>
-        <span className="text-xs text-zinc-500">Pagamento seguro via Mercado Pago</span>
+        <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
       </div>
     </div>
   );
