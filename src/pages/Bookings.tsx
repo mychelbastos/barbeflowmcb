@@ -40,7 +40,10 @@ import {
   Plus,
   Edit,
   CheckCircle,
-  XCircle
+  XCircle,
+  CreditCard,
+  Banknote,
+  AlertCircle
 } from "lucide-react";
 import { format, parseISO, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -76,6 +79,7 @@ export default function Bookings() {
     try {
       setLoading(true);
       
+      // Load bookings with payment info
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -89,7 +93,31 @@ export default function Bookings() {
 
       if (error) throw error;
 
-      setBookings(data || []);
+      // Load payments for these bookings
+      const bookingIds = (data || []).map(b => b.id);
+      let paymentsMap: Record<string, any> = {};
+      
+      if (bookingIds.length > 0) {
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('*')
+          .in('booking_id', bookingIds);
+        
+        if (payments) {
+          paymentsMap = payments.reduce((acc, p) => {
+            acc[p.booking_id] = p;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
+      // Merge payments into bookings
+      const bookingsWithPayments = (data || []).map(booking => ({
+        ...booking,
+        payment: paymentsMap[booking.id] || null,
+      }));
+
+      setBookings(bookingsWithPayments);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -159,6 +187,7 @@ export default function Bookings() {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       confirmed: 'Confirmado',
+      pending: 'Aguardando Pagamento',
       cancelled: 'Cancelado',
       completed: 'Concluído',
       no_show: 'Faltou'
@@ -167,13 +196,34 @@ export default function Bookings() {
   };
 
   const getStatusVariant = (status: string) => {
-    const variants: Record<string, "default" | "destructive" | "secondary"> = {
+    const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
       confirmed: 'default',
+      pending: 'outline',
       cancelled: 'destructive',
       completed: 'secondary',
       no_show: 'destructive'
     };
     return variants[status] || 'secondary';
+  };
+
+  const getPaymentStatusLabel = (payment: any) => {
+    if (!payment) return 'Não requer';
+    const labels: Record<string, string> = {
+      paid: 'Pago',
+      pending: 'Pendente',
+      failed: 'Falhou',
+    };
+    return labels[payment.status] || payment.status;
+  };
+
+  const getPaymentStatusVariant = (payment: any) => {
+    if (!payment) return 'secondary';
+    const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
+      paid: 'default',
+      pending: 'outline',
+      failed: 'destructive',
+    };
+    return variants[payment.status] || 'secondary';
   };
 
   if (tenantLoading || loading) {
@@ -242,6 +292,7 @@ export default function Bookings() {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="confirmed">Confirmado</SelectItem>
+                  <SelectItem value="pending">Aguardando Pagamento</SelectItem>
                   <SelectItem value="completed">Concluído</SelectItem>
                   <SelectItem value="cancelled">Cancelado</SelectItem>
                   <SelectItem value="no_show">Faltou</SelectItem>
@@ -290,6 +341,7 @@ export default function Bookings() {
                 <TableHead>Profissional</TableHead>
                 <TableHead>Data/Hora</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Pagamento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -297,7 +349,7 @@ export default function Bookings() {
             <TableBody>
               {filteredBookings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nenhum agendamento encontrado
                   </TableCell>
                 </TableRow>
@@ -354,6 +406,31 @@ export default function Bookings() {
                       <span className="font-medium text-success">
                         R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {booking.payment ? (
+                          <>
+                            {booking.payment.status === 'paid' && (
+                              <CreditCard className="h-4 w-4 text-emerald-500" />
+                            )}
+                            {booking.payment.status === 'pending' && (
+                              <AlertCircle className="h-4 w-4 text-amber-500" />
+                            )}
+                            {booking.payment.status === 'failed' && (
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            )}
+                            <Badge variant={getPaymentStatusVariant(booking.payment)}>
+                              {getPaymentStatusLabel(booking.payment)}
+                            </Badge>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Banknote className="h-4 w-4" />
+                            <span className="text-sm">No local</span>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(booking.status)}>
@@ -452,12 +529,40 @@ export default function Bookings() {
                 </div>
               </div>
               
-              <div>
-                <Label className="text-sm font-medium">Status</Label>
-                <div className="mt-1">
-                  <Badge variant={getStatusVariant(selectedBooking.status)}>
-                    {getStatusLabel(selectedBooking.status)}
-                  </Badge>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <div className="mt-1">
+                    <Badge variant={getStatusVariant(selectedBooking.status)}>
+                      {getStatusLabel(selectedBooking.status)}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Pagamento</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    {selectedBooking.payment ? (
+                      <>
+                        {selectedBooking.payment.status === 'paid' && (
+                          <CreditCard className="h-4 w-4 text-emerald-500" />
+                        )}
+                        {selectedBooking.payment.status === 'pending' && (
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                        )}
+                        {selectedBooking.payment.status === 'failed' && (
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        )}
+                        <Badge variant={getPaymentStatusVariant(selectedBooking.payment)}>
+                          {getPaymentStatusLabel(selectedBooking.payment)}
+                        </Badge>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Banknote className="h-4 w-4" />
+                        <span className="text-sm">Pagamento no local</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -468,11 +573,21 @@ export default function Bookings() {
                 </div>
               )}
               
-              <div>
-                <Label className="text-sm font-medium">Valor</Label>
-                <p className="text-sm font-semibold text-success">
-                  R$ {((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Valor do Serviço</Label>
+                  <p className="text-sm font-semibold text-success">
+                    R$ {((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}
+                  </p>
+                </div>
+                {selectedBooking.payment && (
+                  <div>
+                    <Label className="text-sm font-medium">Valor Pago Online</Label>
+                    <p className="text-sm font-semibold text-emerald-500">
+                      R$ {((selectedBooking.payment.amount_cents || 0) / 100).toFixed(2)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

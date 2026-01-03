@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Plus } from "lucide-react";
+import { Calendar, Clock, User, Plus, CreditCard, Banknote, AlertCircle } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBookingModal } from "@/hooks/useBookingModal";
@@ -55,7 +55,31 @@ export default function Agenda() {
 
       if (error) throw error;
 
-      setBookings(data || []);
+      // Load payments for these bookings
+      const bookingIds = (data || []).map(b => b.id);
+      let paymentsMap: Record<string, any> = {};
+      
+      if (bookingIds.length > 0) {
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('*')
+          .in('booking_id', bookingIds);
+        
+        if (payments) {
+          paymentsMap = payments.reduce((acc, p) => {
+            acc[p.booking_id] = p;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
+      // Merge payments into bookings
+      const bookingsWithPayments = (data || []).map(booking => ({
+        ...booking,
+        payment: paymentsMap[booking.id] || null,
+      }));
+
+      setBookings(bookingsWithPayments);
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
@@ -121,15 +145,44 @@ export default function Agenda() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end space-y-2">
+                      {/* Payment Status */}
+                      {booking.payment ? (
+                        <div className="flex items-center gap-1">
+                          {booking.payment.status === 'paid' && (
+                            <CreditCard className="h-3 w-3 text-emerald-500" />
+                          )}
+                          {booking.payment.status === 'pending' && (
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                          )}
+                          <span className={`text-xs ${
+                            booking.payment.status === 'paid' ? 'text-emerald-500' :
+                            booking.payment.status === 'pending' ? 'text-amber-500' :
+                            'text-muted-foreground'
+                          }`}>
+                            {booking.payment.status === 'paid' ? 'Pago' : 
+                             booking.payment.status === 'pending' ? 'Aguardando' : 'Falhou'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Banknote className="h-3 w-3" />
+                          <span className="text-xs">No local</span>
+                        </div>
+                      )}
+                      
+                      {/* Booking Status */}
                       <Badge variant={
                         booking.status === 'confirmed' ? 'default' :
+                        booking.status === 'pending' ? 'outline' :
                         booking.status === 'cancelled' ? 'destructive' :
                         'secondary'
                       }>
                         {booking.status === 'confirmed' ? 'Confirmado' :
+                         booking.status === 'pending' ? 'Aguardando' :
                          booking.status === 'cancelled' ? 'Cancelado' :
                          booking.status === 'no_show' ? 'Faltou' : booking.status}
                       </Badge>
+                      
                       <span className="text-sm font-medium text-success">
                         R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
                       </span>
