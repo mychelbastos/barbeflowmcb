@@ -17,15 +17,23 @@ serve(async (req) => {
       booking_id, 
       token, 
       payment_method_id, 
-      installments = 1,
-      payer 
+      payer,
+      payment_type // 'card' or 'pix'
     } = await req.json();
     
-    console.log('Processing payment for booking:', booking_id);
+    console.log('Processing payment for booking:', booking_id, 'type:', payment_type);
 
-    if (!booking_id || !token || !payment_method_id) {
+    if (!booking_id) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: booking_id, token, payment_method_id' }),
+        JSON.stringify({ error: 'Missing required field: booking_id' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // For card payments, token and payment_method_id are required
+    if (payment_type === 'card' && (!token || !payment_method_id)) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields for card payment: token, payment_method_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -114,25 +122,51 @@ serve(async (req) => {
       paymentRecord = newPayment;
     }
 
-    // Process payment via MP API
-    console.log('Creating payment in Mercado Pago...');
-    const mpPaymentBody = {
-      transaction_amount: amountCents / 100,
-      token: token,
-      description: `${booking.service?.name || 'Serviço'} - ${booking.tenant?.name || 'Barbearia'}`,
-      installments: installments,
-      payment_method_id: payment_method_id,
-      payer: {
-        email: payer?.email || booking.customer?.email || 'cliente@example.com',
-        identification: payer?.identification || undefined,
-      },
-      external_reference: booking_id,
-      metadata: {
-        booking_id: booking_id,
-        payment_id: paymentRecord.id,
-        tenant_id: booking.tenant_id,
-      },
-    };
+    // Build payment body based on type
+    let mpPaymentBody: any;
+    const description = `${booking.service?.name || 'Serviço'} - ${booking.tenant?.name || 'Barbearia'}`;
+
+    if (payment_type === 'pix') {
+      // PIX payment
+      console.log('Creating PIX payment...');
+      mpPaymentBody = {
+        transaction_amount: amountCents / 100,
+        description: description,
+        payment_method_id: 'pix',
+        payer: {
+          email: payer?.email || booking.customer?.email || 'cliente@example.com',
+          first_name: booking.customer?.name?.split(' ')[0] || 'Cliente',
+          last_name: booking.customer?.name?.split(' ').slice(1).join(' ') || '',
+          identification: payer?.identification || undefined,
+        },
+        external_reference: booking_id,
+        metadata: {
+          booking_id: booking_id,
+          payment_id: paymentRecord.id,
+          tenant_id: booking.tenant_id,
+        },
+      };
+    } else {
+      // Card payment (credit card à vista)
+      console.log('Creating card payment...');
+      mpPaymentBody = {
+        transaction_amount: amountCents / 100,
+        token: token,
+        description: description,
+        installments: 1, // Always 1 (à vista)
+        payment_method_id: payment_method_id,
+        payer: {
+          email: payer?.email || booking.customer?.email || 'cliente@example.com',
+          identification: payer?.identification || undefined,
+        },
+        external_reference: booking_id,
+        metadata: {
+          booking_id: booking_id,
+          payment_id: paymentRecord.id,
+          tenant_id: booking.tenant_id,
+        },
+      };
+    }
 
     console.log('MP Payment body:', JSON.stringify(mpPaymentBody, null, 2));
 
@@ -141,7 +175,7 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${mpConnection.access_token}`,
-        'X-Idempotency-Key': `${booking_id}-${Date.now()}`,
+        'X-Idempotency-Key': `${booking_id}-${payment_type}-${Date.now()}`,
       },
       body: JSON.stringify(mpPaymentBody),
     });
@@ -213,14 +247,28 @@ serve(async (req) => {
 
     console.log('Payment processed successfully:', mpResult.id, 'Status:', mpResult.status);
 
+    // Build response with PIX data if applicable
+    const response: any = {
+      success: true,
+      payment_id: paymentRecord.id,
+      mp_payment_id: mpResult.id,
+      status: mpResult.status,
+      status_detail: mpResult.status_detail,
+    };
+
+    // Include PIX data if available
+    if (payment_type === 'pix' && mpResult.point_of_interaction?.transaction_data) {
+      const txData = mpResult.point_of_interaction.transaction_data;
+      response.pix = {
+        qr_code: txData.qr_code,
+        qr_code_base64: txData.qr_code_base64,
+        ticket_url: txData.ticket_url,
+      };
+      response.expires_at = mpResult.date_of_expiration;
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        payment_id: paymentRecord.id,
-        mp_payment_id: mpResult.id,
-        status: mpResult.status,
-        status_detail: mpResult.status_detail,
-      }),
+      JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

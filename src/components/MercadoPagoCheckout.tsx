@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, AlertCircle, Check } from 'lucide-react';
+import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface PayerInfo {
   email: string;
@@ -22,7 +23,8 @@ interface MercadoPagoCheckoutProps {
   payer: PayerInfo;
 }
 
-type PaymentStatus = 'idle' | 'loading' | 'ready' | 'processing' | 'success' | 'error' | 'pending';
+type PaymentMethod = 'card' | 'pix' | null;
+type PaymentStatus = 'idle' | 'loading' | 'method-select' | 'ready' | 'processing' | 'pix-waiting' | 'success' | 'error' | 'pending';
 
 declare global {
   interface Window {
@@ -41,12 +43,15 @@ export const MercadoPagoCheckout = ({
   payer,
 }: MercadoPagoCheckoutProps) => {
   const [status, setStatus] = useState<PaymentStatus>('idle');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const brickContainerRef = useRef<HTMLDivElement>(null);
+  const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const brickControllerRef = useRef<any>(null);
+  const publicKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    loadMercadoPago();
+    loadPublicKey();
 
     return () => {
       if (brickControllerRef.current) {
@@ -59,7 +64,7 @@ export const MercadoPagoCheckout = ({
     };
   }, []);
 
-  const loadMercadoPago = async () => {
+  const loadPublicKey = async () => {
     setStatus('loading');
 
     try {
@@ -77,16 +82,50 @@ export const MercadoPagoCheckout = ({
         throw new Error(keyData?.error || 'Não foi possível obter a chave do Mercado Pago');
       }
 
-      console.log('Got public key, initializing bricks...');
+      publicKeyRef.current = keyData.public_key;
+      setStatus('method-select');
 
-      // Initialize MercadoPago
-      const mp = new window.MercadoPago(keyData.public_key, {
+    } catch (error: any) {
+      console.error('Error loading MP SDK:', error);
+      setErrorMessage(error.message || 'Erro ao carregar o pagamento');
+      setStatus('error');
+    }
+  };
+
+  const loadScript = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load MercadoPago SDK'));
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleSelectPaymentMethod = async (method: PaymentMethod) => {
+    setPaymentMethod(method);
+
+    if (method === 'card') {
+      await initializeCardBrick();
+    } else if (method === 'pix') {
+      await processPixPayment();
+    }
+  };
+
+  const initializeCardBrick = async () => {
+    setStatus('loading');
+
+    try {
+      const mp = new window.MercadoPago(publicKeyRef.current, {
         locale: 'pt-BR',
       });
 
-      // Create CardPayment brick
       const bricksBuilder = mp.bricks();
-      
+
       brickControllerRef.current = await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', {
         initialization: {
           amount: amount,
@@ -97,7 +136,7 @@ export const MercadoPagoCheckout = ({
         customization: {
           paymentMethods: {
             minInstallments: 1,
-            maxInstallments: 12,
+            maxInstallments: 1, // Only à vista
           },
           visual: {
             style: {
@@ -122,7 +161,7 @@ export const MercadoPagoCheckout = ({
           },
           onSubmit: async (formData: any) => {
             console.log('Payment form submitted:', formData);
-            await handlePaymentSubmit(formData);
+            await handleCardPaymentSubmit(formData);
           },
           onError: (error: any) => {
             console.error('CardPayment Brick error:', error);
@@ -132,27 +171,13 @@ export const MercadoPagoCheckout = ({
       });
 
     } catch (error: any) {
-      console.error('Error loading MP SDK:', error);
-      setErrorMessage(error.message || 'Erro ao carregar o pagamento');
+      console.error('Error initializing card brick:', error);
+      setErrorMessage(error.message || 'Erro ao carregar formulário de cartão');
       setStatus('error');
     }
   };
 
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load MercadoPago SDK'));
-      document.body.appendChild(script);
-    });
-  };
-
-  const handlePaymentSubmit = async (formData: any) => {
+  const handleCardPaymentSubmit = async (formData: any) => {
     setStatus('processing');
     setErrorMessage('');
 
@@ -162,7 +187,7 @@ export const MercadoPagoCheckout = ({
           booking_id: bookingId,
           token: formData.token,
           payment_method_id: formData.payment_method_id,
-          installments: formData.installments || 1,
+          payment_type: 'card',
           payer: {
             email: formData.payer?.email || payer.email,
             identification: formData.payer?.identification,
@@ -192,6 +217,57 @@ export const MercadoPagoCheckout = ({
     }
   };
 
+  const processPixPayment = async () => {
+    setStatus('processing');
+    setErrorMessage('');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('mp-process-payment', {
+        body: {
+          booking_id: bookingId,
+          payment_type: 'pix',
+          payer: {
+            email: payer.email,
+            identification: payer.identification,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      console.log('PIX result:', data);
+
+      if (data.pix) {
+        setPixData(data.pix);
+        setStatus('pix-waiting');
+      } else if (data.status === 'approved') {
+        setStatus('success');
+        onSuccess(data);
+      } else {
+        throw new Error('Não foi possível gerar o QR Code PIX');
+      }
+
+    } catch (error: any) {
+      console.error('PIX error:', error);
+      setErrorMessage(error.message || 'Erro ao gerar PIX');
+      setStatus('error');
+      onError(error.message);
+    }
+  };
+
+  const copyPixCode = async () => {
+    if (pixData?.qr_code) {
+      try {
+        await navigator.clipboard.writeText(pixData.qr_code);
+        setCopied(true);
+        toast({ title: 'Código PIX copiado!' });
+        setTimeout(() => setCopied(false), 3000);
+      } catch (err) {
+        toast({ title: 'Erro ao copiar', variant: 'destructive' });
+      }
+    }
+  };
+
   const getStatusMessage = (status: string, statusDetail?: string): string => {
     const messages: Record<string, string> = {
       cc_rejected_bad_filled_card_number: 'Número do cartão incorreto',
@@ -215,13 +291,25 @@ export const MercadoPagoCheckout = ({
 
   const retryPayment = () => {
     setErrorMessage('');
+    setPaymentMethod(null);
+    setPixData(null);
     if (brickControllerRef.current) {
       try {
         brickControllerRef.current.unmount();
       } catch (e) {}
     }
-    setStatus('loading');
-    loadMercadoPago();
+    setStatus('method-select');
+  };
+
+  const goBackToMethodSelect = () => {
+    setPaymentMethod(null);
+    setPixData(null);
+    if (brickControllerRef.current) {
+      try {
+        brickControllerRef.current.unmount();
+      } catch (e) {}
+    }
+    setStatus('method-select');
   };
 
   // Success state
@@ -260,14 +348,14 @@ export const MercadoPagoCheckout = ({
     );
   }
 
-  // Error state with retry (before SDK loaded)
-  if (status === 'error' && !brickControllerRef.current) {
+  // Error state with retry
+  if (status === 'error') {
     return (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertCircle className="h-8 w-8 text-red-400" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Erro ao carregar</h3>
+        <h3 className="text-lg font-semibold mb-2">Erro no pagamento</h3>
         <p className="text-muted-foreground text-sm mb-4">{errorMessage}</p>
         <Button onClick={retryPayment} variant="outline">
           Tentar novamente
@@ -276,6 +364,121 @@ export const MercadoPagoCheckout = ({
     );
   }
 
+  // Payment method selection
+  if (status === 'method-select') {
+    return (
+      <div className="space-y-4">
+        {/* Payment info */}
+        <div className="flex items-center justify-between p-3 bg-secondary/50 border border-border rounded-xl">
+          <span className="text-sm text-muted-foreground">{serviceName}</span>
+          <span className="font-semibold text-emerald-400">
+            R$ {amount.toFixed(2)}
+          </span>
+        </div>
+
+        <p className="text-center text-sm text-muted-foreground">Escolha a forma de pagamento:</p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => handleSelectPaymentMethod('card')}
+            className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary/80 hover:border-primary/50 transition-all"
+          >
+            <CreditCard className="h-8 w-8 text-primary" />
+            <span className="text-sm font-medium">Cartão de Crédito</span>
+            <span className="text-xs text-muted-foreground">À vista</span>
+          </button>
+
+          <button
+            onClick={() => handleSelectPaymentMethod('pix')}
+            className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary/80 hover:border-primary/50 transition-all"
+          >
+            <QrCode className="h-8 w-8 text-primary" />
+            <span className="text-sm font-medium">PIX</span>
+            <span className="text-xs text-muted-foreground">Instantâneo</span>
+          </button>
+        </div>
+
+        {/* Security badge */}
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+          </svg>
+          <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
+        </div>
+      </div>
+    );
+  }
+
+  // PIX waiting state
+  if (status === 'pix-waiting' && pixData) {
+    return (
+      <div className="space-y-4">
+        {/* Payment info */}
+        <div className="flex items-center justify-between p-3 bg-secondary/50 border border-border rounded-xl">
+          <div className="flex items-center gap-3">
+            <QrCode className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">{serviceName}</span>
+          </div>
+          <span className="font-semibold text-emerald-400">
+            R$ {amount.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="text-center">
+          <p className="text-sm font-medium mb-4">Escaneie o QR Code ou copie o código PIX:</p>
+          
+          {/* QR Code */}
+          {pixData.qr_code_base64 && (
+            <div className="inline-block p-4 bg-white rounded-xl mb-4">
+              <img 
+                src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                alt="QR Code PIX" 
+                className="w-48 h-48"
+              />
+            </div>
+          )}
+
+          {/* Copy code button */}
+          <Button 
+            onClick={copyPixCode} 
+            variant="outline" 
+            className="w-full gap-2"
+          >
+            {copied ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                Código copiado!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copiar código PIX
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-muted-foreground mt-4">
+            Após o pagamento, a confirmação pode levar alguns segundos.
+          </p>
+        </div>
+
+        {/* Back button */}
+        <Button onClick={goBackToMethodSelect} variant="ghost" className="w-full">
+          Voltar e escolher outra forma de pagamento
+        </Button>
+
+        {/* Security badge */}
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+          </svg>
+          <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Card form state
   return (
     <div className="space-y-4">
       {/* Payment info */}
@@ -290,7 +493,7 @@ export const MercadoPagoCheckout = ({
       </div>
 
       {/* Error message */}
-      {errorMessage && status === 'error' && (
+      {errorMessage && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
           <p className="text-sm text-red-400 flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
@@ -302,9 +505,13 @@ export const MercadoPagoCheckout = ({
       {/* Card Payment Brick container */}
       <div 
         id="cardPaymentBrick_container" 
-        ref={brickContainerRef}
         className="mp-checkout-container"
       />
+
+      {/* Back button */}
+      <Button onClick={goBackToMethodSelect} variant="ghost" className="w-full">
+        Voltar e escolher outra forma de pagamento
+      </Button>
 
       {/* Processing overlay */}
       {status === 'processing' && (
