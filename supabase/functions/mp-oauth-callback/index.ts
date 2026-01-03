@@ -73,15 +73,63 @@ serve(async (req) => {
       refresh_token,
       expires_in,
       user_id: mp_user_id,
-      public_key,
+      public_key: token_public_key,
     } = tokenData;
     
-    console.log('Token data received, public_key:', public_key ? 'present' : 'missing');
+    console.log('Token data received, public_key from token:', token_public_key ? 'present' : 'missing');
 
     if (!access_token) {
       console.error('No access_token in response');
       return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=no_token`, 302);
     }
+
+    // If public_key not in token response, fetch it from credentials endpoint
+    let public_key = token_public_key;
+    if (!public_key && mp_user_id) {
+      console.log('Fetching public_key from credentials endpoint...');
+      try {
+        const credentialsResponse = await fetch(`https://api.mercadopago.com/users/${mp_user_id}/credentials`, {
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+          },
+        });
+        
+        if (credentialsResponse.ok) {
+          const credentials = await credentialsResponse.json();
+          public_key = credentials.public_key;
+          console.log('Public key from credentials:', public_key ? 'found' : 'not found');
+        } else {
+          console.log('Could not fetch credentials:', credentialsResponse.status);
+        }
+      } catch (credErr) {
+        console.log('Error fetching credentials:', credErr);
+      }
+    }
+
+    // If still no public_key, try alternative endpoint
+    if (!public_key) {
+      console.log('Trying alternative approach - fetching from user info...');
+      try {
+        const userResponse = await fetch('https://api.mercadopago.com/users/me', {
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+          },
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          // Sometimes it's in the user data
+          if (userData.public_key) {
+            public_key = userData.public_key;
+            console.log('Public key from user data:', public_key ? 'found' : 'not found');
+          }
+        }
+      } catch (userErr) {
+        console.log('Error fetching user info:', userErr);
+      }
+    }
+
+    console.log('Final public_key status:', public_key ? 'present' : 'missing');
 
     // Calculate token expiration
     const tokenExpiresAt = new Date(Date.now() + (expires_in * 1000)).toISOString();
