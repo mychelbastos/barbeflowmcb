@@ -214,6 +214,26 @@ serve(async (req) => {
       );
     }
 
+    // Check if tenant has WhatsApp connected
+    const { data: whatsappConnection } = await supabase
+      .from("whatsapp_connections")
+      .select("*")
+      .eq("tenant_id", tenant_id)
+      .eq("whatsapp_connected", true)
+      .maybeSingle();
+
+    if (!whatsappConnection) {
+      console.log(`Tenant ${tenant_id} does not have WhatsApp connected. Skipping notification.`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          skipped: true,
+          reason: "WhatsApp not connected for this tenant" 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Fetch booking data
     const booking = await fetchBookingData(booking_id);
     if (!booking) {
@@ -233,11 +253,12 @@ serve(async (req) => {
       phone = "55" + phone;
     }
 
-    // Prepare N8N webhook payload
+    // Prepare N8N webhook payload with tenant's Evolution instance
     const n8nPayload = {
       type,
       phone,
       message,
+      evolution_instance: whatsappConnection.evolution_instance_name,
       booking: {
         id: booking.id,
         starts_at: booking.starts_at,
@@ -256,12 +277,13 @@ serve(async (req) => {
       },
       staff: booking.staff,
       tenant: {
+        id: tenant_id,
         name: booking.tenant.name,
         slug: booking.tenant.slug,
       },
     };
 
-    console.log("Sending to N8N:", JSON.stringify(n8nPayload));
+    console.log("Sending to N8N with instance:", whatsappConnection.evolution_instance_name);
 
     // Send to N8N webhook
     const n8nWebhookUrl = Deno.env.get("N8N_WEBHOOK_URL");
@@ -300,7 +322,8 @@ serve(async (req) => {
         success: true, 
         message: "Notification sent successfully",
         phone,
-        type 
+        type,
+        instance: whatsappConnection.evolution_instance_name
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

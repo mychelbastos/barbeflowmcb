@@ -32,3 +32,15 @@ verify_jwt = false
 
 [functions.send-whatsapp-notification]
 verify_jwt = false
+
+[functions.evolution-create-instance]
+verify_jwt = false
+
+[functions.evolution-get-qrcode]
+verify_jwt = false
+
+[functions.evolution-check-status]
+verify_jwt = false
+
+[functions.evolution-disconnect]
+verify_jwt = false

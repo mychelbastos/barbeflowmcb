@@ -584,6 +584,53 @@ export type Database = {
           },
         ]
       }
+      whatsapp_connections: {
+        Row: {
+          connected_at: string | null
+          created_at: string
+          evolution_instance_name: string
+          id: string
+          last_status: string | null
+          last_status_at: string | null
+          tenant_id: string
+          updated_at: string
+          whatsapp_connected: boolean
+          whatsapp_number: string | null
+        }
+        Insert: {
+          connected_at?: string | null
+          created_at?: string
+          evolution_instance_name: string
+          id?: string
+          last_status?: string | null
+          last_status_at?: string | null
+          tenant_id: string
+          updated_at?: string
+          whatsapp_connected?: boolean
+          whatsapp_number?: string | null
+        }
+        Update: {
+          connected_at?: string | null
+          created_at?: string
+          evolution_instance_name?: string
+          id?: string
+          last_status?: string | null
+          last_status_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+          whatsapp_connected?: boolean
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

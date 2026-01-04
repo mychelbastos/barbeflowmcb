@@ -46,7 +46,8 @@ import {
   Menu,
   User,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  MessageCircle
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -62,6 +63,7 @@ const navigationItems = [
   { title: "Profissionais", url: "/app/staff", icon: Users },
   { title: "Clientes", url: "/app/customers", icon: User },
   { title: "Financeiro", url: "/app/finance", icon: Wallet },
+  { title: "WhatsApp", url: "/app/whatsapp", icon: MessageCircle },
   { title: "Configurações", url: "/app/settings", icon: Settings },
 ];
 
