@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { 
@@ -15,10 +14,17 @@ import {
   MessageSquare, 
   Phone,
   Search,
-  RefreshCw
+  RefreshCw,
+  Check,
+  CheckCheck,
+  MoreVertical,
+  Smile,
+  Paperclip,
+  Mic
 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   id: string;
@@ -50,9 +56,9 @@ export default function WhatsAppInbox() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -61,11 +67,11 @@ export default function WhatsAppInbox() {
     scrollToBottom();
   }, [messages]);
 
-  // Load conversations
   const loadConversations = async () => {
     if (!currentTenant?.id) return;
 
     try {
+      setRefreshing(true);
       const { data, error } = await supabase
         .from("whatsapp_messages")
         .select("*")
@@ -74,7 +80,6 @@ export default function WhatsAppInbox() {
 
       if (error) throw error;
 
-      // Group by remote_jid and get latest message
       const conversationMap = new Map<string, Conversation>();
       
       data?.forEach((msg: Message) => {
@@ -95,10 +100,10 @@ export default function WhatsAppInbox() {
       toast.error("Erro ao carregar conversas");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Load messages for selected conversation
   const loadMessages = async (remoteJid: string) => {
     if (!currentTenant?.id) return;
 
@@ -118,13 +123,11 @@ export default function WhatsAppInbox() {
     }
   };
 
-  // Send message
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !currentTenant?.id) return;
 
     setSending(true);
     try {
-      // Extract phone from remote_jid
       const phone = selectedConversation.replace("@s.whatsapp.net", "");
 
       const { data, error } = await supabase.functions.invoke("whatsapp-send-message", {
@@ -137,7 +140,6 @@ export default function WhatsAppInbox() {
 
       if (error) throw error;
 
-      // Add message to local state immediately
       const newMsg: Message = {
         id: crypto.randomUUID(),
         remote_jid: selectedConversation,
@@ -151,8 +153,6 @@ export default function WhatsAppInbox() {
 
       setMessages((prev) => [...prev, newMsg]);
       setNewMessage("");
-      
-      // Update conversation list
       loadConversations();
     } catch (error) {
       console.error("Error sending message:", error);
@@ -162,7 +162,6 @@ export default function WhatsAppInbox() {
     }
   };
 
-  // Subscribe to realtime updates
   useEffect(() => {
     if (!currentTenant?.id) return;
 
@@ -180,10 +179,8 @@ export default function WhatsAppInbox() {
           console.log("New message received:", payload);
           const newMsg = payload.new as Message;
           
-          // Update messages if viewing this conversation
           if (newMsg.remote_jid === selectedConversation) {
             setMessages((prev) => {
-              // Check if message already exists
               if (prev.some((m) => m.message_id === newMsg.message_id)) {
                 return prev;
               }
@@ -191,7 +188,6 @@ export default function WhatsAppInbox() {
             });
           }
           
-          // Reload conversations to update list
           loadConversations();
         }
       )
@@ -202,21 +198,18 @@ export default function WhatsAppInbox() {
     };
   }, [currentTenant?.id, selectedConversation]);
 
-  // Initial load
   useEffect(() => {
     if (currentTenant?.id) {
       loadConversations();
     }
   }, [currentTenant?.id]);
 
-  // Load messages when conversation is selected
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation);
     }
   }, [selectedConversation]);
 
-  // Format phone number for display
   const formatPhoneDisplay = (remoteJid: string) => {
     const phone = remoteJid.replace("@s.whatsapp.net", "");
     if (phone.length === 13 && phone.startsWith("55")) {
@@ -225,7 +218,6 @@ export default function WhatsAppInbox() {
     return phone;
   };
 
-  // Format timestamp for display
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     if (isToday(date)) {
@@ -236,7 +228,11 @@ export default function WhatsAppInbox() {
     return format(date, "dd/MM/yyyy");
   };
 
-  // Filter conversations by search term
+  const getInitials = (phone: string) => {
+    const clean = phone.replace(/\D/g, "");
+    return clean.slice(-2);
+  };
+
   const filteredConversations = conversations.filter((conv) => {
     const phone = formatPhoneDisplay(conv.remote_jid);
     const name = conv.contact_name || "";
@@ -246,27 +242,44 @@ export default function WhatsAppInbox() {
 
   if (tenantLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+          <p className="text-muted-foreground text-sm">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar - Conversations List */}
-      <div className={`w-full md:w-96 border-r flex flex-col ${selectedConversation ? "hidden md:flex" : "flex"}`}>
+      <div className={`w-full md:w-[380px] border-r border-border/50 flex flex-col bg-card/50 ${selectedConversation ? "hidden md:flex" : "flex"}`}>
         {/* Header */}
-        <div className="p-4 border-b bg-card">
+        <div className="p-4 border-b border-border/50 bg-card">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/app/whatsapp")}>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate("/app/whatsapp")}
+                className="hover:bg-primary/10 rounded-full"
+              >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-xl font-semibold">Mensagens</h1>
+              <div>
+                <h1 className="text-lg font-semibold">Conversas</h1>
+                <p className="text-xs text-muted-foreground">{conversations.length} conversas</p>
+              </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={loadConversations}>
-              <RefreshCw className="h-5 w-5" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={loadConversations}
+              disabled={refreshing}
+              className="hover:bg-primary/10 rounded-full"
+            >
+              <RefreshCw className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
           
@@ -274,10 +287,10 @@ export default function WhatsAppInbox() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar conversas..."
+              placeholder="Buscar ou começar nova conversa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-xl h-10"
             />
           </div>
         </div>
@@ -285,53 +298,74 @@ export default function WhatsAppInbox() {
         {/* Conversations List */}
         <ScrollArea className="flex-1">
           {loading ? (
-            <div className="p-4 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3">
+            <div className="p-3 space-y-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
                   <Skeleton className="h-12 w-12 rounded-full" />
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-32 mb-2" />
-                    <Skeleton className="h-3 w-48" />
+                    <Skeleton className="h-4 w-28 mb-2" />
+                    <Skeleton className="h-3 w-44" />
                   </div>
+                  <Skeleton className="h-3 w-12" />
                 </div>
               ))}
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mb-4" />
-              <p>Nenhuma conversa encontrada</p>
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground px-6">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <MessageSquare className="h-10 w-10 text-primary" />
+              </div>
+              <p className="font-medium">Nenhuma conversa</p>
+              <p className="text-sm text-center mt-1">
+                {searchTerm ? "Nenhum resultado encontrado" : "As mensagens aparecerão aqui"}
+              </p>
             </div>
           ) : (
-            <div>
-              {filteredConversations.map((conv) => (
-                <div
-                  key={conv.remote_jid}
-                  onClick={() => setSelectedConversation(conv.remote_jid)}
-                  className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-accent transition-colors ${
-                    selectedConversation === conv.remote_jid ? "bg-accent" : ""
-                  }`}
-                >
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      <Phone className="h-5 w-5" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium truncate">
-                        {conv.contact_name || formatPhoneDisplay(conv.remote_jid)}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTimestamp(conv.last_message_at)}
-                      </span>
+            <div className="p-2">
+              <AnimatePresence>
+                {filteredConversations.map((conv, index) => (
+                  <motion.div
+                    key={conv.remote_jid}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => setSelectedConversation(conv.remote_jid)}
+                    className={`flex items-center gap-3 p-3 cursor-pointer rounded-xl transition-all duration-200 mb-1 ${
+                      selectedConversation === conv.remote_jid 
+                        ? "bg-primary/15 border border-primary/20" 
+                        : "hover:bg-secondary/50"
+                    }`}
+                  >
+                    <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-medium">
+                        {getInitials(conv.remote_jid)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="font-medium text-sm truncate">
+                          {conv.contact_name || formatPhoneDisplay(conv.remote_jid)}
+                        </p>
+                        <span className={`text-xs ${
+                          selectedConversation === conv.remote_jid 
+                            ? "text-primary" 
+                            : "text-muted-foreground"
+                        }`}>
+                          {formatTimestamp(conv.last_message_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {conv.last_message_from_me && (
+                          <CheckCheck className="h-4 w-4 text-primary shrink-0" />
+                        )}
+                        <p className="text-xs text-muted-foreground truncate">
+                          {conv.last_message}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {conv.last_message_from_me && "Você: "}
-                      {conv.last_message}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </ScrollArea>
@@ -342,90 +376,165 @@ export default function WhatsAppInbox() {
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b bg-card flex items-center gap-3">
+            <div className="px-4 py-3 border-b border-border/50 bg-card flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="md:hidden hover:bg-primary/10 rounded-full"
+                  onClick={() => setSelectedConversation(null)}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-medium text-sm">
+                    {getInitials(selectedConversation)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium text-sm">
+                    {formatPhoneDisplay(selectedConversation)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Online</p>
+                </div>
+              </div>
               <Button 
                 variant="ghost" 
-                size="icon" 
-                className="md:hidden"
-                onClick={() => setSelectedConversation(null)}
+                size="icon"
+                className="hover:bg-primary/10 rounded-full"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <MoreVertical className="h-5 w-5" />
               </Button>
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  <Phone className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">
-                  {formatPhoneDisplay(selectedConversation)}
-                </p>
-              </div>
             </div>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((msg, index) => {
-                  const showDate = index === 0 || 
-                    format(new Date(msg.timestamp), "yyyy-MM-dd") !== 
-                    format(new Date(messages[index - 1].timestamp), "yyyy-MM-dd");
-
-                  return (
-                    <div key={msg.id}>
-                      {showDate && (
-                        <div className="flex justify-center my-4">
-                          <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                            {isToday(new Date(msg.timestamp)) 
-                              ? "Hoje" 
-                              : isYesterday(new Date(msg.timestamp))
-                                ? "Ontem"
-                                : format(new Date(msg.timestamp), "d 'de' MMMM", { locale: ptBR })}
-                          </span>
-                        </div>
-                      )}
-                      <div className={`flex ${msg.from_me ? "justify-end" : "justify-start"}`}>
-                        <Card className={`max-w-[75%] px-4 py-2 ${
-                          msg.from_me 
-                            ? "bg-primary text-primary-foreground" 
-                            : "bg-muted"
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            msg.from_me ? "text-primary-foreground/70" : "text-muted-foreground"
-                          }`}>
-                            {format(new Date(msg.timestamp), "HH:mm")}
-                          </p>
-                        </Card>
-                      </div>
+            {/* Messages Area */}
+            <ScrollArea className="flex-1 bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20width%3D%2232%22%20height%3D%2232%22%20fill%3D%22none%22%20stroke%3D%22rgba(16%2C185%2C129%2C0.03)%22%3E%3Cpath%20d%3D%22M0%2016h32M16%200v32%22%2F%3E%3C%2Fsvg%3E')]">
+              <div className="p-4 space-y-2 max-w-4xl mx-auto">
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                      <MessageSquare className="h-8 w-8 text-primary" />
                     </div>
-                  );
-                })}
+                    <p className="text-sm">Nenhuma mensagem ainda</p>
+                  </div>
+                ) : (
+                  messages.map((msg, index) => {
+                    const showDate = index === 0 || 
+                      format(new Date(msg.timestamp), "yyyy-MM-dd") !== 
+                      format(new Date(messages[index - 1].timestamp), "yyyy-MM-dd");
+
+                    return (
+                      <div key={msg.id}>
+                        {showDate && (
+                          <div className="flex justify-center my-4">
+                            <span className="text-xs text-muted-foreground bg-card/80 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-sm border border-border/30">
+                              {isToday(new Date(msg.timestamp)) 
+                                ? "Hoje" 
+                                : isYesterday(new Date(msg.timestamp))
+                                  ? "Ontem"
+                                  : format(new Date(msg.timestamp), "d 'de' MMMM", { locale: ptBR })}
+                            </span>
+                          </div>
+                        )}
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className={`flex ${msg.from_me ? "justify-end" : "justify-start"}`}
+                        >
+                          <div 
+                            className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-sm ${
+                              msg.from_me 
+                                ? "bg-primary text-primary-foreground rounded-br-md" 
+                                : "bg-card border border-border/50 rounded-bl-md"
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                            <div className={`flex items-center justify-end gap-1 mt-1 ${
+                              msg.from_me ? "text-primary-foreground/70" : "text-muted-foreground"
+                            }`}>
+                              <span className="text-[10px]">
+                                {format(new Date(msg.timestamp), "HH:mm")}
+                              </span>
+                              {msg.from_me && (
+                                msg.status === "read" ? (
+                                  <CheckCheck className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Check className="h-3.5 w-3.5" />
+                                )
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      </div>
+                    );
+                  })
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t bg-card">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Digite uma mensagem..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                  disabled={sending}
-                />
-                <Button onClick={sendMessage} disabled={sending || !newMessage.trim()}>
-                  <Send className="h-4 w-4" />
+            <div className="p-3 border-t border-border/50 bg-card">
+              <div className="flex items-center gap-2 max-w-4xl mx-auto">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="hover:bg-primary/10 rounded-full shrink-0 hidden sm:flex"
+                >
+                  <Smile className="h-5 w-5 text-muted-foreground" />
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="hover:bg-primary/10 rounded-full shrink-0 hidden sm:flex"
+                >
+                  <Paperclip className="h-5 w-5 text-muted-foreground" />
+                </Button>
+                <div className="flex-1 relative">
+                  <Input
+                    placeholder="Digite uma mensagem..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                    disabled={sending}
+                    className="bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-full h-11 pr-12"
+                  />
+                </div>
+                {newMessage.trim() ? (
+                  <Button 
+                    onClick={sendMessage} 
+                    disabled={sending || !newMessage.trim()}
+                    size="icon"
+                    className="rounded-full h-11 w-11 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+                  >
+                    {sending ? (
+                      <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full h-11 w-11 hover:bg-primary/10"
+                  >
+                    <Mic className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                )}
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-            <MessageSquare className="h-16 w-16 mb-4" />
-            <p className="text-lg">Selecione uma conversa</p>
-            <p className="text-sm">para visualizar as mensagens</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-b from-background to-card/50">
+            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <MessageSquare className="h-12 w-12 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">WhatsApp Inbox</h2>
+            <p className="text-sm text-center max-w-xs">
+              Selecione uma conversa para visualizar as mensagens
+            </p>
           </div>
         )}
       </div>
