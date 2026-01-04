@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,8 @@ import {
   Loader2,
   AlertTriangle,
   Wifi,
-  WifiOff
+  WifiOff,
+  Inbox
 } from "lucide-react";
 import { NoTenantState } from "@/components/NoTenantState";
 
@@ -30,6 +32,7 @@ interface ConnectionStatus {
 }
 
 export default function WhatsApp() {
+  const navigate = useNavigate();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -293,6 +296,15 @@ export default function WhatsApp() {
                   </li>
                 </ul>
               </div>
+
+              {/* Inbox Button */}
+              <Button
+                onClick={() => navigate("/app/whatsapp/inbox")}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950"
+              >
+                <Inbox className="h-4 w-4 mr-2" />
+                Abrir Caixa de Mensagens
+              </Button>
 
               <Button
                 variant="outline"

@@ -15,6 +15,7 @@ import Staff from "./pages/Staff";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import WhatsApp from "./pages/WhatsApp";
+import WhatsAppInbox from "./pages/WhatsAppInbox";
 import BookingPublic from "./pages/BookingPublic";
 import PaymentReturn from "./pages/PaymentReturn";
 import NotFound from "./pages/NotFound";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="customers" element={<Customers />} />
             <Route path="finance" element={<Finance />} />
             <Route path="whatsapp" element={<WhatsApp />} />
+            <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           
