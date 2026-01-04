@@ -631,6 +631,56 @@ export type Database = {
           },
         ]
       }
+      whatsapp_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          from_me: boolean
+          id: string
+          media_url: string | null
+          message_id: string
+          message_type: string
+          remote_jid: string
+          status: string | null
+          tenant_id: string
+          timestamp: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_url?: string | null
+          message_id: string
+          message_type?: string
+          remote_jid: string
+          status?: string | null
+          tenant_id: string
+          timestamp?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_url?: string | null
+          message_id?: string
+          message_type?: string
+          remote_jid?: string
+          status?: string | null
+          tenant_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
