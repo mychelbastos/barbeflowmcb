@@ -51,32 +51,43 @@ serve(async (req) => {
 
     // Handle messages.upsert event (new messages)
     if (event === "messages.upsert" || event === "MESSAGES_UPSERT") {
-      console.log("Processing messages.upsert event");
+      console.log("Processing messages.upsert event, data:", JSON.stringify(data, null, 2).substring(0, 500));
       
-      // Evolution API v2 structure: data can be an array or object
+      // Evolution API v2 structure: data can be an array or single object
       const messages = Array.isArray(data) ? data : [data];
       
       for (const messageData of messages) {
-        // Handle both nested and flat message structures
-        const message = messageData.message || messageData;
-        const key = message.key || messageData.key || {};
+        console.log("Processing messageData keys:", Object.keys(messageData));
         
-        const messageId = key.id || messageData.id;
-        const remoteJid = key.remoteJid || messageData.remoteJid;
-        const fromMe = key.fromMe ?? messageData.fromMe ?? false;
+        // Evolution API structure: key is directly in data, message content is in data.message
+        const key = messageData.key || {};
+        const messageId = key.id;
+        const remoteJid = key.remoteJid;
+        const fromMe = key.fromMe ?? false;
         
-        console.log("Processing message:", { messageId, remoteJid, fromMe });
+        console.log("Extracted key data:", { messageId, remoteJid, fromMe });
         
-        // Get message content
+        // Skip if no message ID or remote JID
+        if (!messageId || !remoteJid) {
+          console.log("Missing messageId or remoteJid, skipping. Key:", JSON.stringify(key));
+          continue;
+        }
+
+        // Skip status messages
+        if (remoteJid === "status@broadcast") {
+          console.log("Skipping status broadcast");
+          continue;
+        }
+
+        // Get message content - Evolution API puts it in data.message
         let content = "";
         let messageType = "text";
         let mediaUrl = null;
 
-        const msgContent = message.message || messageData.message || message;
+        const msgContent = messageData.message;
+        console.log("Message content type:", typeof msgContent, "keys:", msgContent ? Object.keys(msgContent) : "null");
         
-        if (typeof msgContent === 'string') {
-          content = msgContent;
-        } else if (msgContent) {
+        if (msgContent) {
           if (msgContent.conversation) {
             content = msgContent.conversation;
           } else if (msgContent.extendedTextMessage?.text) {
@@ -97,29 +108,25 @@ serve(async (req) => {
           }
         }
 
-        // Try to get content from pushName or other fields
+        // Use pushName if no content extracted
         if (!content && messageData.pushName) {
           content = `[Mensagem de ${messageData.pushName}]`;
         }
 
-        // Skip if no message ID or remote JID
-        if (!messageId || !remoteJid) {
-          console.log("Missing messageId or remoteJid, skipping");
-          continue;
-        }
-
-        // Skip status messages
-        if (remoteJid === "status@broadcast") {
-          console.log("Skipping status broadcast");
-          continue;
-        }
-
         // Get message timestamp
-        const messageTimestamp = message.messageTimestamp || messageData.messageTimestamp
-          ? new Date(Number(message.messageTimestamp || messageData.messageTimestamp) * 1000).toISOString()
+        const timestamp = messageData.messageTimestamp;
+        const messageTimestampDate = timestamp
+          ? new Date(Number(timestamp) * 1000).toISOString()
           : new Date().toISOString();
 
-        console.log("Saving message:", { messageId, remoteJid, fromMe, content: content.substring(0, 50), messageType });
+        console.log("Saving message:", { 
+          messageId, 
+          remoteJid, 
+          fromMe, 
+          content: content.substring(0, 50), 
+          messageType,
+          timestamp: messageTimestampDate
+        });
 
         // Insert message into database
         const { error: insertError } = await supabase
@@ -132,7 +139,7 @@ serve(async (req) => {
             message_type: messageType,
             content: content || "[Mensagem sem conteúdo]",
             media_url: mediaUrl,
-            timestamp: messageTimestamp,
+            timestamp: messageTimestampDate,
             status: fromMe ? "sent" : "received",
           }, {
             onConflict: "tenant_id,message_id",
