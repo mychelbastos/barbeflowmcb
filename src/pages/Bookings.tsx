@@ -240,12 +240,12 @@ export default function Bookings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Agendamentos</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Gerencie todos os agendamentos da barbearia
           </p>
         </div>
@@ -254,6 +254,7 @@ export default function Bookings() {
           onClick={() => {
             openBookingModal();
           }}
+          className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Agendamento
@@ -262,20 +263,20 @@ export default function Bookings() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg flex items-center">
+            <Filter className="h-4 w-4 md:h-5 md:w-5 mr-2" />
             Filtros
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <Label>Buscar</Label>
-              <div className="relative">
+              <Label className="text-sm">Buscar</Label>
+              <div className="relative mt-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cliente, serviço, profissional..."
+                  placeholder="Cliente, serviço..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -284,9 +285,9 @@ export default function Bookings() {
             </div>
 
             <div>
-              <Label>Status</Label>
+              <Label className="text-sm">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -301,11 +302,12 @@ export default function Bookings() {
             </div>
 
             <div>
-              <Label>Data</Label>
+              <Label className="text-sm">Data</Label>
               <Input
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
+                className="mt-1"
               />
             </div>
 
@@ -317,6 +319,8 @@ export default function Bookings() {
                   setStatusFilter("all");
                   setDateFilter("");
                 }}
+                className="w-full sm:w-auto"
+                size="sm"
               >
                 Limpar Filtros
               </Button>
@@ -325,157 +329,262 @@ export default function Bookings() {
         </CardContent>
       </Card>
 
-      {/* Bookings Table */}
+      {/* Bookings - Mobile Cards / Desktop Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">
             Agendamentos ({filteredBookings.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Serviço</TableHead>
-                <TableHead>Profissional</TableHead>
-                <TableHead>Data/Hora</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Pagamento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBookings.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Nenhum agendamento encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium">{booking.customer?.name}</div>
-                        <div className="text-sm text-muted-foreground flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {booking.customer?.phone}
-                        </div>
+          {/* Mobile: Card Layout */}
+          <div className="md:hidden space-y-3">
+            {filteredBookings.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                Nenhum agendamento encontrado
+              </div>
+            ) : (
+              filteredBookings.map((booking) => (
+                <div key={booking.id} className="p-4 rounded-lg border border-border bg-card space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
+                      />
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground truncate">{booking.customer?.name}</p>
+                        <p className="text-sm text-muted-foreground">{booking.service?.name}</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
-                        />
-                        <div>
-                          <div className="font-medium">{booking.service?.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {booking.service?.duration_minutes}min
-                          </div>
+                    </div>
+                    <Badge variant={getStatusVariant(booking.status)} className="text-xs flex-shrink-0">
+                      {getStatusLabel(booking.status)}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(parseISO(booking.starts_at), "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(parseISO(booking.starts_at), "HH:mm")} - {format(parseISO(booking.ends_at), "HH:mm")}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      {booking.staff?.name || 'Qualquer'}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      {booking.payment ? (
+                        <div className="flex items-center gap-1">
+                          {booking.payment.status === 'paid' && (
+                            <CreditCard className="h-3 w-3 text-emerald-500" />
+                          )}
+                          {booking.payment.status === 'pending' && (
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                          )}
+                          <span className="text-xs">{getPaymentStatusLabel(booking.payment)}</span>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{booking.staff?.name || 'Qualquer profissional'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
-                          <span className="text-sm">
-                            {format(parseISO(booking.starts_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
+                      ) : (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Banknote className="h-3 w-3" />
+                          <span className="text-xs">No local</span>
                         </div>
-                        <div className="flex items-center">
-                          <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
-                          <span className="text-sm">
-                            {format(parseISO(booking.starts_at), "HH:mm")} - 
-                            {format(parseISO(booking.ends_at), "HH:mm")}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium text-success">
+                      )}
+                      <span className="font-medium text-success text-sm">
                         R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {booking.payment ? (
-                          <>
-                            {booking.payment.status === 'paid' && (
-                              <CreditCard className="h-4 w-4 text-emerald-500" />
-                            )}
-                            {booking.payment.status === 'pending' && (
-                              <AlertCircle className="h-4 w-4 text-amber-500" />
-                            )}
-                            {booking.payment.status === 'failed' && (
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            )}
-                            <Badge variant={getPaymentStatusVariant(booking.payment)}>
-                              {getPaymentStatusLabel(booking.payment)}
-                            </Badge>
-                          </>
-                        ) : (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Banknote className="h-4 w-4" />
-                            <span className="text-sm">No local</span>
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(booking.status)}>
-                        {getStatusLabel(booking.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedBooking(booking);
+                          setShowDetails(true);
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {booking.status === 'confirmed' && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setShowDetails(true);
-                          }}
+                          onClick={() => updateBookingStatus(booking.id, 'completed')}
+                          className="h-8 w-8 p-0"
                         >
-                          <Edit className="h-4 w-4" />
+                          <CheckCircle className="h-4 w-4 text-success" />
                         </Button>
-                        
-                        {booking.status === 'confirmed' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateBookingStatus(booking.id, 'completed')}
-                          >
-                            <CheckCircle className="h-4 w-4 text-success" />
-                          </Button>
-                        )}
-                        
-                        {booking.status !== 'cancelled' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                          >
-                            <XCircle className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
+                      )}
+                      {booking.status !== 'cancelled' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updateBookingStatus(booking.id, 'cancelled')}
+                          className="h-8 w-8 p-0"
+                        >
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table Layout */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Serviço</TableHead>
+                  <TableHead>Profissional</TableHead>
+                  <TableHead>Data/Hora</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredBookings.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      Nenhum agendamento encontrado
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredBookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium">{booking.customer?.name}</div>
+                          <div className="text-sm text-muted-foreground flex items-center">
+                            <Phone className="h-3 w-3 mr-1" />
+                            {booking.customer?.phone}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
+                          />
+                          <div>
+                            <div className="font-medium">{booking.service?.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {booking.service?.duration_minutes}min
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{booking.staff?.name || 'Qualquer profissional'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
+                            <span className="text-sm">
+                              {format(parseISO(booking.starts_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
+                            <span className="text-sm">
+                              {format(parseISO(booking.starts_at), "HH:mm")} - 
+                              {format(parseISO(booking.ends_at), "HH:mm")}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium text-success">
+                          R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {booking.payment ? (
+                            <>
+                              {booking.payment.status === 'paid' && (
+                                <CreditCard className="h-4 w-4 text-emerald-500" />
+                              )}
+                              {booking.payment.status === 'pending' && (
+                                <AlertCircle className="h-4 w-4 text-amber-500" />
+                              )}
+                              {booking.payment.status === 'failed' && (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              )}
+                              <Badge variant={getPaymentStatusVariant(booking.payment)}>
+                                {getPaymentStatusLabel(booking.payment)}
+                              </Badge>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Banknote className="h-4 w-4" />
+                              <span className="text-sm">No local</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(booking.status)}>
+                          {getStatusLabel(booking.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowDetails(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          {booking.status === 'confirmed' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateBookingStatus(booking.id, 'completed')}
+                            >
+                              <CheckCircle className="h-4 w-4 text-success" />
+                            </Button>
+                          )}
+                          
+                          {booking.status !== 'cancelled' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateBookingStatus(booking.id, 'cancelled')}
+                            >
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

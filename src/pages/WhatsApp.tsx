@@ -199,15 +199,15 @@ export default function WhatsApp() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100 flex items-center gap-2">
-            <MessageCircle className="h-6 w-6 text-emerald-400" />
+          <h1 className="text-xl md:text-2xl font-bold text-zinc-100 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 md:h-6 md:w-6 text-emerald-400" />
             WhatsApp
           </h1>
-          <p className="text-zinc-400 mt-1">
+          <p className="text-sm md:text-base text-zinc-400 mt-1">
             Conecte seu WhatsApp para enviar notificações automáticas
           </p>
         </div>
@@ -216,7 +216,7 @@ export default function WhatsApp() {
           size="sm"
           onClick={handleRefresh}
           disabled={refreshing}
-          className="border-zinc-700 hover:bg-zinc-800"
+          className="border-zinc-700 hover:bg-zinc-800 w-full sm:w-auto"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
           Atualizar

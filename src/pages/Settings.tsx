@@ -452,25 +452,27 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Configurações</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Gerencie as configurações da sua barbearia
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
-          <TabsTrigger value="general">Geral</TabsTrigger>
-          <TabsTrigger value="scheduling">Agendamento</TabsTrigger>
-          <TabsTrigger value="notifications">Notificações</TabsTrigger>
-          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
-          {isSuperAdmin && (
-            <TabsTrigger value="multi-tenant">Multi-Barbearia</TabsTrigger>
-          )}
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className={`inline-flex w-auto min-w-full md:w-full ${isSuperAdmin ? 'md:grid md:grid-cols-5' : 'md:grid md:grid-cols-4'}`}>
+            <TabsTrigger value="general" className="text-xs md:text-sm whitespace-nowrap">Geral</TabsTrigger>
+            <TabsTrigger value="scheduling" className="text-xs md:text-sm whitespace-nowrap">Agendamento</TabsTrigger>
+            <TabsTrigger value="notifications" className="text-xs md:text-sm whitespace-nowrap">Notificações</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs md:text-sm whitespace-nowrap">Pagamentos</TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="multi-tenant" className="text-xs md:text-sm whitespace-nowrap">Multi-Barbearia</TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         {/* General Settings */}
         <TabsContent value="general">

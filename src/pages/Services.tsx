@@ -323,12 +323,12 @@ export default function Services() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Serviços</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Serviços</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Gerencie os serviços oferecidos pela barbearia
           </p>
         </div>
@@ -339,6 +339,7 @@ export default function Services() {
             form.reset();
             setShowForm(true);
           }}
+          className="w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Serviço
@@ -346,7 +347,7 @@ export default function Services() {
       </div>
 
       {/* Services Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {services.map((service) => (
           <Card key={service.id} className="relative overflow-hidden">
             {service.photo_url && (

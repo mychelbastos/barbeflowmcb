@@ -203,17 +203,77 @@ export default function Agenda() {
     
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-lg md:text-xl font-semibold">
             Semana de {format(weekStart, "dd", { locale: ptBR })} a {format(endOfWeek(selectedDate, { locale: ptBR }), "dd 'de' MMMM", { locale: ptBR })}
           </h2>
-          <Button onClick={openBookingModal}>
+          <Button onClick={openBookingModal} size="sm" className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Novo Agendamento
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        {/* Mobile: Horizontal scroll cards */}
+        <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4">
+          <div className="flex gap-3" style={{ width: 'max-content' }}>
+            {days.map((day) => {
+              const dayBookings = getBookingsForDay(day);
+              const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              
+              return (
+                <Card key={day.toISOString()} className={`w-40 flex-shrink-0 ${isToday ? 'border-primary' : ''}`}>
+                  <CardHeader className="pb-2 px-3 pt-3">
+                    <CardTitle className="text-sm">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground uppercase">
+                          {format(day, 'EEE', { locale: ptBR })}
+                        </p>
+                        <p className={`text-lg font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                          {format(day, 'dd')}
+                        </p>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-3 pb-3 pt-0">
+                    <div className="space-y-2">
+                      {dayBookings.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-2">
+                          Sem agendamentos
+                        </p>
+                      ) : (
+                        dayBookings.slice(0, 2).map((booking) => (
+                          <div 
+                            key={booking.id}
+                            className="p-2 rounded-md text-xs"
+                            style={{ 
+                              backgroundColor: `${booking.service?.color || '#3B82F6'}20`,
+                              borderLeft: `3px solid ${booking.service?.color || '#3B82F6'}`
+                            }}
+                          >
+                            <div className="font-medium text-foreground">
+                              {format(new Date(booking.starts_at), 'HH:mm')}
+                            </div>
+                            <div className="text-muted-foreground truncate">
+                              {booking.customer?.name}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      {dayBookings.length > 2 && (
+                        <div className="text-xs text-muted-foreground text-center">
+                          +{dayBookings.length - 2} mais
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Desktop: Grid layout */}
+        <div className="hidden md:grid md:grid-cols-7 gap-4">
           {days.map((day) => {
             const dayBookings = getBookingsForDay(day);
             const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
@@ -289,33 +349,37 @@ export default function Agenda() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Calendário</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Visualize seus agendamentos em calendário
           </p>
         </div>
         
-        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-          <Button
-            variant={viewMode === 'day' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('day')}
-          >
-            Dia
-          </Button>
-          <Button
-            variant={viewMode === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('week')}
-          >
-            Semana
-          </Button>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'day' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('day')}
+              className="flex-1 sm:flex-none"
+            >
+              Dia
+            </Button>
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('week')}
+              className="flex-1 sm:flex-none"
+            >
+              Semana
+            </Button>
+          </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 justify-center sm:justify-start">
             <Button
               variant="outline"
               size="sm"
@@ -324,6 +388,7 @@ export default function Agenda() {
                   ? new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000)
                   : new Date(selectedDate.getTime() - 7 * 24 * 60 * 60 * 1000)
               )}
+              className="px-3"
             >
               ←
             </Button>
@@ -331,6 +396,7 @@ export default function Agenda() {
               variant="outline"
               size="sm"
               onClick={() => setSelectedDate(new Date())}
+              className="min-w-[60px]"
             >
               Hoje
             </Button>
@@ -342,6 +408,7 @@ export default function Agenda() {
                   ? new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000)
                   : new Date(selectedDate.getTime() + 7 * 24 * 60 * 60 * 1000)
               )}
+              className="px-3"
             >
               →
             </Button>

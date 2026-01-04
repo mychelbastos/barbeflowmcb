@@ -334,39 +334,37 @@ export default function Finance() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Date Range Selector */}
-      <DateRangeSelector />
+      <DateRangeSelector className="overflow-x-auto" />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Financeiro</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Financeiro</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Análise de receitas e performance do negócio
           </p>
         </div>
         
-        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-          <Button variant="outline" onClick={exportToCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
-        </div>
+        <Button variant="outline" onClick={exportToCSV} size="sm" className="w-full sm:w-auto">
+          <Download className="h-4 w-4 mr-2" />
+          Exportar CSV
+        </Button>
       </div>
 
       {/* Additional Filters */}
       {staff.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Filtros Adicionais</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Filtros Adicionais</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label>Profissional</Label>
+                <Label className="text-sm">Profissional</Label>
                 <Select value={staffFilter} onValueChange={setStaffFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -385,90 +383,87 @@ export default function Finance() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Faturamento Previsto</p>
-                <p className="text-2xl font-bold text-foreground">
-                  R$ {data ? (data.revenue_expected / 100).toFixed(2) : '0,00'}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground truncate">Faturamento Previsto</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
+                  R$ {data ? (data.revenue_expected / 100).toFixed(0) : '0'}
                 </p>
                 <div className="flex items-center mt-1">
-                  <TrendingUp className="h-3 w-3 text-success mr-1" />
-                  <span className="text-xs text-success">Meta do período</span>
+                  <TrendingUp className="h-3 w-3 text-success mr-1 flex-shrink-0" />
+                  <span className="text-xs text-success truncate">Meta do período</span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Target className="h-6 w-6 text-primary" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 ml-2">
+                <Target className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Recebido</p>
-                <p className="text-2xl font-bold text-foreground">
-                  R$ {data ? (data.revenue_received / 100).toFixed(2) : '0,00'}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Recebido</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
+                  R$ {data ? (data.revenue_received / 100).toFixed(0) : '0'}
                 </p>
                 <div className="flex items-center mt-1">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground truncate">
                     {data && data.revenue_expected > 0 
-                      ? `${((data.revenue_received / data.revenue_expected) * 100).toFixed(1)}% do previsto`
-                      : '0% do previsto'
+                      ? `${((data.revenue_received / data.revenue_expected) * 100).toFixed(0)}% do previsto`
+                      : '0%'
                     }
                   </span>
-                  <Badge variant="outline" className="ml-2 text-xs">
-                    Serviços Concluídos
-                  </Badge>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-success" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0 ml-2">
+                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-success" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Agendamentos</p>
-                <p className="text-2xl font-bold text-foreground">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Agendamentos</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
                   {data?.bookings_count || 0}
                 </p>
                 <div className="flex items-center mt-1">
-                  <Calendar className="h-3 w-3 text-primary mr-1" />
-                  <span className="text-xs text-primary">Confirmados e Concluídos</span>
+                  <Calendar className="h-3 w-3 text-primary mr-1 flex-shrink-0" />
+                  <span className="text-xs text-primary truncate">Confirmados</span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-accent" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 ml-2">
+                <Calendar className="h-5 w-5 md:h-6 md:w-6 text-accent" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                <p className="text-2xl font-bold text-foreground">
-                  R$ {data ? (data.avg_ticket / 100).toFixed(2) : '0,00'}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-muted-foreground">Ticket Médio</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
+                  R$ {data ? (data.avg_ticket / 100).toFixed(0) : '0'}
                 </p>
                 <div className="flex items-center mt-1">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground truncate">
                     Por agendamento
                   </span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                <Wallet className="h-6 w-6 text-warning" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-warning/10 flex items-center justify-center flex-shrink-0 ml-2">
+                <Wallet className="h-5 w-5 md:h-6 md:w-6 text-warning" />
               </div>
             </div>
           </CardContent>

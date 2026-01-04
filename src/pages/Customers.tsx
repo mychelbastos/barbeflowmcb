@@ -377,53 +377,51 @@ export default function Customers() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Clientes</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Gerencie a base de clientes da barbearia
           </p>
         </div>
         
-        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar cliente..."
-              className="pl-10 w-64"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar cliente..."
+            className="pl-10 w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Clientes</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">Total Clientes</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
                   {customers.length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <User className="h-6 w-6 text-primary" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Novos Este Mês</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">Novos Este Mês</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
                   {customers.filter(c => {
                     const created = new Date(c.created_at);
                     const now = new Date();
@@ -432,158 +430,239 @@ export default function Customers() {
                   }).length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                <Plus className="h-6 w-6 text-success" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-success/10 flex items-center justify-center">
+                <Plus className="h-5 w-5 md:h-6 md:w-6 text-success" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Clientes Ativos</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">Clientes Ativos</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
                   {customers.filter(c => c.totalBookings > 0).length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-accent" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-accent/10 flex items-center justify-center">
+                <Calendar className="h-5 w-5 md:h-6 md:w-6 text-accent" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">Ticket Médio</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">
                   R$ {customers.length > 0 
                     ? (customers.reduce((sum, c) => sum + c.totalSpent, 0) / 100 / customers.filter(c => c.totalBookings > 0).length || 0).toFixed(0)
                     : '0'
                   }
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-warning" />
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-warning/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-warning" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Customers Table */}
+      {/* Customers - Mobile Cards / Desktop Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">
             Clientes ({filteredCustomers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Agendamentos</TableHead>
-                <TableHead>Total Gasto</TableHead>
-                <TableHead>Última Visita</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCustomers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{customer.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
-                          </div>
-                        </div>
+          {/* Mobile: Card Layout */}
+          <div className="md:hidden space-y-3">
+            {filteredCustomers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+              </div>
+            ) : (
+              filteredCustomers.map((customer) => (
+                <div key={customer.id} className="p-4 rounded-lg border border-border bg-card space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <User className="h-5 w-5 text-primary" />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm">
-                          <Phone className="h-3 w-3 mr-1 text-muted-foreground" />
-                          {customer.phone}
-                        </div>
-                        {customer.email && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {customer.email}
-                          </div>
-                        )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground truncate">{customer.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
+                        </p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {customer.totalBookings} agendamentos
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {customer.phone}
+                    </div>
+                    {customer.email && (
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        <span className="truncate max-w-[120px]">{customer.email}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="flex items-center gap-3 text-xs">
+                      <Badge variant="secondary" className="text-xs">
+                        {customer.totalBookings} agend.
                       </Badge>
-                    </TableCell>
-                    <TableCell>
                       <span className="font-medium text-success">
-                        R$ {(customer.totalSpent / 100).toFixed(2)}
+                        R$ {(customer.totalSpent / 100).toFixed(0)}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      {customer.lastVisit ? (
-                        <div className="text-sm">
-                          {format(customer.lastVisit, "dd/MM/yyyy", { locale: ptBR })}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Nunca</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => loadCustomerDetails(customer)}
-                          title="Ver detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditClick(customer)}
-                          title="Editar"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(customer)}
-                          title="Excluir"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => loadCustomerDetails(customer)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditClick(customer)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteClick(customer)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table Layout */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>Agendamentos</TableHead>
+                  <TableHead>Total Gasto</TableHead>
+                  <TableHead>Última Visita</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{customer.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm">
+                            <Phone className="h-3 w-3 mr-1 text-muted-foreground" />
+                            {customer.phone}
+                          </div>
+                          {customer.email && (
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {customer.email}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {customer.totalBookings} agendamentos
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium text-success">
+                          R$ {(customer.totalSpent / 100).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {customer.lastVisit ? (
+                          <div className="text-sm">
+                            {format(customer.lastVisit, "dd/MM/yyyy", { locale: ptBR })}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Nunca</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => loadCustomerDetails(customer)}
+                            title="Ver detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditClick(customer)}
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(customer)}
+                            title="Excluir"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

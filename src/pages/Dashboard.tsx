@@ -185,21 +185,21 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-0">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Date Range Selector */}
-      <DateRangeSelector />
+      <DateRangeSelector className="overflow-x-auto" />
 
       {/* Welcome Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-8"
+        className="mb-4 md:mb-8"
       >
-        <h1 className="text-2xl font-bold text-zinc-100 mb-2">
+        <h1 className="text-xl md:text-2xl font-bold text-zinc-100 mb-1 md:mb-2">
           {getGreeting()}! 👋
         </h1>
-        <p className="text-zinc-500">
+        <p className="text-sm md:text-base text-zinc-500">
           {loading 
             ? "Carregando dados..." 
             : `Você tem ${todayBookings.length} agendamentos hoje.`
@@ -212,78 +212,78 @@ const Dashboard = () => {
         variants={staggerContainer}
         initial="initial"
         animate="animate"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4 mb-4 md:mb-8"
       >
         <motion.div 
           variants={fadeInUp}
           onClick={() => navigate('/app/agenda')}
-          className="group p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
+          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
         >
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <Calendar className="h-5 w-5 text-blue-400" />
+          <div className="flex items-start justify-between mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <Calendar className="h-4 w-4 md:h-5 md:w-5 text-blue-400" />
             </div>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-zinc-100 mb-1">
+          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
             {loading ? "..." : todayBookings.length}
           </p>
-          <p className="text-sm text-zinc-500">Agendamentos hoje</p>
+          <p className="text-xs md:text-sm text-zinc-500">Agendamentos hoje</p>
         </motion.div>
 
         <motion.div 
           variants={fadeInUp}
           onClick={() => navigate('/app/services')}
-          className="group p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
+          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
         >
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Scissors className="h-5 w-5 text-emerald-400" />
+          <div className="flex items-start justify-between mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <Scissors className="h-4 w-4 md:h-5 md:w-5 text-emerald-400" />
             </div>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-zinc-100 mb-1">
+          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
             {loading ? "..." : services.length}
           </p>
-          <p className="text-sm text-zinc-500">Serviços ativos</p>
+          <p className="text-xs md:text-sm text-zinc-500">Serviços ativos</p>
         </motion.div>
 
         <motion.div 
           variants={fadeInUp}
           onClick={() => navigate('/app/staff')}
-          className="group p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
+          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
         >
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-violet-400" />
+          <div className="flex items-start justify-between mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-violet-500/10 flex items-center justify-center">
+              <Users className="h-4 w-4 md:h-5 md:w-5 text-violet-400" />
             </div>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-zinc-100 mb-1">
+          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
             {loading ? "..." : staff.length}
           </p>
-          <p className="text-sm text-zinc-500">Profissionais</p>
+          <p className="text-xs md:text-sm text-zinc-500">Profissionais</p>
         </motion.div>
 
         <motion.div 
           variants={fadeInUp}
           onClick={() => navigate('/app/finance')}
-          className="group p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
+          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
         >
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-amber-400" />
+          <div className="flex items-start justify-between mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-amber-400" />
             </div>
-            <ArrowUpRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
           </div>
-          <p className="text-2xl font-bold text-zinc-100 mb-1">
+          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
             {loading ? "..." : `R$ ${(revenue / 100).toFixed(0)}`}
           </p>
-          <p className="text-sm text-zinc-500">Faturamento</p>
+          <p className="text-xs md:text-sm text-zinc-500">Faturamento</p>
         </motion.div>
       </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
         {/* Upcoming Appointments */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -291,60 +291,60 @@ const Dashboard = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="lg:col-span-2"
         >
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl">
-            <div className="flex items-center justify-between p-5 border-b border-zinc-800/50">
+          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
+            <div className="flex items-center justify-between p-3 md:p-5 border-b border-zinc-800/50">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100">Próximos Agendamentos</h2>
-                <p className="text-sm text-zinc-500">Agendamentos de hoje</p>
+                <h2 className="text-base md:text-lg font-semibold text-zinc-100">Próximos Agendamentos</h2>
+                <p className="text-xs md:text-sm text-zinc-500">Agendamentos de hoje</p>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/app/bookings')}
-                className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
+                className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 text-xs md:text-sm"
               >
                 Ver Todos
               </Button>
             </div>
-            <div className="p-5">
-              <div className="space-y-3">
+            <div className="p-3 md:p-5">
+              <div className="space-y-2 md:space-y-3">
                 {loading ? (
-                  <div className="text-center text-zinc-500 py-8">
+                  <div className="text-center text-zinc-500 py-6 md:py-8 text-sm">
                     Carregando agendamentos...
                   </div>
                 ) : todayBookings.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                      <Calendar className="h-6 w-6 text-zinc-600" />
+                  <div className="text-center py-8 md:py-12">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-zinc-800 flex items-center justify-center mx-auto mb-3 md:mb-4">
+                      <Calendar className="h-5 w-5 md:h-6 md:w-6 text-zinc-600" />
                     </div>
-                    <p className="text-zinc-500">Nenhum agendamento para hoje</p>
+                    <p className="text-sm text-zinc-500">Nenhum agendamento para hoje</p>
                   </div>
                 ) : (
                   todayBookings.slice(0, 4).map((booking) => (
                     <div 
                       key={booking.id} 
-                      className="flex items-center justify-between p-4 rounded-xl bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-lg md:rounded-xl bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors gap-3"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-zinc-700/50 rounded-full flex items-center justify-center">
-                          <Users className="h-5 w-5 text-zinc-400" />
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-zinc-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Users className="h-4 w-4 md:h-5 md:w-5 text-zinc-400" />
                         </div>
-                        <div>
-                          <h4 className="font-medium text-zinc-100">{booking.customer?.name}</h4>
-                          <p className="text-sm text-zinc-500">{booking.service?.name}</p>
-                          <div className="flex items-center mt-1 gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-medium text-sm md:text-base text-zinc-100 truncate">{booking.customer?.name}</h4>
+                          <p className="text-xs md:text-sm text-zinc-500 truncate">{booking.service?.name}</p>
+                          <div className="flex items-center mt-1 gap-2 md:gap-3 flex-wrap">
                             <span className="text-xs text-zinc-500 flex items-center">
                               <Clock className="h-3 w-3 mr-1" />
                               {new Date(booking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            <span className="text-xs text-zinc-500 flex items-center">
+                            <span className="text-xs text-zinc-500 flex items-center hidden sm:flex">
                               <Phone className="h-3 w-3 mr-1" />
                               {booking.customer?.phone}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium self-start sm:self-auto ${
                         booking.status === 'confirmed' 
                           ? 'bg-emerald-500/10 text-emerald-400' 
                           : 'bg-zinc-700/50 text-zinc-400'
