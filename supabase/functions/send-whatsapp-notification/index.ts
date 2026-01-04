@@ -254,11 +254,16 @@ serve(async (req) => {
     }
 
     // Prepare N8N webhook payload with tenant's Evolution instance
+    // TOP LEVEL fields for easy access in N8N
     const n8nPayload = {
       type,
       phone,
       message,
+      // TOP LEVEL - for N8N to use directly in Evolution API call
       evolution_instance: whatsappConnection.evolution_instance_name,
+      tenant_id: tenant_id,
+      tenant_slug: booking.tenant.slug,
+      // Nested objects for additional context
       booking: {
         id: booking.id,
         starts_at: booking.starts_at,
@@ -277,13 +282,15 @@ serve(async (req) => {
       },
       staff: booking.staff,
       tenant: {
-        id: tenant_id,
         name: booking.tenant.name,
         slug: booking.tenant.slug,
       },
     };
 
-    console.log("Sending to N8N with instance:", whatsappConnection.evolution_instance_name);
+    // Log for debugging - shows exactly what instance will be used
+    console.log(`[WhatsApp] Preparing notification for tenant_id=${tenant_id}, tenant_slug=${booking.tenant.slug}`);
+    console.log(`[WhatsApp] Evolution instance to use: ${whatsappConnection.evolution_instance_name}`);
+    console.log(`[WhatsApp] Sending to phone: ${phone}`);
 
     // Send to N8N webhook
     const n8nWebhookUrl = Deno.env.get("N8N_WEBHOOK_URL");
