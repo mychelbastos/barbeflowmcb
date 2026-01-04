@@ -168,6 +168,40 @@ export default function Bookings() {
 
       if (error) throw error;
 
+      // Map status to notification type
+      const notificationTypeMap: Record<string, string | null> = {
+        cancelled: 'booking_cancelled',
+        confirmed: 'booking_confirmed',
+        completed: null,
+        no_show: null,
+      };
+
+      const notificationType = notificationTypeMap[newStatus];
+
+      // Send WhatsApp notification if applicable
+      if (notificationType && currentTenant) {
+        try {
+          const { error: notifError } = await supabase.functions.invoke(
+            'send-whatsapp-notification',
+            {
+              body: {
+                type: notificationType,
+                booking_id: bookingId,
+                tenant_id: currentTenant.id,
+              },
+            }
+          );
+
+          if (notifError) {
+            console.error('Erro ao enviar notificação WhatsApp:', notifError);
+          } else {
+            console.log('Notificação WhatsApp enviada:', notificationType);
+          }
+        } catch (notifError) {
+          console.error('Erro ao chamar send-whatsapp-notification:', notifError);
+        }
+      }
+
       toast({
         title: "Status atualizado",
         description: `Agendamento marcado como ${getStatusLabel(newStatus)}`,
