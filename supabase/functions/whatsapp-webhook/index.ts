@@ -49,9 +49,15 @@ serve(async (req) => {
 
     console.log("Found tenant:", connection.tenant_id);
 
-    // Handle messages.upsert event (new messages)
-    if (event === "messages.upsert" || event === "MESSAGES_UPSERT") {
-      console.log("Processing messages.upsert event, data:", JSON.stringify(data, null, 2).substring(0, 500));
+    // Handle messages.upsert and send.message events (new messages)
+    const isNewMessageEvent = 
+      event === "messages.upsert" || 
+      event === "MESSAGES_UPSERT" || 
+      event === "send.message" ||
+      event === "SEND_MESSAGE";
+    
+    if (isNewMessageEvent) {
+      console.log("Processing new message event:", event, "data:", JSON.stringify(data, null, 2).substring(0, 500));
       
       // Evolution API v2 structure: data can be an array or single object
       const messages = Array.isArray(data) ? data : [data];
