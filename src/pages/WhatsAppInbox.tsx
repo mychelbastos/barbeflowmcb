@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -378,50 +378,48 @@ export default function WhatsAppInbox() {
             </div>
           ) : (
             <div className="p-2">
-              <AnimatePresence>
-                {filteredConversations.map((conv, index) => (
-                  <motion.div
-                    key={conv.remote_jid}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => setSelectedConversation(conv.remote_jid)}
-                    className={`flex items-center gap-3 p-3 cursor-pointer rounded-xl transition-all duration-200 mb-1 ${
-                      selectedConversation === conv.remote_jid 
-                        ? "bg-primary/15 border border-primary/20" 
-                        : "hover:bg-secondary/50"
-                    }`}
-                  >
-                    <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-medium">
-                        {getInitials(conv.remote_jid)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <p className="font-medium text-sm truncate">
-                          {conv.contact_name || formatPhoneDisplay(conv.remote_jid)}
-                        </p>
-                        <span className={`text-xs ${
-                          selectedConversation === conv.remote_jid 
-                            ? "text-primary" 
-                            : "text-muted-foreground"
-                        }`}>
-                          {formatTimestamp(conv.last_message_at)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {conv.last_message_from_me && (
-                          <CheckCheck className="h-4 w-4 text-primary shrink-0" />
-                        )}
-                        <p className="text-xs text-muted-foreground truncate">
-                          {conv.last_message}
-                        </p>
-                      </div>
+              {filteredConversations.map((conv, index) => (
+                <motion.div
+                  key={conv.remote_jid}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(index * 0.03, 0.3) }}
+                  onClick={() => setSelectedConversation(conv.remote_jid)}
+                  className={`flex items-center gap-3 p-3 cursor-pointer rounded-xl transition-all duration-200 mb-1 ${
+                    selectedConversation === conv.remote_jid 
+                      ? "bg-primary/15 border border-primary/20" 
+                      : "hover:bg-secondary/50"
+                  }`}
+                >
+                  <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-medium">
+                      {getInitials(conv.remote_jid)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="font-medium text-sm truncate">
+                        {conv.contact_name || formatPhoneDisplay(conv.remote_jid)}
+                      </p>
+                      <span className={`text-xs ${
+                        selectedConversation === conv.remote_jid 
+                          ? "text-primary" 
+                          : "text-muted-foreground"
+                      }`}>
+                        {formatTimestamp(conv.last_message_at)}
+                      </span>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    <div className="flex items-center gap-1">
+                      {conv.last_message_from_me && (
+                        <CheckCheck className="h-4 w-4 text-primary shrink-0" />
+                      )}
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conv.last_message}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           )}
         </ScrollArea>
