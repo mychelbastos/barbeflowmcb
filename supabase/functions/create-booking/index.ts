@@ -276,7 +276,7 @@ serve(async (req) => {
 
     // 5. Check for time conflicts (overbooking prevention)
     const settings = tenant.settings || {};
-    const bufferTime = settings.buffer_time || 10; // minutes
+    const bufferTime = settings.buffer_time ?? 10; // minutes - use ?? to allow 0 as valid value
 
     const bufferedStart = new Date(startsAtDate.getTime() - (bufferTime * 60 * 1000));
     const bufferedEnd = new Date(endsAtDate.getTime() + (bufferTime * 60 * 1000));
