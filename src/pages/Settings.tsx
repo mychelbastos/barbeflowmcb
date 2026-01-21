@@ -274,15 +274,15 @@ export default function Settings() {
 
     const settings = currentTenant.settings || {};
     settingsForm.reset({
-      timezone: settings.timezone || "America/Bahia",
-      buffer_time: settings.buffer_time || 10,
-      slot_duration: settings.slot_duration || 15,
-      cancellation_hours: settings.cancellation_hours || 2,
-      whatsapp_enabled: settings.whatsapp_enabled || false,
+      timezone: settings.timezone ?? "America/Bahia",
+      buffer_time: settings.buffer_time ?? 10,
+      slot_duration: settings.slot_duration ?? 15,
+      cancellation_hours: settings.cancellation_hours ?? 2,
+      whatsapp_enabled: settings.whatsapp_enabled ?? false,
       email_notifications: settings.email_notifications !== false,
-      allow_online_payment: settings.allow_online_payment || false,
-      require_prepayment: settings.require_prepayment || false,
-      prepayment_percentage: settings.prepayment_percentage || 0,
+      allow_online_payment: settings.allow_online_payment ?? false,
+      require_prepayment: settings.require_prepayment ?? false,
+      prepayment_percentage: settings.prepayment_percentage ?? 0,
     });
   };
 
