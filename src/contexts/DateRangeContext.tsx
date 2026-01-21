@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export interface DateRange {
@@ -51,9 +51,9 @@ const getDateRangeFromPreset = (preset: string, customStart?: string, customEnd?
       return { from: startOfMonth(now), to: endOfMonth(now) };
     case 'custom':
       if (customStart && customEnd) {
-        const startDate = new Date(customStart);
-        const endDate = new Date(customEnd);
-        endDate.setHours(23, 59, 59, 999);
+        // Use parseISO to correctly parse YYYY-MM-DD without timezone issues
+        const startDate = startOfDay(parseISO(customStart));
+        const endDate = endOfDay(parseISO(customEnd));
         return { from: startDate, to: endDate };
       }
       return { from: subDays(now, 29), to: now };
