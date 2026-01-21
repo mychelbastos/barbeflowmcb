@@ -272,6 +272,72 @@ export const MercadoPagoCheckout = ({
     }
   };
 
+  // State for payment polling
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Poll for PIX payment status
+  const pollPaymentStatus = useCallback(async (paymentIdToCheck: string) => {
+    if (!isMountedRef.current) return;
+    
+    try {
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .select('status')
+        .eq('id', paymentIdToCheck)
+        .single();
+      
+      if (error) {
+        console.error('Error polling payment status:', error);
+        return;
+      }
+      
+      console.log('Polled payment status:', payment?.status);
+      
+      if (payment?.status === 'paid') {
+        // Payment confirmed!
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setStatus('success');
+        onSuccess({ status: 'approved', payment_id: paymentIdToCheck });
+      } else if (payment?.status === 'failed' || payment?.status === 'cancelled') {
+        // Payment failed
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setErrorMessage('Pagamento não foi aprovado');
+        setStatus('error');
+      }
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  }, [onSuccess]);
+
+  // Start polling when PIX is generated
+  useEffect(() => {
+    if (status === 'pix-waiting' && paymentId) {
+      console.log('Starting payment status polling for:', paymentId);
+      
+      // Poll every 5 seconds
+      pollingIntervalRef.current = setInterval(() => {
+        pollPaymentStatus(paymentId);
+      }, 5000);
+      
+      // Also poll immediately
+      pollPaymentStatus(paymentId);
+    }
+    
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [status, paymentId, pollPaymentStatus]);
+
   const processPixPayment = async () => {
     if (!isMountedRef.current) return;
     setStatus('processing');
@@ -296,6 +362,10 @@ export const MercadoPagoCheckout = ({
 
       if (data.pix) {
         setPixData(data.pix);
+        // Store the payment_id for polling
+        if (data.payment_id) {
+          setPaymentId(data.payment_id);
+        }
         setStatus('pix-waiting');
       } else if (data.status === 'approved') {
         setStatus('success');
