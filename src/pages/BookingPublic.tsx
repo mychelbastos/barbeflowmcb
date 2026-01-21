@@ -528,8 +528,16 @@ END:VCALENDAR`;
       <header className="border-b border-zinc-800/50">
         <div className="max-w-lg mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center">
-              <Scissors className="h-6 w-6 text-white/80" />
+            <div className="w-12 h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center overflow-hidden">
+              {tenant?.logo_url ? (
+                <img 
+                  src={tenant.logo_url} 
+                  alt={`Logo ${tenant.name}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Scissors className="h-6 w-6 text-white/80" />
+              )}
             </div>
             <div>
               <h1 className="font-semibold text-lg">{tenant?.name || "Carregando..."}</h1>
