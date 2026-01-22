@@ -285,7 +285,7 @@ const Dashboard = () => {
         </motion.div>
       </motion.div>
 
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Upcoming Appointments */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -363,21 +363,21 @@ const Dashboard = () => {
           </div>
         </motion.div>
 
-        {/* Sidebar */}
+        {/* Sidebar - Mobile: Horizontal scroll, Desktop: Vertical stack */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="space-y-6"
+          className="space-y-4 md:space-y-6"
         >
           {/* Top Services */}
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl">
-            <div className="p-5 border-b border-zinc-800/50">
-              <h2 className="text-lg font-semibold text-zinc-100">Serviços Populares</h2>
-              <p className="text-sm text-zinc-500">Este mês</p>
+          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
+            <div className="p-3 md:p-5 border-b border-zinc-800/50">
+              <h2 className="text-base md:text-lg font-semibold text-zinc-100">Serviços Populares</h2>
+              <p className="text-xs md:text-sm text-zinc-500">Este mês</p>
             </div>
-            <div className="p-5">
-              <div className="space-y-4">
+            <div className="p-3 md:p-5">
+              <div className="space-y-3 md:space-y-4">
                 {loading ? (
                   <div className="text-center text-zinc-500">
                     Carregando...
@@ -415,14 +415,14 @@ const Dashboard = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl">
-            <div className="p-5 border-b border-zinc-800/50">
+          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
+            <div className="p-3 md:p-5 border-b border-zinc-800/50">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-emerald-400" />
-                <h2 className="text-lg font-semibold text-zinc-100">Ações Rápidas</h2>
+                <h2 className="text-base md:text-lg font-semibold text-zinc-100">Ações Rápidas</h2>
               </div>
             </div>
-            <div className="p-5 space-y-2">
+            <div className="p-3 md:p-5 space-y-2">
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" 

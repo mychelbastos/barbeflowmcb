@@ -199,7 +199,7 @@ export function BookingModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={closeBookingModal}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Agendamento</DialogTitle>
           <DialogDescription>
@@ -208,7 +208,7 @@ export function BookingModal() {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 md:space-y-4">
             {/* Customer Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
@@ -364,16 +364,17 @@ export function BookingModal() {
               )}
             />
 
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => closeBookingModal()}
                 disabled={formLoading}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={formLoading}>
+              <Button type="submit" disabled={formLoading} className="w-full sm:w-auto">
                 {formLoading ? "Criando..." : "Criar Agendamento"}
               </Button>
             </DialogFooter>
