@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.evolution-sync-messages]
 verify_jwt = false
+
+[functions.send-booking-reminders]
+verify_jwt = false
