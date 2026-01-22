@@ -471,18 +471,18 @@ export default function Finance() {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Faturamento Diário</CardTitle>
-            <CardDescription>Previsto vs Recebido</CardDescription>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Faturamento Diário</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Previsto vs Recebido</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="pl-0 pr-2 md:pl-2 md:pr-4">
+            <ResponsiveContainer width="100%" height={200} className="md:!h-[300px]">
               <LineChart data={data?.daily_revenue || []}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} width={40} />
                 <Tooltip 
                   formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
                 />
@@ -492,6 +492,7 @@ export default function Finance() {
                   stroke="hsl(var(--primary))" 
                   strokeWidth={2}
                   name="Previsto"
+                  dot={false}
                 />
                 <Line 
                   type="monotone" 
@@ -499,6 +500,7 @@ export default function Finance() {
                   stroke="hsl(var(--success))" 
                   strokeWidth={2}
                   name="Recebido"
+                  dot={false}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -506,124 +508,211 @@ export default function Finance() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Top Serviços</CardTitle>
-            <CardDescription>Por faturamento no período</CardDescription>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Top Serviços</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Por faturamento no período</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data?.top_services || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value: number) => [`R$ ${(value / 100).toFixed(2)}`, 'Faturamento']}
-                />
-                <Bar
-                  dataKey="revenue" 
-                  fill="hsl(var(--accent))"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="pl-0 pr-2 md:pl-2 md:pr-4">
+            {/* Mobile: List view instead of chart */}
+            <div className="md:hidden space-y-3">
+              {(data?.top_services || []).map((service, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                      style={{ backgroundColor: `${COLORS[index % COLORS.length]}20`, color: COLORS[index % COLORS.length] }}
+                    >
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{service.name}</p>
+                      <p className="text-xs text-muted-foreground">{service.count} agendamentos</p>
+                    </div>
+                  </div>
+                  <span className="font-semibold text-sm text-success">
+                    R$ {(service.revenue / 100).toFixed(0)}
+                  </span>
+                </div>
+              ))}
+              {(!data?.top_services || data.top_services.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum dado disponível</p>
+              )}
+            </div>
+            {/* Desktop: Chart */}
+            <div className="hidden md:block">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data?.top_services || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip 
+                    formatter={(value: number) => [`R$ ${(value / 100).toFixed(2)}`, 'Faturamento']}
+                  />
+                  <Bar
+                    dataKey="revenue" 
+                    fill="hsl(var(--accent))"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tables */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Performance da Equipe</CardTitle>
-            <CardDescription>Faturamento por profissional</CardDescription>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Performance da Equipe</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Faturamento por profissional</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Profissional</TableHead>
-                  <TableHead className="text-right">Agendamentos</TableHead>
-                  <TableHead className="text-right">Faturamento</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data?.staff_performance.map((staff, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{staff.name}</TableCell>
-                    <TableCell className="text-right">{staff.bookings}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      R$ {(staff.revenue / 100).toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                )) || (
+            {/* Mobile: Card list */}
+            <div className="md:hidden space-y-3">
+              {data?.staff_performance.map((staff, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{staff.name}</p>
+                      <p className="text-xs text-muted-foreground">{staff.bookings} agendamentos</p>
+                    </div>
+                  </div>
+                  <span className="font-semibold text-sm text-success">
+                    R$ {(staff.revenue / 100).toFixed(0)}
+                  </span>
+                </div>
+              )) || (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum dado disponível</p>
+              )}
+            </div>
+            {/* Desktop: Table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      Nenhum dado disponível
-                    </TableCell>
+                    <TableHead>Profissional</TableHead>
+                    <TableHead className="text-right">Agendamentos</TableHead>
+                    <TableHead className="text-right">Faturamento</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data?.staff_performance.map((staff, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{staff.name}</TableCell>
+                      <TableCell className="text-right">{staff.bookings}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        R$ {(staff.revenue / 100).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  )) || (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        Nenhum dado disponível
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Últimos Agendamentos</CardTitle>
-            <CardDescription>Agendamentos recentes do período</CardDescription>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Últimos Agendamentos</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Agendamentos recentes do período</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.slice(0, 5).map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{booking.customer?.name}</p>
-                        <p className="text-sm text-muted-foreground">{booking.service?.name}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{format(new Date(booking.starts_at), 'dd/MM/yyyy')}</p>
-                        <p className="text-muted-foreground">
-                          {format(new Date(booking.starts_at), 'HH:mm')}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div>
-                        <p className="font-medium">
-                          R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
-                        </p>
-                        <Badge variant={
-                          booking.status === 'confirmed' ? 'default' :
-                          booking.status === 'cancelled' ? 'destructive' :
-                          'secondary'
-                        } className="text-xs">
-                          {booking.status === 'completed' ? 'Concluído' :
-                           booking.status === 'confirmed' ? 'Confirmado' :
-                           booking.status === 'cancelled' ? 'Cancelado' :
-                           booking.status === 'no_show' ? 'Faltou' : booking.status}
-                        </Badge>
-                      </div>
-                    </TableCell>
+            {/* Mobile: Card list */}
+            <div className="md:hidden space-y-3">
+              {bookings.slice(0, 5).map((booking) => (
+                <div key={booking.id} className="p-3 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{booking.customer?.name}</p>
+                      <p className="text-xs text-muted-foreground">{booking.service?.name}</p>
+                    </div>
+                    <Badge variant={
+                      booking.status === 'confirmed' ? 'default' :
+                      booking.status === 'cancelled' ? 'destructive' :
+                      'secondary'
+                    } className="text-xs">
+                      {booking.status === 'completed' ? 'Concluído' :
+                       booking.status === 'confirmed' ? 'Confirmado' :
+                       booking.status === 'cancelled' ? 'Cancelado' :
+                       booking.status === 'no_show' ? 'Faltou' : booking.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      {format(new Date(booking.starts_at), 'dd/MM/yyyy HH:mm')}
+                    </span>
+                    <span className="font-semibold text-success">
+                      R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop: Table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {bookings.slice(0, 5).map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{booking.customer?.name}</p>
+                          <p className="text-sm text-muted-foreground">{booking.service?.name}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <p>{format(new Date(booking.starts_at), 'dd/MM/yyyy')}</p>
+                          <p className="text-muted-foreground">
+                            {format(new Date(booking.starts_at), 'HH:mm')}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div>
+                          <p className="font-medium">
+                            R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
+                          </p>
+                          <Badge variant={
+                            booking.status === 'confirmed' ? 'default' :
+                            booking.status === 'cancelled' ? 'destructive' :
+                            'secondary'
+                          } className="text-xs">
+                            {booking.status === 'completed' ? 'Concluído' :
+                             booking.status === 'confirmed' ? 'Confirmado' :
+                             booking.status === 'cancelled' ? 'Cancelado' :
+                             booking.status === 'no_show' ? 'Faltou' : booking.status}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

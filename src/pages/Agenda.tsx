@@ -213,63 +213,74 @@ export default function Agenda() {
           </Button>
         </div>
         
-        {/* Mobile: Horizontal scroll cards */}
-        <div className="md:hidden overflow-x-auto pb-4 -mx-4 px-4">
-          <div className="flex gap-3" style={{ width: 'max-content' }}>
-            {days.map((day) => {
-              const dayBookings = getBookingsForDay(day);
-              const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-              
-              return (
-                <Card key={day.toISOString()} className={`w-40 flex-shrink-0 ${isToday ? 'border-primary' : ''}`}>
-                  <CardHeader className="pb-2 px-3 pt-3">
-                    <CardTitle className="text-sm">
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground uppercase">
-                          {format(day, 'EEE', { locale: ptBR })}
+        {/* Mobile: Vertical stacked cards */}
+        <div className="md:hidden space-y-3">
+          {days.map((day) => {
+            const dayBookings = getBookingsForDay(day);
+            const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+            
+            return (
+              <Card key={day.toISOString()} className={`${isToday ? 'border-primary ring-1 ring-primary/20' : ''}`}>
+                <CardHeader className="pb-2 px-4 pt-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isToday ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                        <span className="text-lg font-bold">{format(day, 'dd')}</span>
+                      </div>
+                      <div>
+                        <p className={`font-medium ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                          {format(day, 'EEEE', { locale: ptBR })}
                         </p>
-                        <p className={`text-lg font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>
-                          {format(day, 'dd')}
+                        <p className="text-xs text-muted-foreground">
+                          {format(day, "MMMM", { locale: ptBR })}
                         </p>
                       </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-3 pb-3 pt-0">
+                    </div>
+                    <Badge variant={dayBookings.length > 0 ? "default" : "secondary"} className="text-xs">
+                      {dayBookings.length} {dayBookings.length === 1 ? 'agendamento' : 'agendamentos'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-3 pt-0">
+                  {dayBookings.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Sem agendamentos
+                    </p>
+                  ) : (
                     <div className="space-y-2">
-                      {dayBookings.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-2">
-                          Sem agendamentos
-                        </p>
-                      ) : (
-                        dayBookings.slice(0, 2).map((booking) => (
-                          <div 
-                            key={booking.id}
-                            className="p-2 rounded-md text-xs"
-                            style={{ 
-                              backgroundColor: `${booking.service?.color || '#3B82F6'}20`,
-                              borderLeft: `3px solid ${booking.service?.color || '#3B82F6'}`
-                            }}
-                          >
-                            <div className="font-medium text-foreground">
-                              {format(new Date(booking.starts_at), 'HH:mm')}
+                      {dayBookings.slice(0, 3).map((booking) => (
+                        <div 
+                          key={booking.id}
+                          className="flex items-center gap-3 p-2 rounded-lg"
+                          style={{ 
+                            backgroundColor: `${booking.service?.color || '#3B82F6'}15`,
+                            borderLeft: `3px solid ${booking.service?.color || '#3B82F6'}`
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm font-medium text-foreground">
+                                {format(new Date(booking.starts_at), 'HH:mm')}
+                              </span>
                             </div>
-                            <div className="text-muted-foreground truncate">
-                              {booking.customer?.name}
-                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {booking.customer?.name} • {booking.service?.name}
+                            </p>
                           </div>
-                        ))
-                      )}
-                      {dayBookings.length > 2 && (
-                        <div className="text-xs text-muted-foreground text-center">
-                          +{dayBookings.length - 2} mais
                         </div>
+                      ))}
+                      {dayBookings.length > 3 && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                          +{dayBookings.length - 3} mais
+                        </p>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
         
         {/* Desktop: Grid layout */}
