@@ -164,7 +164,7 @@ export function BookingModal() {
       const startsAt = new Date(`${data.date}T${data.time}`);
       const endsAt = new Date(startsAt.getTime() + (service?.duration_minutes || 60) * 60000);
 
-      const { error: bookingError } = await supabase
+      const { data: newBooking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
           tenant_id: currentTenant.id,
@@ -175,9 +175,28 @@ export function BookingModal() {
           ends_at: endsAt.toISOString(),
           status: 'confirmed',
           notes: data.notes || null,
-        });
+        })
+        .select('id')
+        .single();
 
       if (bookingError) throw bookingError;
+
+      // Send WhatsApp notification for booking confirmation
+      if (newBooking) {
+        try {
+          await supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              type: 'booking_confirmed',
+              booking_id: newBooking.id,
+              tenant_id: currentTenant.id,
+            },
+          });
+          console.log('WhatsApp notification sent for booking:', newBooking.id);
+        } catch (notifError) {
+          console.error('Error sending WhatsApp notification:', notifError);
+          // Don't fail the booking if notification fails
+        }
+      }
 
       toast({
         title: "Sucesso",
