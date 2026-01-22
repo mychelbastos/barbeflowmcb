@@ -128,7 +128,7 @@ export function NewServiceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Plus className="h-5 w-5 mr-2" />
@@ -140,7 +140,7 @@ export function NewServiceModal({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 md:space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -173,7 +173,7 @@ export function NewServiceModal({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               <FormField
                 control={form.control}
                 name="duration_minutes"
@@ -259,11 +259,11 @@ export function NewServiceModal({
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Criar Serviço
               </Button>
@@ -333,7 +333,7 @@ export function NewStaffModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Users className="h-5 w-5 mr-2" />
@@ -345,7 +345,7 @@ export function NewStaffModal({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 md:space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -420,11 +420,11 @@ export function NewStaffModal({
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Adicionar
               </Button>
@@ -517,7 +517,7 @@ export function BlockTimeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Calendar className="h-5 w-5 mr-2" />
@@ -529,7 +529,7 @@ export function BlockTimeModal({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 md:space-y-4">
             <FormField
               control={form.control}
               name="reason"
@@ -570,7 +570,7 @@ export function BlockTimeModal({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               <FormField
                 control={form.control}
                 name="starts_at"
@@ -606,11 +606,11 @@ export function BlockTimeModal({
               />
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Bloquear
               </Button>
