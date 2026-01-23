@@ -139,7 +139,6 @@ const Dashboard = () => {
     if (!bookingsList.length) return 0;
     
     try {
-      // Get all booking IDs from the period (confirmed + completed)
       const bookingIds = bookingsList.map(b => b.id);
       
       // Fetch all paid payments for these bookings
@@ -149,15 +148,20 @@ const Dashboard = () => {
         .in('booking_id', bookingIds)
         .eq('status', 'paid');
 
-      const actualPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
+      const paidPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
       
-      if (actualPayments > 0) {
-        return actualPayments;
+      // If there are paid payments, use that value
+      if (paidPayments > 0) {
+        return paidPayments;
       }
       
-      // Fallback: only count completed bookings' service prices
-      const completedBookings = bookingsList.filter(booking => booking.status === 'completed');
-      return completedBookings.reduce((sum, booking) => {
+      // For bookings without online payment (confirmed/completed),
+      // calculate expected revenue based on service price
+      const revenueBookings = bookingsList.filter(
+        booking => booking.status === 'confirmed' || booking.status === 'completed'
+      );
+      
+      return revenueBookings.reduce((sum, booking) => {
         return sum + (booking.service?.price_cents || 0);
       }, 0);
     } catch (error) {
