@@ -4,6 +4,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { NewTenantModal } from "@/components/modals/NewTenantModal";
 import { NoTenantState } from "@/components/NoTenantState";
+import { AvailabilityBlocksManager } from "@/components/AvailabilityBlocksManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,8 @@ import {
   Unlink,
   CheckCircle,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  CalendarOff
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,6 +73,7 @@ const settingsSchema = z.object({
   buffer_time: z.number().min(0).max(60),
   slot_duration: z.number().min(15).max(120),
   cancellation_hours: z.number().min(0).max(48),
+  max_advance_days: z.number().min(0).max(365),
   whatsapp_enabled: z.boolean(),
   email_notifications: z.boolean(),
   allow_online_payment: z.boolean(),
@@ -125,6 +128,7 @@ export default function Settings() {
       buffer_time: 10,
       slot_duration: 15,
       cancellation_hours: 2,
+      max_advance_days: 30,
       whatsapp_enabled: false,
       email_notifications: true,
       allow_online_payment: false,
@@ -278,6 +282,7 @@ export default function Settings() {
       buffer_time: settings.buffer_time ?? 10,
       slot_duration: settings.slot_duration ?? 15,
       cancellation_hours: settings.cancellation_hours ?? 2,
+      max_advance_days: settings.max_advance_days ?? 30,
       whatsapp_enabled: settings.whatsapp_enabled ?? false,
       email_notifications: settings.email_notifications !== false,
       allow_online_payment: settings.allow_online_payment ?? false,
@@ -889,6 +894,30 @@ export default function Settings() {
                     />
                   </div>
 
+                  {/* Advance Booking Limit */}
+                  <FormField
+                    control={settingsForm.control}
+                    name="max_advance_days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Limite de Agendamento Antecipado (dias)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={0} 
+                            max={365}
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Quantos dias à frente o cliente pode agendar. Ex: 30 = cliente pode agendar até 30 dias no futuro. Use 0 para ilimitado.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <div className="flex justify-end">
                     <Button type="submit" disabled={loading}>
                       {loading ? "Salvando..." : "Salvar Configurações"}
@@ -896,6 +925,19 @@ export default function Settings() {
                   </div>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+
+          {/* Availability Blocks */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <CalendarOff className="h-5 w-5 mr-2" />
+                Bloqueios de Agenda
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AvailabilityBlocksManager tenantId={currentTenant.id} />
             </CardContent>
           </Card>
         </TabsContent>

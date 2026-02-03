@@ -61,6 +61,10 @@ const BookingPublic = () => {
   const [allowOnlinePayment, setAllowOnlinePayment] = useState(false);
   const [requirePrepayment, setRequirePrepayment] = useState(false);
   const [prepaymentPercentage, setPrepaymentPercentage] = useState(0);
+  
+  // Availability settings
+  const [maxAdvanceDays, setMaxAdvanceDays] = useState<number>(0);
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (slug) {
@@ -100,8 +104,9 @@ const BookingPublic = () => {
       setAllowOnlinePayment(settings.allow_online_payment || false);
       setRequirePrepayment(settings.require_prepayment || false);
       setPrepaymentPercentage(settings.prepayment_percentage || 0);
+      setMaxAdvanceDays(settings.max_advance_days || 0);
 
-      const [servicesRes, staffRes] = await Promise.all([
+      const [servicesRes, staffRes, blocksRes] = await Promise.all([
         supabase
           .from('services')
           .select('*')
@@ -114,11 +119,42 @@ const BookingPublic = () => {
           .select('*')
           .eq('tenant_id', tenantData.id)
           .eq('active', true)
-          .order('name')
+          .order('name'),
+        
+        // Load full-day blocks to disable dates in calendar
+        supabase
+          .from('blocks')
+          .select('starts_at, ends_at, staff_id')
+          .eq('tenant_id', tenantData.id)
+          .gte('ends_at', new Date().toISOString())
       ]);
 
       if (servicesRes.error) throw servicesRes.error;
       if (staffRes.error) throw staffRes.error;
+      
+      // Process blocked dates (full-day blocks that apply to all staff)
+      const blocked = new Set<string>();
+      if (blocksRes.data) {
+        for (const block of blocksRes.data) {
+          // Check if it's a full-day block (00:00 to 23:59)
+          const startDate = new Date(block.starts_at);
+          const endDate = new Date(block.ends_at);
+          const startHours = startDate.getHours();
+          const startMinutes = startDate.getMinutes();
+          const endHours = endDate.getHours();
+          const endMinutes = endDate.getMinutes();
+          
+          const isFullDay = startHours === 0 && startMinutes === 0 && 
+                            endHours === 23 && endMinutes >= 59;
+          
+          // Only block dates if it's a full-day block for all staff
+          if (isFullDay && block.staff_id === null) {
+            const dateStr = startDate.toISOString().split('T')[0];
+            blocked.add(dateStr);
+          }
+        }
+      }
+      setBlockedDates(blocked);
 
       setServices(servicesRes.data || []);
       setStaff(staffRes.data || []);
@@ -702,6 +738,11 @@ END:VCALENDAR`;
                 value={selectedCalendarDate}
                 onChange={handleDateSelect}
                 minValue={today(getLocalTimeZone())}
+                maxValue={maxAdvanceDays > 0 ? today(getLocalTimeZone()).add({ days: maxAdvanceDays }) : undefined}
+                isDateUnavailable={(date) => {
+                  const dateStr = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+                  return blockedDates.has(dateStr);
+                }}
                 className="w-full [&_.rdp]:w-full [&_.rdp-months]:w-full [&_.rdp-month]:w-full [&_.rdp-table]:w-full"
               />
             </div>
