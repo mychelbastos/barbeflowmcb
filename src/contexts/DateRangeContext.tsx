@@ -66,11 +66,11 @@ const getDateRangeFromPreset = (preset: string, customStart?: string, customEnd?
 };
 
 export function DateRangeProvider({ children }: { children: ReactNode }) {
-  const [preset, setPreset] = useState('30');
+  const [preset, setPreset] = useState('today');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [dateRange, setDateRange] = useState<DateRange>(() => 
-    getDateRangeFromPreset('30')
+    getDateRangeFromPreset('today')
   );
 
   const handleSetPreset = (newPreset: string) => {

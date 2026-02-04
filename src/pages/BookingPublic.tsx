@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
+import { CustomerBookingsModal } from "@/components/modals/CustomerBookingsModal";
 import { 
   Calendar, 
   Clock, 
@@ -21,7 +22,8 @@ import {
   CalendarPlus,
   Sparkles,
   CreditCard,
-  Banknote
+  Banknote,
+  CalendarCheck
 } from "lucide-react";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import { formatInTimeZone } from "date-fns-tz";
@@ -65,6 +67,9 @@ const BookingPublic = () => {
   // Availability settings
   const [maxAdvanceDays, setMaxAdvanceDays] = useState<number>(0);
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+  
+  // Customer bookings modal
+  const [showCustomerBookings, setShowCustomerBookings] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -563,27 +568,40 @@ END:VCALENDAR`;
       {/* Header */}
       <header className="border-b border-zinc-800/50">
         <div className="max-w-lg mx-auto px-4 py-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center overflow-hidden">
-              {tenant?.logo_url ? (
-                <img 
-                  src={tenant.logo_url} 
-                  alt={`Logo ${tenant.name}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Scissors className="h-6 w-6 text-white/80" />
-              )}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center overflow-hidden">
+                {tenant?.logo_url ? (
+                  <img 
+                    src={tenant.logo_url} 
+                    alt={`Logo ${tenant.name}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Scissors className="h-6 w-6 text-white/80" />
+                )}
+              </div>
+              <div>
+                <h1 className="font-semibold text-lg">{tenant?.name || "Carregando..."}</h1>
+                {tenant?.address && (
+                  <p className="text-zinc-500 text-sm flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {tenant.address}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="font-semibold text-lg">{tenant?.name || "Carregando..."}</h1>
-              {tenant?.address && (
-                <p className="text-zinc-500 text-sm flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {tenant.address}
-                </p>
-              )}
-            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCustomerBookings(true)}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
+              <CalendarCheck className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Meus Agendamentos</span>
+              <span className="sm:hidden">Consultar</span>
+            </Button>
           </div>
         </div>
       </header>
@@ -1026,6 +1044,16 @@ END:VCALENDAR`;
           </div>
         )}
       </div>
+      
+      {/* Customer Bookings Modal */}
+      {tenant && (
+        <CustomerBookingsModal
+          open={showCustomerBookings}
+          onOpenChange={setShowCustomerBookings}
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+        />
+      )}
     </div>
   );
 };

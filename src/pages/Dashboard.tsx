@@ -136,36 +136,57 @@ const Dashboard = () => {
   };
 
   const calculateRevenue = async (bookingsList: any[]) => {
-    if (!bookingsList.length) return 0;
+    if (!currentTenant) return 0;
     
     try {
-      const bookingIds = bookingsList.map(b => b.id);
+      let totalRevenue = 0;
       
-      // Fetch all paid payments for these bookings
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('amount_cents, status')
-        .in('booking_id', bookingIds)
-        .eq('status', 'paid');
+      // Calculate revenue from bookings
+      if (bookingsList.length > 0) {
+        const bookingIds = bookingsList.map(b => b.id);
+        
+        // Fetch all paid payments for these bookings
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('amount_cents, status')
+          .in('booking_id', bookingIds)
+          .eq('status', 'paid');
 
-      const paidPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
-      
-      // If there are paid payments, use that value
-      if (paidPayments > 0) {
-        return paidPayments;
+        const paidPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
+        
+        // If there are paid payments, use that value
+        if (paidPayments > 0) {
+          totalRevenue += paidPayments;
+        } else {
+          // For bookings without online payment (confirmed/completed),
+          // calculate expected revenue based on service price
+          const revenueBookings = bookingsList.filter(
+            booking => booking.status === 'confirmed' || booking.status === 'completed'
+          );
+          
+          totalRevenue += revenueBookings.reduce((sum, booking) => {
+            return sum + (booking.service?.price_cents || 0);
+          }, 0);
+        }
       }
       
-      // For bookings without online payment (confirmed/completed),
-      // calculate expected revenue based on service price
-      const revenueBookings = bookingsList.filter(
-        booking => booking.status === 'confirmed' || booking.status === 'completed'
-      );
+      // Add product sales revenue for the period
+      const { data: productSales } = await supabase
+        .from('product_sales')
+        .select('sale_price_snapshot_cents, quantity')
+        .eq('tenant_id', currentTenant.id)
+        .gte('sale_date', dateRange.from.toISOString())
+        .lte('sale_date', dateRange.to.toISOString());
       
-      return revenueBookings.reduce((sum, booking) => {
-        return sum + (booking.service?.price_cents || 0);
-      }, 0);
+      if (productSales && productSales.length > 0) {
+        const productRevenue = productSales.reduce((sum, sale) => 
+          sum + (sale.sale_price_snapshot_cents * sale.quantity), 0);
+        totalRevenue += productRevenue;
+      }
+      
+      return totalRevenue;
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.error('Error fetching revenue data:', error);
       return 0;
     }
   };
