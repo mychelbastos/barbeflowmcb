@@ -156,7 +156,7 @@ export default function Finance() {
     };
 
     // Revenue expected from all confirmed and completed bookings
-    const revenueExpected = bookingsData.reduce((sum, booking) => 
+    let revenueExpected = bookingsData.reduce((sum, booking) => 
       sum + (booking.service?.price_cents || 0), 0
     );
 
@@ -177,13 +177,24 @@ export default function Finance() {
       return payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
     };
 
+    // Load product sales for the period
+    const loadProductSales = async () => {
+      const { data: productSales } = await supabase
+        .from('product_sales')
+        .select('sale_price_snapshot_cents, quantity')
+        .eq('tenant_id', currentTenant!.id)
+        .gte('sale_date', dateRange.from.toISOString())
+        .lte('sale_date', dateRange.to.toISOString());
+      
+      return productSales?.reduce((sum, sale) => sum + (sale.sale_price_snapshot_cents * sale.quantity), 0) || 0;
+    };
+
     // Fallback: use completed bookings value if no payments data
     let revenueReceived = completedBookings.reduce((sum, booking) => 
       sum + (booking.service?.price_cents || 0), 0
     );
 
     const bookingsCount = bookingsData.length;
-    const avgTicket = bookingsCount > 0 ? revenueExpected / bookingsCount : 0;
 
     // Daily revenue chart
     const dailyRevenue = generateDailyRevenue(bookingsData);
@@ -225,15 +236,22 @@ export default function Finance() {
     const staffPerformance = Object.values(staffStats)
       .sort((a: any, b: any) => b.revenue - a.revenue);
 
-    // Load payments and no-show rate asynchronously
+    // Load payments, no-show rate, and product sales asynchronously
     try {
-      const [actualPayments, noShowRate] = await Promise.all([
+      const [actualPayments, noShowRate, productSalesRevenue] = await Promise.all([
         loadPaymentsData(),
-        loadAllBookingsForNoShow()
+        loadAllBookingsForNoShow(),
+        loadProductSales()
       ]);
 
+      // Add product sales to expected and received revenue
+      revenueExpected += productSalesRevenue;
+      
       // Use actual payments if available, otherwise use completed bookings value
-      const finalRevenueReceived = actualPayments > 0 ? actualPayments : revenueReceived;
+      const finalRevenueReceived = (actualPayments > 0 ? actualPayments : revenueReceived) + productSalesRevenue;
+      
+      // Recalculate avg ticket including product sales
+      const avgTicket = bookingsCount > 0 ? revenueExpected / bookingsCount : 0;
 
       setData({
         revenue_expected: revenueExpected,
