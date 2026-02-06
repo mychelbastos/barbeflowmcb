@@ -59,6 +59,8 @@ verify_jwt = false
 
 [functions.auto-complete-bookings]
 verify_jwt = false
-
 [functions.process-recurring-bookings]
+verify_jwt = false
+
+[functions.wa-booking-engine]
 verify_jwt = false
