@@ -11,6 +11,49 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+// Forward config
+const N8N_WEBHOOK_URL = Deno.env.get("N8N_WHATSAPP_INCOMING_WEBHOOK_URL");
+const N8N_WEBHOOK_TOKEN = Deno.env.get("N8N_WHATSAPP_INCOMING_TOKEN");
+
+/**
+ * Forward inbound text message to n8n webhook.
+ * Fire-and-forget with short timeout — never breaks the main flow.
+ */
+async function forwardToN8n(payload: {
+  instance: string;
+  tenant_id: string;
+  remote_jid: string;
+  message_id: string;
+  text: string;
+  raw: unknown;
+}) {
+  if (!N8N_WEBHOOK_URL) {
+    console.log("N8N_WHATSAPP_INCOMING_WEBHOOK_URL not configured, skipping forward");
+    return;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+    const response = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(N8N_WEBHOOK_TOKEN ? { "x-bf-token": N8N_WEBHOOK_TOKEN } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    console.log("Forward to n8n:", response.status);
+  } catch (error) {
+    // Never let forward errors break the webhook
+    console.error("Forward to n8n failed (non-blocking):", error.message || error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -135,7 +178,7 @@ serve(async (req) => {
         });
 
         // Insert message into database
-        const { error: insertError } = await supabase
+        const { error: insertError, data: upsertResult, count } = await supabase
           .from("whatsapp_messages")
           .upsert({
             tenant_id: connection.tenant_id,
@@ -149,12 +192,49 @@ serve(async (req) => {
             status: fromMe ? "sent" : "received",
           }, {
             onConflict: "tenant_id,message_id",
-          });
+            ignoreDuplicates: false,
+            count: "exact",
+          })
+          .select("created_at");
 
         if (insertError) {
           console.error("Error inserting message:", insertError);
         } else {
           console.log("Message saved successfully:", messageId);
+
+          // --- FORWARD TO N8N ---
+          // Only forward inbound text messages from clients (not fromMe)
+          // Only forward on new inserts (deduplicate by checking if created_at ~ now)
+          const isInbound = !fromMe;
+          const isTextMessage = messageType === "text" && content && !content.startsWith("[");
+          const isMessagesUpsert = event === "messages.upsert" || event === "MESSAGES_UPSERT";
+
+          if (isInbound && isTextMessage && isMessagesUpsert) {
+            // Deduplication: check if record was just created (within last 5 seconds)
+            // If the upsert returned data, compare created_at to now
+            let isNewRecord = true;
+            if (upsertResult && upsertResult.length > 0) {
+              const createdAt = new Date(upsertResult[0].created_at).getTime();
+              const now = Date.now();
+              // If created_at is more than 10 seconds old, this was an existing record (update, not insert)
+              isNewRecord = (now - createdAt) < 10000;
+            }
+
+            if (isNewRecord) {
+              console.log("Forwarding inbound text to n8n:", { messageId, remoteJid });
+              // Fire-and-forget: don't await to avoid delaying the response
+              forwardToN8n({
+                instance: instanceName,
+                tenant_id: connection.tenant_id,
+                remote_jid: remoteJid,
+                message_id: messageId,
+                text: content,
+                raw: messageData,
+              });
+            } else {
+              console.log("Skipping forward (duplicate message):", messageId);
+            }
+          }
         }
       }
     }
