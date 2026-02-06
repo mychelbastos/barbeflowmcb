@@ -702,10 +702,14 @@ END:VCALENDAR`;
                 >
                   <div className="flex items-center gap-4">
                     <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
                       style={{ backgroundColor: `${member.color}20` }}
                     >
-                      <User className="h-5 w-5" style={{ color: member.color }} />
+                      {member.photo_url ? (
+                        <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="h-5 w-5" style={{ color: member.color }} />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium group-hover:text-white transition-colors">{member.name}</h3>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,7 @@ import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +28,9 @@ import {
   Palette,
   Scissors,
   Settings,
-  Clock
+  Clock,
+  Camera,
+  Loader2
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,6 +53,8 @@ const staffSchema = z.object({
   active: z.boolean(),
 });
 
+const SUPABASE_URL = "https://iagzodcwctvydmgrwjsy.supabase.co";
+
 type StaffFormData = z.infer<typeof staffSchema>;
 
 export default function Staff() {
@@ -64,6 +69,10 @@ export default function Staff() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedStaffForSchedule, setSelectedStaffForSchedule] = useState<any>(null);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffSchema),
@@ -122,6 +131,28 @@ export default function Staff() {
     }
   };
 
+  const uploadPhoto = async (staffId: string): Promise<string | null> => {
+    if (!photoFile || !currentTenant) return null;
+    
+    const fileExt = photoFile.name.split('.').pop();
+    const filePath = `${currentTenant.id}/staff/${staffId}.${fileExt}`;
+    
+    const { error } = await supabase.storage
+      .from('tenant-media')
+      .upload(filePath, photoFile, { upsert: true });
+    
+    if (error) throw error;
+    
+    return `${SUPABASE_URL}/storage/v1/object/public/tenant-media/${filePath}`;
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (values: StaffFormData) => {
     if (!currentTenant) return;
 
@@ -129,7 +160,6 @@ export default function Staff() {
       setFormLoading(true);
 
       if (editingStaff) {
-        // Update existing staff
         const { error } = await supabase
           .from('staff')
           .update(values)
@@ -137,7 +167,12 @@ export default function Staff() {
 
         if (error) throw error;
 
-        // Update staff services
+        // Upload photo if changed
+        const photoUrl = await uploadPhoto(editingStaff.id);
+        if (photoUrl) {
+          await supabase.from('staff').update({ photo_url: photoUrl }).eq('id', editingStaff.id);
+        }
+
         await updateStaffServices(editingStaff.id);
 
         toast({
@@ -145,7 +180,6 @@ export default function Staff() {
           description: `${values.name} foi atualizado com sucesso.`,
         });
       } else {
-        // Create new staff
         const { data: newStaff, error } = await supabase
           .from('staff')
           .insert({
@@ -157,8 +191,11 @@ export default function Staff() {
 
         if (error) throw error;
 
-        // Add staff services
         if (newStaff) {
+          const photoUrl = await uploadPhoto(newStaff.id);
+          if (photoUrl) {
+            await supabase.from('staff').update({ photo_url: photoUrl }).eq('id', newStaff.id);
+          }
           await updateStaffServices(newStaff.id);
         }
 
@@ -172,6 +209,8 @@ export default function Staff() {
       setShowForm(false);
       setEditingStaff(null);
       setSelectedServices([]);
+      setPhotoFile(null);
+      setPhotoPreview(null);
       loadData();
     } catch (error: any) {
       toast({
@@ -216,9 +255,10 @@ export default function Staff() {
       active: staffMember.active,
     });
     
-    // Set selected services
     const memberServices = staffMember.staff_services?.map((ss: any) => ss.service_id) || [];
     setSelectedServices(memberServices);
+    setPhotoFile(null);
+    setPhotoPreview(staffMember.photo_url || null);
     
     setShowForm(true);
   };
@@ -312,6 +352,8 @@ export default function Staff() {
             setEditingStaff(null);
             form.reset();
             setSelectedServices([]);
+            setPhotoFile(null);
+            setPhotoPreview(null);
             setShowForm(true);
           }}
           className="w-full sm:w-auto"
@@ -330,15 +372,16 @@ export default function Staff() {
             <Card key={staffMember.id} className="relative">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div 
-                    className="w-16 h-16 rounded-full flex items-center justify-center"
-                    style={{ 
-                      backgroundColor: `${staffMember.color}20`,
-                      color: staffMember.color 
-                    }}
-                  >
-                    <User className="h-8 w-8" />
-                  </div>
+                  <Avatar className="w-16 h-16">
+                    {staffMember.photo_url ? (
+                      <AvatarImage src={staffMember.photo_url} alt={staffMember.name} />
+                    ) : null}
+                    <AvatarFallback
+                      style={{ backgroundColor: `${staffMember.color}20`, color: staffMember.color }}
+                    >
+                      <User className="h-8 w-8" />
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex items-center space-x-2">
                     <Switch
                       checked={staffMember.active}
@@ -443,6 +486,8 @@ export default function Staff() {
                   setEditingStaff(null);
                   form.reset();
                   setSelectedServices([]);
+                  setPhotoFile(null);
+                  setPhotoPreview(null);
                   setShowForm(true);
                 }}
               >
@@ -489,6 +534,39 @@ export default function Staff() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              {/* Photo Upload */}
+              <div className="flex flex-col items-center gap-3">
+                <div 
+                  className="relative w-20 h-20 rounded-full overflow-hidden cursor-pointer group"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <User className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {photoPreview ? 'Alterar foto' : 'Adicionar foto'}
+                </button>
+              </div>
+
               <FormField
                 control={form.control}
                 name="name"
