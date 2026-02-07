@@ -10,7 +10,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function ok(reply: string, nextStep: string, debug: Record<string, unknown> = {}) {
+function ok(reply: string | string[], nextStep: string, debug: Record<string, unknown> = {}) {
   return { should_reply: true, reply, next_step: nextStep, debug };
 }
 
@@ -34,9 +34,20 @@ function formatCurrency(cents: number): string {
 
 const CONVERSATION_TIMEOUT_MS = 30 * 60 * 1000; // 30 min
 
+// ── Post-action menu (reused after booking done or cancel) ─────────────
+function postActionMenu() {
+  return ok(
+    `O que deseja fazer agora?\n\n` +
+    `*1* - 📅 Fazer um novo agendamento\n` +
+    `*2* - 🔙 Voltar ao menu principal\n` +
+    `*3* - ❌ Finalizar atendimento automatizado\n\n` +
+    `Digite o número da opção:`,
+    "POST_ACTION"
+  );
+}
+
 // ── State machine ──────────────────────────────────────────────────────
-async function handleMenu(_text: string, _payload: Record<string, unknown>, tenantId: string) {
-  // Fetch tenant name for greeting
+async function handleMenu(_text: string, _payload: Record<string, unknown>, tenantId: string, isFirstInteraction: boolean) {
   const { data: tenant } = await supabase
     .from("tenants")
     .select("name")
@@ -44,17 +55,43 @@ async function handleMenu(_text: string, _payload: Record<string, unknown>, tena
     .single();
 
   const name = tenant?.name || "nossa barbearia";
-  const reply =
+
+  const menuMsg =
     `Olá! Bem-vindo(a) à *${name}* ✂️\n\n` +
     `O que deseja fazer?\n\n` +
-    `*1* - 📅 Agendar horário\n\n` +
+    `*1* - 📅 Agendar horário\n` +
+    `*2* - ❌ Cancelar atendimento automatizado (falar com um atendente)\n\n` +
     `Digite o número da opção:`;
 
-  return ok(reply, "CHOOSE_SERVICE");
+  if (isFirstInteraction) {
+    const introMsg =
+      `Olá! 👋\n` +
+      `Este é um sistema de agendamento automatizado feito por IA da *BarberFlow* ✂️\n\n` +
+      `Siga as instruções abaixo para prosseguir com o agendamento.\n\n` +
+      `Caso prefira, você pode cancelar o atendimento automatizado a qualquer momento para falar com um atendente humano.`;
+
+    return ok([introMsg, menuMsg], "AWAIT_MENU_CHOICE");
+  }
+
+  return ok(menuMsg, "AWAIT_MENU_CHOICE");
+}
+
+async function handleAwaitMenuChoice(text: string, payload: Record<string, unknown>, tenantId: string) {
+  const choice = text.trim();
+  if (choice === "1") {
+    return await handleChooseService(text, payload, tenantId);
+  }
+  if (choice === "2") {
+    return ok(
+      `Atendimento automatizado encerrado. 👋\n\n` +
+      `Um atendente humano continuará a conversa em breve. Aguarde!`,
+      "CANCELLED"
+    );
+  }
+  return ok("Por favor, digite *1* para agendar ou *2* para falar com um atendente:", "AWAIT_MENU_CHOICE");
 }
 
 async function handleChooseService(text: string, payload: Record<string, unknown>, tenantId: string) {
-  // First time entering this step: show services list
   if (!payload._servicesShown) {
     const { data: services } = await supabase
       .from("services")
@@ -71,14 +108,12 @@ async function handleChooseService(text: string, payload: Record<string, unknown
       .map((s, i) => `*${i + 1}* - ${s.name} (${formatCurrency(s.price_cents)} • ${s.duration_minutes}min)`)
       .join("\n");
 
-    // Store services in payload for reference
     payload._services = services;
     payload._servicesShown = true;
 
     return ok(`Escolha um serviço:\n\n${list}\n\nDigite o *número* do serviço:`, "CHOOSE_SERVICE");
   }
 
-  // User is choosing a service by number
   const services = payload._services as Array<{ id: string; name: string; price_cents: number; duration_minutes: number }>;
   if (!services?.length) {
     return ok("Sessão expirada. Digite *MENU* para recomeçar.", "MENU");
@@ -95,12 +130,10 @@ async function handleChooseService(text: string, payload: Record<string, unknown
   payload.service_duration = selected.duration_minutes;
   payload.service_price = selected.price_cents;
 
-  // Now fetch staff for this service
   return await showStaffList(tenantId, selected.id, payload);
 }
 
 async function showStaffList(tenantId: string, serviceId: string, payload: Record<string, unknown>) {
-  // Check staff_services first
   const { data: staffServices } = await supabase
     .from("staff_services")
     .select("staff_id")
@@ -113,7 +146,6 @@ async function showStaffList(tenantId: string, serviceId: string, payload: Recor
     .eq("active", true)
     .order("name");
 
-  // If staff_services has entries for this service, filter by them
   if (staffServices && staffServices.length > 0) {
     const staffIds = staffServices.map((ss) => ss.staff_id);
     staffQuery = staffQuery.in("id", staffIds);
@@ -125,7 +157,6 @@ async function showStaffList(tenantId: string, serviceId: string, payload: Recor
     return ok("Nenhum profissional disponível para este serviço. Digite *MENU* para recomeçar.", "MENU");
   }
 
-  // If only one staff, auto-select
   if (staffList.length === 1) {
     payload.staff_id = staffList[0].id;
     payload.staff_name = staffList[0].name;
@@ -171,7 +202,6 @@ async function handleChooseStaff(text: string, payload: Record<string, unknown>)
 }
 
 async function handleChooseDate(text: string, payload: Record<string, unknown>) {
-  // Parse DD/MM/YYYY
   const match = text.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
   if (!match) {
     return ok("Formato inválido. Digite a data assim: *DD/MM/AAAA*\nExemplo: *15/03/2026*", "CHOOSE_DATE");
@@ -181,7 +211,6 @@ async function handleChooseDate(text: string, payload: Record<string, unknown>) 
   const month = parseInt(match[2], 10);
   const year = parseInt(match[3], 10);
 
-  // Basic validation
   if (month < 1 || month > 12 || day < 1 || day > 31) {
     return ok("Data inválida. Verifique e tente novamente no formato *DD/MM/AAAA*:", "CHOOSE_DATE");
   }
@@ -192,7 +221,6 @@ async function handleChooseDate(text: string, payload: Record<string, unknown>) 
     return ok("Data inválida. Verifique e tente novamente:", "CHOOSE_DATE");
   }
 
-  // Check not in the past
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (dateObj < today) {
@@ -212,7 +240,6 @@ async function fetchAndShowSlots(tenantId: string, payload: Record<string, unkno
     staff_id: string;
   };
 
-  // Call get-available-slots edge function internally
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const response = await fetch(`${supabaseUrl}/functions/v1/get-available-slots`, {
     method: "POST",
@@ -221,12 +248,7 @@ async function fetchAndShowSlots(tenantId: string, payload: Record<string, unkno
       "Authorization": `Bearer ${anonKey}`,
       "apikey": anonKey,
     },
-    body: JSON.stringify({
-      tenant_id: tenantId,
-      date,
-      service_id,
-      staff_id,
-    }),
+    body: JSON.stringify({ tenant_id: tenantId, date, service_id, staff_id }),
   });
 
   if (!response.ok) {
@@ -245,10 +267,8 @@ async function fetchAndShowSlots(tenantId: string, payload: Record<string, unkno
     );
   }
 
-  // Show max 20 slots in numbered list
   const displaySlots = slots.slice(0, 20);
   const list = displaySlots.map((s: any, i: number) => `*${i + 1}* - ${s.time}`).join("\n");
-
   payload._availableSlots = displaySlots;
 
   return ok(
@@ -261,10 +281,7 @@ async function fetchAndShowSlots(tenantId: string, payload: Record<string, unkno
 
 async function handleChooseTime(text: string, payload: Record<string, unknown>, tenantId: string) {
   const slots = payload._availableSlots as Array<{
-    time: string;
-    starts_at: string;
-    ends_at: string;
-    staff_id: string;
+    time: string; starts_at: string; ends_at: string; staff_id: string;
   }>;
   if (!slots?.length) {
     return ok("Sessão expirada. Digite *MENU* para recomeçar.", "MENU");
@@ -280,7 +297,6 @@ async function handleChooseTime(text: string, payload: Record<string, unknown>, 
   payload.ends_at = selected.ends_at;
   payload.time_display = selected.time;
 
-  // Create booking hold (5 min expiry)
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   const { data: hold, error: holdError } = await supabase
     .from("booking_holds")
@@ -303,7 +319,6 @@ async function handleChooseTime(text: string, payload: Record<string, unknown>, 
     payload.hold_id = hold?.id;
   }
 
-  // Check if tenant has online payment
   const { data: mpConn } = await supabase
     .from("mercadopago_connections")
     .select("id")
@@ -330,7 +345,6 @@ async function handleChooseTime(text: string, payload: Record<string, unknown>, 
     );
   }
 
-  // No online payment, go straight to ask name
   payload.payment_method = "local";
   return ok(
     `⏰ Horário reservado: *${selected.time}* em *${payload.date_display}*\n` +
@@ -362,15 +376,11 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     return ok("Nome muito curto. Por favor, digite seu *nome completo*:", "ASK_NAME");
   }
 
-  // Normalize phone (digits only, ensure 55 prefix)
   let cleanPhone = phone.replace(/\D/g, "").replace("@s.whatsapp.net", "");
-  if (cleanPhone.length > 11 && cleanPhone.startsWith("55")) {
-    // already has country code
-  } else if (cleanPhone.length <= 11) {
-    cleanPhone = "55" + cleanPhone;
+  if (!(cleanPhone.length > 11 && cleanPhone.startsWith("55"))) {
+    if (cleanPhone.length <= 11) cleanPhone = "55" + cleanPhone;
   }
 
-  // Find or create customer
   const { data: existingCustomer } = await supabase
     .from("customers")
     .select("id, name")
@@ -382,7 +392,6 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
 
   if (existingCustomer) {
     customerId = existingCustomer.id;
-    // Update name if different
     if (existingCustomer.name.toLowerCase() !== name.toLowerCase()) {
       await supabase.from("customers").update({ name }).eq("id", customerId);
     }
@@ -400,7 +409,6 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     customerId = newCustomer.id;
   }
 
-  // Create booking
   const isPix = payload.payment_method === "pix";
   const bookingStatus = isPix ? "pending_payment" : "confirmed";
 
@@ -424,7 +432,6 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     return error();
   }
 
-  // Update hold to converted
   if (payload.hold_id) {
     await supabase
       .from("booking_holds")
@@ -432,7 +439,6 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
       .eq("id", payload.hold_id as string);
   }
 
-  // If pix, create payment record (structure ready, actual pix link TBD)
   if (isPix) {
     await supabase.from("payments").insert({
       tenant_id: tenantId,
@@ -443,13 +449,10 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     });
   }
 
-  // Build confirmation
   const statusLabel = isPix ? "⏳ Aguardando pagamento Pix" : "✅ Confirmado";
-  const pixNote = isPix
-    ? "\n\n_O link de pagamento Pix será enviado em breve._"
-    : "";
+  const pixNote = isPix ? "\n\n_O link de pagamento Pix será enviado em breve._" : "";
 
-  const reply =
+  const confirmationMsg =
     `🎉 *Agendamento ${isPix ? "criado" : "confirmado"}!*\n\n` +
     `📋 *Serviço:* ${payload.service_name}\n` +
     `👤 *Profissional:* ${payload.staff_name}\n` +
@@ -458,10 +461,42 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     `💰 *Valor:* ${formatCurrency((payload.service_price as number) || 0)}\n` +
     `📍 *Pagamento:* ${payload.payment_method === "local" ? "No local" : "Pix"}\n` +
     `📌 *Status:* ${statusLabel}` +
-    pixNote +
-    `\n\nDigite *MENU* para fazer outro agendamento.`;
+    pixNote;
 
-  return ok(reply, "DONE");
+  const postMenu =
+    `O que deseja fazer agora?\n\n` +
+    `*1* - 📅 Fazer um novo agendamento\n` +
+    `*2* - 🔙 Voltar ao menu principal\n` +
+    `*3* - ❌ Finalizar atendimento automatizado\n\n` +
+    `Digite o número da opção:`;
+
+  return ok([confirmationMsg, postMenu], "POST_ACTION");
+}
+
+async function handlePostAction(text: string, payload: Record<string, unknown>, tenantId: string) {
+  const choice = text.trim();
+
+  if (choice === "1") {
+    // New booking: reset service-related payload but keep session
+    const cleanPayload: Record<string, unknown> = {};
+    return await handleChooseService("", cleanPayload, tenantId);
+  }
+
+  if (choice === "2") {
+    return await handleMenu("", {}, tenantId, false);
+  }
+
+  if (choice === "3") {
+    return ok(
+      `Atendimento automatizado finalizado. 👋\n\nObrigado por usar nosso sistema! Até a próxima.`,
+      "CANCELLED"
+    );
+  }
+
+  return ok(
+    "Por favor, digite *1* para novo agendamento, *2* para menu principal ou *3* para finalizar:",
+    "POST_ACTION"
+  );
 }
 
 // ── Main handler ───────────────────────────────────────────────────────
@@ -485,7 +520,6 @@ serve(async (req) => {
     const debugInfo = { tenant_id, phone: remoteJid };
 
     // ── Deduplication ──
-    // Check if message_id already exists in whatsapp_messages
     const { data: existingMsg } = await supabase
       .from("whatsapp_messages")
       .select("id")
@@ -494,7 +528,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingMsg) {
-      // Also check conversation state last_message_id
       const { data: convState } = await supabase
         .from("whatsapp_conversation_state")
         .select("last_message_id")
@@ -521,13 +554,21 @@ serve(async (req) => {
     const now = Date.now();
     let currentStep = "MENU";
     let payload: Record<string, unknown> = {};
+    let isFirstInteraction = !state;
 
     if (state) {
+      // If cancelled, don't respond to any further messages
+      if (state.step === "CANCELLED") {
+        return new Response(JSON.stringify(skip()), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const lastUpdated = new Date(state.updated_at).getTime();
       if (now - lastUpdated > CONVERSATION_TIMEOUT_MS) {
-        // Expired, reset
         currentStep = "MENU";
         payload = {};
+        isFirstInteraction = true; // Treat timeout as fresh start
       } else {
         currentStep = state.step;
         payload = (state.payload as Record<string, unknown>) || {};
@@ -541,7 +582,6 @@ serve(async (req) => {
       payload = {};
     }
 
-    // Store remote_jid in payload for hold creation
     payload._remote_jid = remoteJid;
 
     // ── State machine dispatch ──
@@ -549,7 +589,10 @@ serve(async (req) => {
 
     switch (currentStep) {
       case "MENU":
-        result = await handleMenu(text, payload, tenant_id);
+        result = await handleMenu(text, payload, tenant_id, isFirstInteraction);
+        break;
+      case "AWAIT_MENU_CHOICE":
+        result = await handleAwaitMenuChoice(text, payload, tenant_id);
         break;
       case "CHOOSE_SERVICE":
         result = await handleChooseService(text, payload, tenant_id);
@@ -559,7 +602,6 @@ serve(async (req) => {
         break;
       case "CHOOSE_DATE":
         result = await handleChooseDate(text, payload);
-        // Special case: if date was valid, fetch slots
         if (result?._action === "FETCH_SLOTS") {
           result = await fetchAndShowSlots(tenant_id, payload);
         }
@@ -573,22 +615,22 @@ serve(async (req) => {
       case "ASK_NAME":
         result = await handleAskName(text, payload, tenant_id, phone);
         break;
+      case "POST_ACTION":
+        result = await handlePostAction(text, payload, tenant_id);
+        break;
       case "DONE":
-        // After done, any message restarts
-        currentStep = "MENU";
-        payload = {};
-        result = await handleMenu(text, payload, tenant_id);
+        // Legacy: redirect to post-action
+        result = postActionMenu();
         break;
       default:
         currentStep = "MENU";
         payload = {};
-        result = await handleMenu(text, payload, tenant_id);
+        result = await handleMenu(text, payload, tenant_id, true);
     }
 
     // ── Persist conversation state ──
     const nextStep = result.next_step || currentStep;
 
-    // Clean internal fields before saving payload
     const savePayload = { ...payload };
     delete savePayload._remote_jid;
 
@@ -620,7 +662,7 @@ serve(async (req) => {
   } catch (err) {
     console.error("wa-booking-engine error:", err);
     return new Response(JSON.stringify(error()), {
-      status: 200, // Always 200 to avoid retries
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
