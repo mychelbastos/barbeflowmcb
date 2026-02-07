@@ -370,6 +370,97 @@ async function handleChoosePayment(text: string, payload: Record<string, unknown
   );
 }
 
+async function createPixCharge(tenantId: string, bookingId: string, amountCents: number, customerEmail?: string, customerName?: string) {
+  try {
+    const { data: mpConn } = await supabase
+      .from("mercadopago_connections")
+      .select("access_token")
+      .eq("tenant_id", tenantId)
+      .single();
+
+    if (!mpConn?.access_token) {
+      console.error("MP connection not found for PIX charge");
+      return null;
+    }
+
+    // Create payment record
+    const { data: paymentRecord, error: payErr } = await supabase
+      .from("payments")
+      .insert({
+        tenant_id: tenantId,
+        booking_id: bookingId,
+        amount_cents: amountCents,
+        status: "pending",
+        provider: "mercadopago",
+        currency: "BRL",
+      })
+      .select("id")
+      .single();
+
+    if (payErr || !paymentRecord) {
+      console.error("Error creating payment record:", payErr);
+      return null;
+    }
+
+    const mpBody = {
+      transaction_amount: amountCents / 100,
+      description: `Agendamento - ${customerName || "Cliente"}`,
+      payment_method_id: "pix",
+      payer: {
+        email: customerEmail || "cliente@agendamento.com",
+        first_name: customerName?.split(" ")[0] || "Cliente",
+        last_name: customerName?.split(" ").slice(1).join(" ") || "",
+      },
+      external_reference: paymentRecord.id,
+      metadata: {
+        booking_id: bookingId,
+        payment_id: paymentRecord.id,
+        tenant_id: tenantId,
+      },
+    };
+
+    const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${mpConn.access_token}`,
+        "X-Idempotency-Key": `wa-pix-${bookingId}-${Date.now()}`,
+      },
+      body: JSON.stringify(mpBody),
+    });
+
+    const mpResult = await mpRes.json();
+    console.log("PIX charge result:", mpResult.id, mpResult.status);
+
+    if (!mpRes.ok) {
+      console.error("MP PIX error:", JSON.stringify(mpResult));
+      await supabase.from("payments").update({ status: "failed" }).eq("id", paymentRecord.id);
+      return null;
+    }
+
+    // Update payment with MP data
+    await supabase.from("payments").update({
+      external_id: mpResult.id?.toString(),
+      status: mpResult.status === "approved" ? "paid" : "pending",
+      updated_at: new Date().toISOString(),
+    }).eq("id", paymentRecord.id);
+
+    const txData = mpResult.point_of_interaction?.transaction_data;
+    return {
+      payment_id: paymentRecord.id,
+      mp_payment_id: mpResult.id,
+      status: mpResult.status,
+      qr_code: txData?.qr_code || null,
+      qr_code_base64: txData?.qr_code_base64 || null,
+      ticket_url: txData?.ticket_url || null,
+      expires_at: mpResult.date_of_expiration || null,
+    };
+  } catch (err) {
+    console.error("createPixCharge error:", err);
+    return null;
+  }
+}
+
 async function handleAskName(text: string, payload: Record<string, unknown>, tenantId: string, phone: string) {
   const name = text.trim();
   if (name.length < 2) {
@@ -383,15 +474,17 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
 
   const { data: existingCustomer } = await supabase
     .from("customers")
-    .select("id, name")
+    .select("id, name, email")
     .eq("tenant_id", tenantId)
     .eq("phone", cleanPhone)
     .maybeSingle();
 
   let customerId: string;
+  let customerEmail: string | undefined;
 
   if (existingCustomer) {
     customerId = existingCustomer.id;
+    customerEmail = existingCustomer.email || undefined;
     if (existingCustomer.name.toLowerCase() !== name.toLowerCase()) {
       await supabase.from("customers").update({ name }).eq("id", customerId);
     }
@@ -439,18 +532,7 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
       .eq("id", payload.hold_id as string);
   }
 
-  if (isPix) {
-    await supabase.from("payments").insert({
-      tenant_id: tenantId,
-      booking_id: booking.id,
-      amount_cents: (payload.service_price as number) || 0,
-      status: "pending",
-      provider: "mercadopago",
-    });
-  }
-
-  const statusLabel = isPix ? "⏳ Aguardando pagamento Pix" : "✅ Confirmado";
-  const pixNote = isPix ? "\n\n_O link de pagamento Pix será enviado em breve._" : "";
+  const priceCents = (payload.service_price as number) || 0;
 
   const confirmationMsg =
     `🎉 *Agendamento ${isPix ? "criado" : "confirmado"}!*\n\n` +
@@ -458,10 +540,9 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     `👤 *Profissional:* ${payload.staff_name}\n` +
     `📅 *Data:* ${payload.date_display}\n` +
     `⏰ *Horário:* ${payload.time_display}\n` +
-    `💰 *Valor:* ${formatCurrency((payload.service_price as number) || 0)}\n` +
-    `📍 *Pagamento:* ${payload.payment_method === "local" ? "No local" : "Pix"}\n` +
-    `📌 *Status:* ${statusLabel}` +
-    pixNote;
+    `💰 *Valor:* ${formatCurrency(priceCents)}\n` +
+    `📍 *Pagamento:* ${isPix ? "Pix" : "No local"}\n` +
+    `📌 *Status:* ${isPix ? "⏳ Aguardando pagamento Pix" : "✅ Confirmado"}`;
 
   const postMenu =
     `O que deseja fazer agora?\n\n` +
@@ -469,6 +550,44 @@ async function handleAskName(text: string, payload: Record<string, unknown>, ten
     `*2* - 🔙 Voltar ao menu principal\n` +
     `*3* - ❌ Finalizar atendimento automatizado\n\n` +
     `Digite o número da opção:`;
+
+  if (isPix) {
+    const pixData = await createPixCharge(tenantId, booking.id, priceCents, customerEmail, name);
+
+    if (!pixData) {
+      // Fallback: booking created but PIX failed
+      const fallbackMsg = confirmationMsg + "\n\n⚠️ Não foi possível gerar o Pix automaticamente. Entre em contato para efetuar o pagamento.";
+      return ok([fallbackMsg, postMenu], "POST_ACTION");
+    }
+
+    const messages: string[] = [confirmationMsg];
+
+    // PIX payment message
+    let pixMsg = `📱 *Pagamento Pix*\n\n`;
+    if (pixData.ticket_url) {
+      pixMsg += `🔗 *Link de pagamento:*\n${pixData.ticket_url}\n\n`;
+    }
+    if (pixData.qr_code) {
+      pixMsg += `📋 *Pix Copia e Cola:*\n\`\`\`${pixData.qr_code}\`\`\`\n\n`;
+    }
+    pixMsg += `⏰ Efetue o pagamento para confirmar seu agendamento.`;
+    messages.push(pixMsg);
+
+    messages.push(postMenu);
+
+    // Store pix data in response for n8n (optional QR image)
+    const result = ok(messages, "POST_ACTION");
+    result.debug = {
+      pix: {
+        payment_link: pixData.ticket_url,
+        pix_copia_e_cola: pixData.qr_code,
+        qr_code_image_url: pixData.qr_code_base64 ? `data:image/png;base64,${pixData.qr_code_base64}` : null,
+        payment_status: pixData.status,
+        mp_payment_id: pixData.mp_payment_id,
+      },
+    };
+    return result;
+  }
 
   return ok([confirmationMsg, postMenu], "POST_ACTION");
 }
