@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const bookingFormSchema = z.object({
   customer_name: z.string().min(1, "Nome é obrigatório"),
@@ -46,6 +48,19 @@ const bookingFormSchema = z.object({
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 
+interface CustomerSuggestion {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+}
+
+interface AvailableSlot {
+  time: string;
+  staff_id: string;
+  staff_name: string;
+}
+
 export function BookingModal() {
   const { currentTenant } = useTenant();
   const { isOpen, closeBookingModal } = useBookingModal();
@@ -53,6 +68,18 @@ export function BookingModal() {
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [formLoading, setFormLoading] = useState(false);
+
+  // Customer autocomplete state
+  const [customerSuggestions, setCustomerSuggestions] = useState<CustomerSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchingCustomers, setSearchingCustomers] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Available slots state
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -68,15 +95,34 @@ export function BookingModal() {
     },
   });
 
+  const watchedDate = form.watch("date");
+  const watchedServiceId = form.watch("service_id");
+  const watchedStaffId = form.watch("staff_id");
+
   useEffect(() => {
     if (isOpen && currentTenant) {
       loadFormData();
     }
+    if (!isOpen) {
+      form.reset();
+      setCustomerSuggestions([]);
+      setSelectedCustomerId(null);
+      setAvailableSlots([]);
+    }
   }, [isOpen, currentTenant]);
+
+  // Fetch available slots when date/service/staff changes
+  useEffect(() => {
+    if (watchedDate && currentTenant) {
+      fetchAvailableSlots();
+    } else {
+      setAvailableSlots([]);
+      form.setValue("time", "");
+    }
+  }, [watchedDate, watchedServiceId, watchedStaffId, currentTenant]);
 
   const loadFormData = async () => {
     if (!currentTenant) return;
-
     try {
       const [servicesResult, staffResult] = await Promise.all([
         supabase
@@ -92,10 +138,8 @@ export function BookingModal() {
           .eq('active', true)
           .order('name')
       ]);
-
       if (servicesResult.error) throw servicesResult.error;
       if (staffResult.error) throw staffResult.error;
-
       setServices(servicesResult.data || []);
       setStaff(staffResult.data || []);
     } catch (error) {
@@ -108,59 +152,127 @@ export function BookingModal() {
     }
   };
 
+  const fetchAvailableSlots = async () => {
+    if (!currentTenant || !watchedDate) return;
+    setLoadingSlots(true);
+    try {
+      const body: any = {
+        tenant_id: currentTenant.id,
+        date: watchedDate,
+      };
+      if (watchedServiceId) body.service_id = watchedServiceId;
+      if (watchedStaffId && watchedStaffId !== "none") body.staff_id = watchedStaffId;
+
+      const { data, error } = await supabase.functions.invoke('get-available-slots', { body });
+      if (error) throw error;
+      setAvailableSlots(data?.available_slots || []);
+      // Reset time if previously selected time is no longer available
+      const currentTime = form.getValues("time");
+      if (currentTime && !data?.available_slots?.find((s: AvailableSlot) => s.time === currentTime)) {
+        form.setValue("time", "");
+      }
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Customer search with debounce
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchCustomers = useCallback((name: string) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (!name || name.length < 2 || !currentTenant) {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    searchTimeoutRef.current = setTimeout(async () => {
+      setSearchingCustomers(true);
+      try {
+        const { data, error } = await supabase
+          .from('customers')
+          .select('id, name, phone, email')
+          .eq('tenant_id', currentTenant.id)
+          .ilike('name', `%${name}%`)
+          .order('name')
+          .limit(8);
+        if (error) throw error;
+        setCustomerSuggestions(data || []);
+        setShowSuggestions((data || []).length > 0);
+      } catch (err) {
+        console.error('Error searching customers:', err);
+      } finally {
+        setSearchingCustomers(false);
+      }
+    }, 300);
+  }, [currentTenant]);
+
+  const selectCustomer = (customer: CustomerSuggestion) => {
+    form.setValue("customer_name", customer.name);
+    form.setValue("customer_phone", customer.phone);
+    form.setValue("customer_email", customer.email || "");
+    setSelectedCustomerId(customer.id);
+    setShowSuggestions(false);
+  };
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+          nameInputRef.current && !nameInputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
   const handleSubmit = async (data: BookingFormData) => {
     if (!currentTenant) return;
-
     try {
       setFormLoading(true);
 
-      // Create or get customer
-      let customerId;
-      
-      // First try to find existing customer by phone
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('tenant_id', currentTenant.id)
-        .eq('phone', data.customer_phone)
-        .single();
+      let customerId = selectedCustomerId;
 
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-        
-        // Update customer info if needed
-        await supabase
+      if (!customerId) {
+        // Try to find existing customer by phone
+        const { data: existingCustomer } = await supabase
           .from('customers')
-          .update({
-            name: data.customer_name,
-            email: data.customer_email || null,
-          })
-          .eq('id', customerId);
-      } else {
-        // Create new customer
-        const { data: newCustomer, error: customerError } = await supabase
-          .from('customers')
-          .insert({
-            tenant_id: currentTenant.id,
-            name: data.customer_name,
-            phone: data.customer_phone,
-            email: data.customer_email || null,
-          })
-          .select()
+          .select('id')
+          .eq('tenant_id', currentTenant.id)
+          .eq('phone', data.customer_phone)
           .single();
 
-        if (customerError) throw customerError;
-        customerId = newCustomer.id;
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+          await supabase
+            .from('customers')
+            .update({ name: data.customer_name, email: data.customer_email || null })
+            .eq('id', customerId);
+        } else {
+          const { data: newCustomer, error: customerError } = await supabase
+            .from('customers')
+            .insert({
+              tenant_id: currentTenant.id,
+              name: data.customer_name,
+              phone: data.customer_phone,
+              email: data.customer_email || null,
+            })
+            .select()
+            .single();
+          if (customerError) throw customerError;
+          customerId = newCustomer.id;
+        }
       }
 
-      // Get service details for duration
       const { data: service } = await supabase
         .from('services')
         .select('duration_minutes')
         .eq('id', data.service_id)
         .single();
 
-      // Create booking
       const startsAt = new Date(`${data.date}T${data.time}`);
       const endsAt = new Date(startsAt.getTime() + (service?.duration_minutes || 60) * 60000);
 
@@ -181,7 +293,6 @@ export function BookingModal() {
 
       if (bookingError) throw bookingError;
 
-      // Send WhatsApp notification for booking confirmation
       if (newBooking) {
         try {
           await supabase.functions.invoke('send-whatsapp-notification', {
@@ -191,10 +302,8 @@ export function BookingModal() {
               tenant_id: currentTenant.id,
             },
           });
-          console.log('WhatsApp notification sent for booking:', newBooking.id);
         } catch (notifError) {
           console.error('Error sending WhatsApp notification:', notifError);
-          // Don't fail the booking if notification fails
         }
       }
 
@@ -204,6 +313,7 @@ export function BookingModal() {
       });
 
       form.reset();
+      setSelectedCustomerId(null);
       closeBookingModal();
     } catch (error: any) {
       toast({
@@ -228,17 +338,56 @@ export function BookingModal() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 md:space-y-4">
-            {/* Customer Info */}
+            {/* Customer Name with Autocomplete */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="customer_name"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="relative">
                     <FormLabel>Nome do Cliente *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: João Silva" {...field} />
+                      <Input
+                        placeholder="Ex: João Silva"
+                        {...field}
+                        ref={(e) => {
+                          field.ref(e);
+                          (nameInputRef as any).current = e;
+                        }}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setSelectedCustomerId(null);
+                          searchCustomers(e.target.value);
+                        }}
+                        onFocus={() => {
+                          if (customerSuggestions.length > 0) setShowSuggestions(true);
+                        }}
+                        autoComplete="off"
+                      />
                     </FormControl>
+                    {showSuggestions && customerSuggestions.length > 0 && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto"
+                      >
+                        {customerSuggestions.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors flex flex-col"
+                            onClick={() => selectCustomer(c)}
+                          >
+                            <span className="font-medium text-foreground">{c.name}</span>
+                            <span className="text-xs text-muted-foreground">{c.phone}{c.email ? ` · ${c.email}` : ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {searchingCustomers && (
+                      <div className="absolute right-3 top-9">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -333,36 +482,61 @@ export function BookingModal() {
               />
             </div>
 
-            {/* Date and Time */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data *</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Date */}
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Horário *</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Available Time Slots */}
+            <FormField
+              control={form.control}
+              name="time"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Horário *</FormLabel>
+                  {!watchedDate ? (
+                    <p className="text-sm text-muted-foreground">Selecione uma data primeiro</p>
+                  ) : loadingSlots ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando horários disponíveis...
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">Nenhum horário disponível para esta data</p>
+                  ) : (
+                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto p-1">
+                      {availableSlots.map((slot) => (
+                        <button
+                          key={slot.time}
+                          type="button"
+                          className={cn(
+                            "flex items-center justify-center gap-1 px-2 py-2 rounded-md text-sm font-medium border transition-colors",
+                            field.value === slot.time
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
+                          )}
+                          onClick={() => field.onChange(slot.time)}
+                        >
+                          <Clock className="h-3 w-3" />
+                          {slot.time}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Notes */}
             <FormField

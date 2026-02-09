@@ -4,15 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Plus, CreditCard, Banknote, AlertCircle, UserCheck } from "lucide-react";
+import { Calendar, Clock, User, CreditCard, Banknote, AlertCircle, UserCheck } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useBookingModal } from "@/hooks/useBookingModal";
 import { NoTenantState } from "@/components/NoTenantState";
 
 export default function Agenda() {
   const { currentTenant, loading: tenantLoading } = useTenant();
-  const { openBookingModal } = useBookingModal();
   const [bookings, setBookings] = useState<any[]>([]);
   const [recurringClients, setRecurringClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,10 +144,6 @@ export default function Agenda() {
           <h2 className="text-xl font-semibold">
             {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </h2>
-          <Button onClick={openBookingModal}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Agendamento
-          </Button>
         </div>
         
         <Card>
@@ -254,14 +248,10 @@ export default function Agenda() {
     
     return (
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
           <h2 className="text-lg md:text-xl font-semibold">
             Semana de {format(weekStart, "dd", { locale: ptBR })} a {format(endOfWeek(selectedDate, { locale: ptBR }), "dd 'de' MMMM", { locale: ptBR })}
           </h2>
-          <Button onClick={openBookingModal} size="sm" className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Agendamento
-          </Button>
         </div>
         
         {/* Mobile: Vertical stacked cards */}

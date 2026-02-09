@@ -37,7 +37,6 @@ import {
   Phone, 
   Search,
   Filter,
-  Plus,
   Edit,
   CheckCircle,
   XCircle,
@@ -48,12 +47,10 @@ import {
 import { format, parseISO, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useBookingModal } from "@/hooks/useBookingModal";
 
 export default function Bookings() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
-  const { openBookingModal } = useBookingModal();
   const [bookings, setBookings] = useState<any[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,23 +273,11 @@ export default function Bookings() {
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Agendamentos</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Gerencie todos os agendamentos da barbearia
-          </p>
-        </div>
-        
-        <Button
-          onClick={() => {
-            openBookingModal();
-          }}
-          className="w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Agendamento
-        </Button>
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Agendamentos</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
+          Gerencie todos os agendamentos da barbearia
+        </p>
       </div>
 
       {/* Filters */}
