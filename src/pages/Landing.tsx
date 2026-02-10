@@ -33,7 +33,7 @@ const Landing = () => {
               <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
                 <Scissors className="h-4 w-4 text-zinc-950" />
               </div>
-              <span className="text-lg font-semibold tracking-tight">BarberSync</span>
+              <span className="text-lg font-semibold tracking-tight">BarberFlow</span>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/app/login">
@@ -391,10 +391,10 @@ const Landing = () => {
             <div className="w-6 h-6 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-md flex items-center justify-center">
               <Scissors className="h-3 w-3 text-zinc-950" />
             </div>
-            <span className="font-semibold">BarberSync</span>
+            <span className="font-semibold">BarberFlow</span>
           </div>
           <p className="text-zinc-600 text-sm">
-            © 2024 BarberSync. Todos os direitos reservados.
+            © 2025 BarberFlow. Todos os direitos reservados.
           </p>
         </div>
       </motion.footer>

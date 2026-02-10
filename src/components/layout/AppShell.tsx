@@ -92,7 +92,7 @@ function AppSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-semibold text-zinc-100 truncate">
-              {currentTenant?.name || 'BarberSync'}
+               {currentTenant?.name || 'BarberFlow'}
             </h1>
             <p className="text-xs text-zinc-500">
               {currentTenant?.slug ? `@${currentTenant.slug}` : 'Dashboard'}
@@ -279,7 +279,7 @@ export default function AppShell() {
                   </div>
                   <div>
                     <h1 className="text-sm font-semibold text-zinc-100">
-                      {currentTenant?.name || 'BarberSync'}
+                      {currentTenant?.name || 'BarberFlow'}
                     </h1>
                   </div>
                   <TenantSelector />

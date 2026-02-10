@@ -63,7 +63,7 @@ const Login = () => {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl mb-4">
             <Scissors className="h-7 w-7 text-zinc-950" />
           </div>
-          <h1 className="text-2xl font-bold text-zinc-100">BarberSync</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">BarberFlow</h1>
           <p className="text-zinc-500 mt-1">
             {isSignUp ? "Crie sua conta" : "Entre na sua conta"}
           </p>
