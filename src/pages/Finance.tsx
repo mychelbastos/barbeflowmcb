@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Products from "@/pages/Products";
+import { CommissionsTab } from "@/components/CommissionsTab";
 import { useTenant } from "@/hooks/useTenant";
 import { useDateRange } from "@/contexts/DateRangeContext";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
@@ -396,12 +399,16 @@ export default function Finance() {
             Análise de receitas e performance do negócio
           </p>
         </div>
-        
-        <Button variant="outline" onClick={exportToCSV} size="sm" className="w-full sm:w-auto">
-          <Download className="h-4 w-4 mr-2" />
-          Exportar CSV
-        </Button>
       </div>
+
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="products">Produtos</TabsTrigger>
+          <TabsTrigger value="commissions">Comissões</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4 md:space-y-6">
 
       {/* Additional Filters */}
       {staff.length > 0 && (
@@ -881,6 +888,16 @@ export default function Finance() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="products">
+          <Products />
+        </TabsContent>
+
+        <TabsContent value="commissions">
+          <CommissionsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

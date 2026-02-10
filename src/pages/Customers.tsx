@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RecurringClients from "@/pages/RecurringClients";
+import { CustomerBalanceTab } from "@/components/CustomerBalanceTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -378,6 +381,13 @@ export default function Customers() {
 
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
+      <Tabs defaultValue="customers" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="customers">Clientes</TabsTrigger>
+          <TabsTrigger value="recurring">Clientes Fixos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="customers" className="space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div>
@@ -729,60 +739,71 @@ export default function Customers() {
                 </Card>
               </div>
 
-              {/* Booking History */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Histórico de Agendamentos</h3>
-                {detailsLoading ? (
-                  <div className="h-64 bg-muted rounded animate-pulse" />
-                ) : customerBookings.length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-8">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">Nenhum agendamento encontrado</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {customerBookings.map((booking) => (
-                      <Card key={booking.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div 
-                                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                style={{ 
-                                  backgroundColor: `${booking.service?.color}20`,
-                                  color: booking.service?.color 
-                                }}
-                              >
-                                <Calendar className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium">{booking.service?.name}</h4>
-                                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                  <div className="flex items-center">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {format(parseISO(booking.starts_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+              {/* Tabs: Histórico + Saldo */}
+              <Tabs defaultValue="history" className="space-y-3">
+                <TabsList>
+                  <TabsTrigger value="history">Histórico</TabsTrigger>
+                  <TabsTrigger value="balance">Saldo</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="history">
+                  <h3 className="text-lg font-semibold mb-4">Histórico de Agendamentos</h3>
+                  {detailsLoading ? (
+                    <div className="h-64 bg-muted rounded animate-pulse" />
+                  ) : customerBookings.length === 0 ? (
+                    <Card>
+                      <CardContent className="text-center py-8">
+                        <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-muted-foreground">Nenhum agendamento encontrado</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {customerBookings.map((booking) => (
+                        <Card key={booking.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div 
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                  style={{ 
+                                    backgroundColor: `${booking.service?.color}20`,
+                                    color: booking.service?.color 
+                                  }}
+                                >
+                                  <Calendar className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">{booking.service?.name}</h4>
+                                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      {format(parseISO(booking.starts_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                    </div>
+                                    <span>{booking.staff?.name || 'Qualquer profissional'}</span>
                                   </div>
-                                  <span>{booking.staff?.name || 'Qualquer profissional'}</span>
                                 </div>
                               </div>
+                              <div className="flex items-center space-x-3">
+                                <Badge variant={getStatusVariant(booking.status)}>
+                                  {getStatusLabel(booking.status)}
+                                </Badge>
+                                <span className="font-medium text-success">
+                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-3">
-                              <Badge variant={getStatusVariant(booking.status)}>
-                                {getStatusLabel(booking.status)}
-                              </Badge>
-                              <span className="font-medium text-success">
-                                R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="balance">
+                  <CustomerBalanceTab customerId={selectedCustomer.id} />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
           
@@ -870,6 +891,13 @@ export default function Customers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+        </TabsContent>
+
+        <TabsContent value="recurring">
+          <RecurringClients />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

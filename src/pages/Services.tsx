@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ServicePackagesTab } from "@/components/ServicePackagesTab";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -324,25 +326,19 @@ export default function Services() {
 
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Serviços</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Gerencie os serviços oferecidos pela barbearia
-          </p>
-        </div>
-        
-        <Button
-          onClick={() => {
-            setEditingService(null);
-            form.reset();
-            setShowForm(true);
-          }}
-          className="w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Serviço
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Serviços</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Gerencie os serviços oferecidos pela barbearia</p>
+      </div>
+      <Tabs defaultValue="services" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="services">Serviços</TabsTrigger>
+          <TabsTrigger value="packages">Pacotes</TabsTrigger>
+        </TabsList>
+        <TabsContent value="services" className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => { setEditingService(null); form.reset(); setShowForm(true); }} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" /> Novo Serviço
         </Button>
       </div>
 
@@ -657,6 +653,12 @@ export default function Services() {
           </Form>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="packages">
+          <ServicePackagesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

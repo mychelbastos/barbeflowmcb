@@ -251,6 +251,132 @@ export type Database = {
           },
         ]
       }
+      customer_balance_entries: {
+        Row: {
+          amount_cents: number
+          booking_id: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          id: string
+          staff_id: string | null
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          amount_cents: number
+          booking_id?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          staff_id?: string | null
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          amount_cents?: number
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          staff_id?: string | null
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_balance_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_balance_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_balance_entries_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_balance_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_packages: {
+        Row: {
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          package_id: string
+          purchased_at: string
+          sessions_total: number
+          sessions_used: number
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          package_id: string
+          purchased_at?: string
+          sessions_total: number
+          sessions_used?: number
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          package_id?: string
+          purchased_at?: string
+          sessions_total?: number
+          sessions_used?: number
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_packages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_packages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "service_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_packages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -393,6 +519,45 @@ export type Database = {
           },
         ]
       }
+      plans: {
+        Row: {
+          active: boolean
+          billing_cycle: string
+          created_at: string
+          features: Json | null
+          id: string
+          max_bookings_month: number | null
+          max_staff: number | null
+          name: string
+          price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          billing_cycle?: string
+          created_at?: string
+          features?: Json | null
+          id?: string
+          max_bookings_month?: number | null
+          max_staff?: number | null
+          name: string
+          price_cents: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          billing_cycle?: string
+          created_at?: string
+          features?: Json | null
+          id?: string
+          max_bookings_month?: number | null
+          max_staff?: number | null
+          name?: string
+          price_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_sales: {
         Row: {
           created_at: string
@@ -403,6 +568,7 @@ export type Database = {
           quantity: number
           sale_date: string
           sale_price_snapshot_cents: number
+          staff_id: string | null
           tenant_id: string
         }
         Insert: {
@@ -414,6 +580,7 @@ export type Database = {
           quantity?: number
           sale_date?: string
           sale_price_snapshot_cents: number
+          staff_id?: string | null
           tenant_id: string
         }
         Update: {
@@ -425,6 +592,7 @@ export type Database = {
           quantity?: number
           sale_date?: string
           sale_price_snapshot_cents?: number
+          staff_id?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -433,6 +601,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -615,6 +790,57 @@ export type Database = {
           },
         ]
       }
+      service_packages: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          price_cents: number
+          service_id: string
+          tenant_id: string
+          total_sessions: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          price_cents: number
+          service_id: string
+          tenant_id: string
+          total_sessions: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          price_cents?: number
+          service_id?: string
+          tenant_id?: string
+          total_sessions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_packages_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_packages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           active: boolean | null
@@ -671,6 +897,7 @@ export type Database = {
           bio: string | null
           color: string | null
           created_at: string
+          default_commission_percent: number | null
           id: string
           name: string
           photo_url: string | null
@@ -682,6 +909,7 @@ export type Database = {
           bio?: string | null
           color?: string | null
           created_at?: string
+          default_commission_percent?: number | null
           id?: string
           name: string
           photo_url?: string | null
@@ -693,6 +921,7 @@ export type Database = {
           bio?: string | null
           color?: string | null
           created_at?: string
+          default_commission_percent?: number | null
           id?: string
           name?: string
           photo_url?: string | null
@@ -702,6 +931,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "staff_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          reference_period_end: string | null
+          reference_period_start: string | null
+          staff_id: string
+          status: string
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          reference_period_end?: string | null
+          reference_period_start?: string | null
+          staff_id: string
+          status?: string
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          reference_period_end?: string | null
+          reference_period_start?: string | null
+          staff_id?: string
+          status?: string
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_payments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_payments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -738,6 +1024,60 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string
+          current_period_start: string
+          external_subscription_id: string | null
+          id: string
+          plan_id: string
+          status: string
+          tenant_id: string
+          trial_ends_at: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          external_subscription_id?: string | null
+          id?: string
+          plan_id: string
+          status?: string
+          tenant_id: string
+          trial_ends_at?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string
+          current_period_start?: string
+          external_subscription_id?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          tenant_id?: string
+          trial_ends_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
