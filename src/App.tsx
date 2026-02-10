@@ -8,7 +8,8 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Finance from "./pages/Finance";
-
+import CommissionsPage from "./pages/CommissionsPage";
+import PackagesPage from "./pages/PackagesPage";
 import Bookings from "./pages/Bookings";
 import Services from "./pages/Services";
 import Staff from "./pages/Staff";
@@ -51,11 +52,13 @@ const App = () => (
             
             <Route path="bookings" element={<Bookings />} />
             <Route path="services" element={<Services />} />
+            <Route path="packages" element={<PackagesPage />} />
             <Route path="staff" element={<Staff />} />
             <Route path="customers" element={<Customers />} />
-            <Route path="finance" element={<Finance />} />
-            <Route path="products" element={<Products />} />
             <Route path="recurring-clients" element={<RecurringClients />} />
+            <Route path="finance" element={<Finance />} />
+            <Route path="commissions" element={<CommissionsPage />} />
+            <Route path="products" element={<Products />} />
             <Route path="whatsapp" element={<WhatsApp />} />
             <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
             <Route path="settings" element={<Settings />} />

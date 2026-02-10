@@ -34,6 +34,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Plus, 
   Users, 
@@ -46,7 +51,14 @@ import {
   User,
   LogOut,
   ChevronRight,
-  MessageCircle
+  ChevronDown,
+  MessageCircle,
+  Package,
+  ShoppingBag,
+  CalendarCheck,
+  CreditCard,
+  BarChart3,
+  Gift,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -54,13 +66,37 @@ import { ptBR } from "date-fns/locale";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { BookingModal } from "@/components/modals/BookingModal";
 
-const navigationItems = [
+interface NavItem {
+  title: string;
+  url: string;
+  icon: any;
+  children?: { title: string; url: string; icon: any }[];
+}
+
+const navigationItems: NavItem[] = [
   { title: "Dashboard", url: "/app/dashboard", icon: Home },
   { title: "Agendamentos", url: "/app/bookings", icon: FileText },
   { title: "Clientes", url: "/app/customers", icon: User },
-  { title: "Serviços", url: "/app/services", icon: Scissors },
+  { 
+    title: "Catálogo", 
+    url: "/app/services", 
+    icon: ShoppingBag,
+    children: [
+      { title: "Serviços", url: "/app/services", icon: Scissors },
+      { title: "Pacotes", url: "/app/packages", icon: Gift },
+      { title: "Produtos", url: "/app/products", icon: Package },
+    ]
+  },
   { title: "Profissionais", url: "/app/staff", icon: Users },
-  { title: "Financeiro", url: "/app/finance", icon: Wallet },
+  { 
+    title: "Financeiro", 
+    url: "/app/finance", 
+    icon: Wallet,
+    children: [
+      { title: "Visão Geral", url: "/app/finance", icon: BarChart3 },
+      { title: "Comissões", url: "/app/commissions", icon: CreditCard },
+    ]
+  },
   { title: "WhatsApp", url: "/app/whatsapp", icon: MessageCircle },
   { title: "Configurações", url: "/app/settings", icon: Settings },
 ];
@@ -71,6 +107,55 @@ const bottomTabItems = [
   { title: "Financeiro", url: "/app/finance", icon: Wallet },
   { title: "Mais", url: "/app/settings", icon: Menu },
 ];
+
+function NavItemLink({ item, isActive, onClick }: { item: { title: string; url: string; icon: any }; isActive: boolean; onClick?: () => void }) {
+  return (
+    <NavLink
+      to={item.url}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+        isActive 
+          ? 'bg-emerald-500/10 text-emerald-400' 
+          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+      }`}
+    >
+      <item.icon className="h-4 w-4" />
+      <span className="text-sm font-medium">{item.title}</span>
+      {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
+    </NavLink>
+  );
+}
+
+function CollapsibleNavItem({ item, location }: { item: NavItem; location: any }) {
+  const isAnyChildActive = item.children?.some(child => location.pathname === child.url) || false;
+  const [open, setOpen] = useState(isAnyChildActive);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full ${
+        isAnyChildActive 
+          ? 'text-emerald-400' 
+          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+      }`}>
+        <item.icon className="h-4 w-4" />
+        <span className="text-sm font-medium">{item.title}</span>
+        <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pl-4 mt-1 space-y-1">
+        {item.children?.map((child) => {
+          const isActive = location.pathname === child.url;
+          return (
+            <SidebarMenuItem key={child.url}>
+              <SidebarMenuButton asChild>
+                <NavItemLink item={child} isActive={isActive} />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 function AppSidebar() {
   const { currentTenant } = useTenant();
@@ -100,24 +185,18 @@ function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => {
+                if (item.children) {
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <CollapsibleNavItem item={item} location={location} />
+                    </SidebarMenuItem>
+                  );
+                }
                 const isActive = location.pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
-                          isActive 
-                            ? 'bg-emerald-500/10 text-emerald-400' 
-                            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
-                        }`}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span className="text-sm font-medium">{item.title}</span>
-                        {isActive && (
-                          <ChevronRight className="h-4 w-4 ml-auto" />
-                        )}
-                      </NavLink>
+                      <NavItemLink item={item} isActive={isActive} />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -185,6 +264,31 @@ function MobileDrawer() {
         <div className="p-4">
           <div className="space-y-1">
             {navigationItems.map((item) => {
+              if (item.children) {
+                return (
+                  <div key={item.title}>
+                    <p className="px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">{item.title}</p>
+                    {item.children.map((child) => {
+                      const isActive = location.pathname === child.url;
+                      return (
+                        <NavLink
+                          key={child.url}
+                          to={child.url}
+                          onClick={() => setOpen(false)}
+                          className={`flex items-center gap-3 p-3 pl-6 rounded-xl transition-all duration-200 ${
+                            isActive 
+                              ? 'bg-emerald-500/10 text-emerald-400' 
+                              : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+                          }`}
+                        >
+                          <child.icon className="h-5 w-5" />
+                          <span className="font-medium">{child.title}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                );
+              }
               const isActive = location.pathname === item.url;
               return (
                 <NavLink

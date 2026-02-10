@@ -8,7 +8,13 @@ import { useNavigate } from "react-router-dom";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, eachDayOfInterval, isSameDay } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { format, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { 
@@ -21,10 +27,10 @@ import {
   Phone,
   ArrowUpRight,
   Sparkles,
-  CreditCard,
-  Banknote,
-  AlertCircle,
-  UserCheck
+  UserCheck,
+  User,
+  MapPin,
+  Mail,
 } from "lucide-react";
 import { NewServiceModal, NewStaffModal, BlockTimeModal } from "@/components/modals/QuickActions";
 
@@ -48,9 +54,9 @@ const Dashboard = () => {
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [recurringClients, setRecurringClients] = useState<any[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  
   // Modal states
   const [showNewService, setShowNewService] = useState(false);
   const [showNewStaff, setShowNewStaff] = useState(false);
@@ -231,23 +237,6 @@ const Dashboard = () => {
       {/* Date Range Selector */}
       <DateRangeSelector className="overflow-x-auto" />
 
-      {/* Welcome Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-4 md:mb-8"
-      >
-        <h1 className="text-xl md:text-2xl font-bold text-zinc-100 mb-1 md:mb-2">
-          {getGreeting()}! 👋
-        </h1>
-        <p className="text-sm md:text-base text-zinc-500">
-          {loading 
-            ? "Carregando dados..." 
-            : `Você tem ${todayBookings.length} agendamentos hoje.`
-          }
-        </p>
-      </motion.div>
 
       {/* Stats Grid */}
       <motion.div 
@@ -423,7 +412,7 @@ const Dashboard = () => {
                         </div>
                         <div className="divide-y divide-zinc-800/30">
                           {dayBookings.map((booking: any) => (
-                            <div key={booking.id} className="flex items-center gap-3 md:gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors">
+                            <div key={booking.id} className="flex items-center gap-3 md:gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors cursor-pointer" onClick={() => setSelectedBooking(booking)}>
                               <div
                                 className="w-1 h-10 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
@@ -483,92 +472,14 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
-      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Upcoming Appointments */}
+      {/* Sidebar with quick actions and popular services */}
+      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+        {/* Top Services */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="lg:col-span-2"
         >
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
-            <div className="flex items-center justify-between p-3 md:p-5 border-b border-zinc-800/50">
-              <div>
-                <h2 className="text-base md:text-lg font-semibold text-zinc-100">Próximos Agendamentos</h2>
-                <p className="text-xs md:text-sm text-zinc-500">Agendamentos de hoje</p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/app/bookings')}
-                className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 text-xs md:text-sm"
-              >
-                Ver Todos
-              </Button>
-            </div>
-            <div className="p-3 md:p-5">
-              <div className="space-y-2 md:space-y-3">
-                {loading ? (
-                  <div className="text-center text-zinc-500 py-6 md:py-8 text-sm">
-                    Carregando agendamentos...
-                  </div>
-                ) : todayBookings.length === 0 ? (
-                  <div className="text-center py-8 md:py-12">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-zinc-800 flex items-center justify-center mx-auto mb-3 md:mb-4">
-                      <Calendar className="h-5 w-5 md:h-6 md:w-6 text-zinc-600" />
-                    </div>
-                    <p className="text-sm text-zinc-500">Nenhum agendamento para hoje</p>
-                  </div>
-                ) : (
-                  todayBookings.slice(0, 4).map((booking) => (
-                    <div 
-                      key={booking.id} 
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-lg md:rounded-xl bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors gap-3"
-                    >
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-zinc-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Users className="h-4 w-4 md:h-5 md:w-5 text-zinc-400" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-medium text-sm md:text-base text-zinc-100 truncate">{booking.customer?.name}</h4>
-                          <p className="text-xs md:text-sm text-zinc-500 truncate">{booking.service?.name}</p>
-                          <div className="flex items-center mt-1 gap-2 md:gap-3 flex-wrap">
-                            <span className="text-xs text-zinc-500 flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {new Date(booking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <span className="text-xs text-zinc-500 flex items-center hidden sm:flex">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {booking.customer?.phone}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium self-start sm:self-auto ${
-                        booking.status === 'confirmed' 
-                          ? 'bg-emerald-500/10 text-emerald-400' 
-                          : 'bg-zinc-700/50 text-zinc-400'
-                      }`}>
-                        {booking.status === 'confirmed' ? 'Confirmado' : 
-                         booking.status === 'pending' ? 'Pendente' : 
-                         booking.status}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Sidebar - Mobile: Horizontal scroll, Desktop: Vertical stack */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="space-y-4 md:space-y-6"
-        >
-          {/* Top Services */}
           <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
             <div className="p-3 md:p-5 border-b border-zinc-800/50">
               <h2 className="text-base md:text-lg font-semibold text-zinc-100">Serviços Populares</h2>
@@ -577,23 +488,16 @@ const Dashboard = () => {
             <div className="p-3 md:p-5">
               <div className="space-y-3 md:space-y-4">
                 {loading ? (
-                  <div className="text-center text-zinc-500">
-                    Carregando...
-                  </div>
+                  <div className="text-center text-zinc-500">Carregando...</div>
                 ) : services.length === 0 ? (
-                  <div className="text-center text-zinc-500">
-                    Nenhum serviço cadastrado
-                  </div>
+                  <div className="text-center text-zinc-500">Nenhum serviço cadastrado</div>
                 ) : (
-                  services.slice(0, 3).map((service) => (
+                  services.slice(0, 5).map((service) => (
                     <div key={service.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div 
                           className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ 
-                            backgroundColor: `${service.color}15`,
-                            color: service.color 
-                          }}
+                          style={{ backgroundColor: `${service.color}15`, color: service.color }}
                         >
                           <Scissors className="h-4 w-4" />
                         </div>
@@ -611,8 +515,14 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+        </motion.div>
 
-          {/* Quick Actions */}
+        {/* Quick Actions */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
           <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
             <div className="p-3 md:p-5 border-b border-zinc-800/50">
               <div className="flex items-center gap-2">
@@ -621,32 +531,14 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="p-3 md:p-5 space-y-2">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" 
-                size="sm"
-                onClick={() => setShowNewService(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Serviço
+              <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" size="sm" onClick={() => setShowNewService(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Novo Serviço
               </Button>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" 
-                size="sm"
-                onClick={() => setShowNewStaff(true)}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Adicionar Profissional
+              <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" size="sm" onClick={() => setShowNewStaff(true)}>
+                <Users className="h-4 w-4 mr-2" /> Adicionar Profissional
               </Button>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" 
-                size="sm"
-                onClick={() => setShowBlockTime(true)}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Bloquear Horário
+              <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" size="sm" onClick={() => setShowBlockTime(true)}>
+                <Calendar className="h-4 w-4 mr-2" /> Bloquear Horário
               </Button>
             </div>
           </div>
@@ -669,6 +561,106 @@ const Dashboard = () => {
         onOpenChange={setShowBlockTime}
         onSuccess={loadDashboardData}
       />
+
+      {/* Booking Detail Modal */}
+      <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100">Detalhes do Agendamento</DialogTitle>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="space-y-4">
+              {/* Customer Info */}
+              <div className="p-4 rounded-xl bg-zinc-800/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
+                    <User className="h-5 w-5 text-zinc-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-zinc-100">{selectedBooking.customer?.name}</p>
+                    {selectedBooking.is_recurring && (
+                      <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-xs mt-0.5">
+                        Cliente Fixo
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {selectedBooking.customer?.phone && (
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Phone className="h-4 w-4" />
+                    <span>{selectedBooking.customer.phone}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Booking Info */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Scissors className="h-4 w-4" />
+                    <span>Serviço</span>
+                  </div>
+                  <span className="text-sm font-medium text-zinc-100">{selectedBooking.service?.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <Clock className="h-4 w-4" />
+                    <span>Horário</span>
+                  </div>
+                  <span className="text-sm font-medium text-zinc-100">
+                    {format(new Date(selectedBooking.starts_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {' — '}
+                    {format(new Date(selectedBooking.ends_at), "HH:mm")}
+                  </span>
+                </div>
+                {selectedBooking.staff?.name && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <Users className="h-4 w-4" />
+                      <span>Profissional</span>
+                    </div>
+                    <span className="text-sm font-medium text-zinc-100">{selectedBooking.staff.name}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>Valor</span>
+                  </div>
+                  <span className="text-sm font-bold text-emerald-400">
+                    R$ {((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}
+                  </span>
+                </div>
+                {!selectedBooking.is_recurring && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <Calendar className="h-4 w-4" />
+                      <span>Status</span>
+                    </div>
+                    <Badge className={`text-xs ${
+                      selectedBooking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                      selectedBooking.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                      selectedBooking.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                      'bg-zinc-700/50 text-zinc-400 border-zinc-600/30'
+                    }`}>
+                      {selectedBooking.status === 'confirmed' ? 'Confirmado' :
+                       selectedBooking.status === 'completed' ? 'Concluído' :
+                       selectedBooking.status === 'cancelled' ? 'Cancelado' :
+                       selectedBooking.status === 'no_show' ? 'Faltou' : selectedBooking.status}
+                    </Badge>
+                  </div>
+                )}
+                {selectedBooking.notes && (
+                  <div className="pt-2 border-t border-zinc-800">
+                    <p className="text-xs text-zinc-500 mb-1">Observações</p>
+                    <p className="text-sm text-zinc-300">{selectedBooking.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

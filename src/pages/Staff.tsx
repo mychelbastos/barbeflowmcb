@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { StaffPaymentsTab } from "@/components/StaffPaymentsTab";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +44,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { StaffScheduleManager } from "@/components/StaffScheduleManager";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const staffSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -339,22 +337,14 @@ export default function Staff() {
 
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
-      <Tabs defaultValue="team" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-foreground">Profissionais</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Gerencie a equipe da barbearia
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Profissionais</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Gerencie a equipe da barbearia
+          </p>
         </div>
-
-        <TabsList>
-          <TabsTrigger value="team">Equipe</TabsTrigger>
-          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="team" className="space-y-4">
+      </div>
       <div className="flex justify-end">
         <Button
           onClick={() => {
@@ -709,12 +699,6 @@ export default function Staff() {
           </Form>
         </DialogContent>
       </Dialog>
-        </TabsContent>
-
-        <TabsContent value="payments">
-          <StaffPaymentsTab />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

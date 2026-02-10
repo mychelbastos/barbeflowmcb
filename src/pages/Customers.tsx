@@ -3,7 +3,6 @@ import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import RecurringClients from "@/pages/RecurringClients";
 import { CustomerBalanceTab } from "@/components/CustomerBalanceTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
@@ -381,13 +380,6 @@ export default function Customers() {
 
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
-      <Tabs defaultValue="customers" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="customers">Clientes</TabsTrigger>
-          <TabsTrigger value="recurring">Clientes Fixos</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="customers" className="space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3">
         <div>
@@ -892,12 +884,6 @@ export default function Customers() {
         </AlertDialogContent>
       </AlertDialog>
 
-        </TabsContent>
-
-        <TabsContent value="recurring">
-          <RecurringClients />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
