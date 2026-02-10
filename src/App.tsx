@@ -8,7 +8,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Finance from "./pages/Finance";
-import Agenda from "./pages/Agenda";
+
 import Bookings from "./pages/Bookings";
 import Services from "./pages/Services";
 import Staff from "./pages/Staff";
@@ -48,7 +48,7 @@ const App = () => (
             </ProtectedRoute>
           }>
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="agenda" element={<Agenda />} />
+            
             <Route path="bookings" element={<Bookings />} />
             <Route path="services" element={<Services />} />
             <Route path="staff" element={<Staff />} />

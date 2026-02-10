@@ -243,7 +243,7 @@ const Dashboard = () => {
       >
         <motion.div 
           variants={fadeInUp}
-          onClick={() => navigate('/app/agenda')}
+          onClick={() => navigate('/app/bookings')}
           className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
         >
           <div className="flex items-start justify-between mb-2 md:mb-4">

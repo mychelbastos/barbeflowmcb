@@ -35,7 +35,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { 
-  Calendar, 
   Plus, 
   Users, 
   Scissors, 
@@ -47,9 +46,7 @@ import {
   User,
   LogOut,
   ChevronRight,
-  MessageCircle,
-  Package,
-  CalendarClock
+  MessageCircle
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -59,21 +56,18 @@ import { BookingModal } from "@/components/modals/BookingModal";
 
 const navigationItems = [
   { title: "Dashboard", url: "/app/dashboard", icon: Home },
-  { title: "Calendário", url: "/app/agenda", icon: Calendar },
   { title: "Agendamentos", url: "/app/bookings", icon: FileText },
+  { title: "Clientes", url: "/app/customers", icon: User },
   { title: "Serviços", url: "/app/services", icon: Scissors },
   { title: "Profissionais", url: "/app/staff", icon: Users },
-  { title: "Clientes", url: "/app/customers", icon: User },
   { title: "Financeiro", url: "/app/finance", icon: Wallet },
-  { title: "Produtos", url: "/app/products", icon: Package },
-  { title: "Clientes Fixos", url: "/app/recurring-clients", icon: CalendarClock },
   { title: "WhatsApp", url: "/app/whatsapp", icon: MessageCircle },
   { title: "Configurações", url: "/app/settings", icon: Settings },
 ];
 
 const bottomTabItems = [
   { title: "Home", url: "/app/dashboard", icon: Home },
-  { title: "Calendário", url: "/app/agenda", icon: Calendar },
+  { title: "Agendamentos", url: "/app/bookings", icon: FileText },
   { title: "Financeiro", url: "/app/finance", icon: Wallet },
   { title: "Mais", url: "/app/settings", icon: Menu },
 ];
