@@ -899,8 +899,10 @@ export type Database = {
           created_at: string
           default_commission_percent: number | null
           id: string
+          is_owner: boolean | null
           name: string
           photo_url: string | null
+          product_commission_percent: number | null
           tenant_id: string
           updated_at: string
         }
@@ -911,8 +913,10 @@ export type Database = {
           created_at?: string
           default_commission_percent?: number | null
           id?: string
+          is_owner?: boolean | null
           name: string
           photo_url?: string | null
+          product_commission_percent?: number | null
           tenant_id: string
           updated_at?: string
         }
@@ -923,8 +927,10 @@ export type Database = {
           created_at?: string
           default_commission_percent?: number | null
           id?: string
+          is_owner?: boolean | null
           name?: string
           photo_url?: string | null
+          product_commission_percent?: number | null
           tenant_id?: string
           updated_at?: string
         }

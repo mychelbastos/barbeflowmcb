@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { z } from "zod/v4";
 import {
   Form,
   FormControl,
@@ -50,6 +50,9 @@ const staffSchema = z.object({
   bio: z.string().optional(),
   color: z.string().min(1, "Cor é obrigatória"),
   active: z.boolean(),
+  is_owner: z.boolean(),
+  default_commission_percent: z.number().min(0).max(100),
+  product_commission_percent: z.number().min(0).max(100),
 });
 
 const SUPABASE_URL = "https://iagzodcwctvydmgrwjsy.supabase.co";
@@ -80,6 +83,9 @@ export default function Staff() {
       bio: "",
       color: "#10B981",
       active: true,
+      is_owner: false,
+      default_commission_percent: 0,
+      product_commission_percent: 0,
     },
   });
 
@@ -252,6 +258,9 @@ export default function Staff() {
       bio: staffMember.bio || "",
       color: staffMember.color,
       active: staffMember.active,
+      is_owner: staffMember.is_owner || false,
+      default_commission_percent: staffMember.default_commission_percent || 0,
+      product_commission_percent: staffMember.product_commission_percent || 0,
     });
     
     const memberServices = staffMember.staff_services?.map((ss: any) => ss.service_id) || [];
@@ -395,13 +404,36 @@ export default function Staff() {
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <h3 className="font-semibold text-foreground">{staffMember.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground">{staffMember.name}</h3>
+                      {staffMember.is_owner && (
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-400 border-amber-500/30">
+                          Chefe
+                        </Badge>
+                      )}
+                    </div>
                     {staffMember.bio && (
                       <p className="text-sm text-muted-foreground mt-1">
                         {staffMember.bio}
                       </p>
                     )}
                   </div>
+
+                  {/* Commission info */}
+                  {!staffMember.is_owner && (staffMember.default_commission_percent > 0 || staffMember.product_commission_percent > 0) && (
+                    <div className="flex flex-wrap gap-2">
+                      {staffMember.default_commission_percent > 0 && (
+                        <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                          Serviços: {staffMember.default_commission_percent}%
+                        </Badge>
+                      )}
+                      {staffMember.product_commission_percent > 0 && (
+                        <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/30">
+                          Produtos: {staffMember.product_commission_percent}%
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground">
@@ -661,6 +693,77 @@ export default function Staff() {
                   Se nenhum serviço for selecionado, o profissional poderá realizar todos os serviços
                 </p>
               </div>
+
+              {/* Owner Toggle */}
+              <FormField
+                control={form.control}
+                name="is_owner"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between">
+                    <div>
+                      <FormLabel>Barbeiro Chefe (Dono)</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        O dono não recebe comissão — ele distribui para os outros
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Commission fields - only if not owner */}
+              {!form.watch("is_owner") && (
+                <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/30">
+                  <Label className="text-sm font-medium">Comissões</Label>
+                  <FormField
+                    control={form.control}
+                    name="default_commission_percent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Comissão de Serviços (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            placeholder="0"
+                            value={field.value}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="product_commission_percent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Comissão de Produtos (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            placeholder="0"
+                            value={field.value}
+                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
               <FormField
                 control={form.control}

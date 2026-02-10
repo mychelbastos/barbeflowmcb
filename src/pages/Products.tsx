@@ -78,12 +78,17 @@ const Products = () => {
     product_id: '',
     quantity: '1',
     sale_date: new Date().toISOString().split('T')[0],
+    staff_id: '',
   });
   const [savingSale, setSavingSale] = useState(false);
+
+  // Staff state
+  const [staffList, setStaffList] = useState<any[]>([]);
 
   useEffect(() => {
     if (currentTenant) {
       loadProducts();
+      loadStaff();
     }
   }, [currentTenant]);
 
@@ -114,13 +119,24 @@ const Products = () => {
     }
   };
 
+  const loadStaff = async () => {
+    if (!currentTenant) return;
+    const { data } = await supabase
+      .from('staff')
+      .select('id, name')
+      .eq('tenant_id', currentTenant.id)
+      .eq('active', true)
+      .order('name');
+    setStaffList(data || []);
+  };
+
   const loadSales = async () => {
     if (!currentTenant) return;
     try {
       setLoadingSales(true);
       const { data, error } = await supabase
         .from('product_sales')
-        .select('*, product:products(*)')
+        .select('*, product:products(*), staff:staff(name)')
         .eq('tenant_id', currentTenant.id)
         .order('sale_date', { ascending: false })
         .limit(100);
@@ -254,6 +270,7 @@ const Products = () => {
         product_id: sale.product_id,
         quantity: sale.quantity.toString(),
         sale_date: sale.sale_date.split('T')[0],
+        staff_id: (sale as any).staff_id || '',
       });
     } else {
       setEditingSale(null);
@@ -261,6 +278,7 @@ const Products = () => {
         product_id: '',
         quantity: '1',
         sale_date: new Date().toISOString().split('T')[0],
+        staff_id: '',
       });
     }
     setShowSaleModal(true);
@@ -294,6 +312,7 @@ const Products = () => {
         sale_date: new Date(saleForm.sale_date + 'T12:00:00').toISOString(),
         sale_price_snapshot_cents: selectedProduct.sale_price_cents,
         purchase_price_snapshot_cents: selectedProduct.purchase_price_cents,
+        staff_id: saleForm.staff_id || null,
       };
 
       if (editingSale) {
@@ -501,6 +520,7 @@ const Products = () => {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Data</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Produto</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Profissional</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-zinc-400">Qtd</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Total</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Lucro</th>
@@ -519,6 +539,9 @@ const Products = () => {
                           </td>
                           <td className="px-4 py-3 text-sm text-zinc-100 font-medium">
                             {sale.product?.name || 'Produto'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-zinc-300">
+                            {(sale as any).staff?.name || '—'}
                           </td>
                           <td className="px-4 py-3 text-sm text-zinc-300 text-center">
                             {sale.quantity}
@@ -661,6 +684,25 @@ const Products = () => {
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.name} - R$ {(product.sale_price_cents / 100).toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">Profissional que vendeu</label>
+              <Select
+                value={saleForm.staff_id}
+                onValueChange={(value) => setSaleForm(prev => ({ ...prev, staff_id: value }))}
+              >
+                <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
+                  <SelectValue placeholder="Selecione (opcional)" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800">
+                  {staffList.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
