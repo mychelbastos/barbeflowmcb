@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Scissors, ArrowLeft, Mail, Lock, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { getPublicUrl } from "@/lib/hostname";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
@@ -45,13 +45,13 @@ const Login = () => {
         className="w-full max-w-md relative"
       >
         {/* Back link */}
-        <Link 
-          to="/" 
+        <a 
+          href={getPublicUrl('/')} 
           className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar ao início
-        </Link>
+        </a>
 
         {/* Logo */}
         <motion.div 
@@ -127,12 +127,12 @@ const Login = () => {
 
             {!isSignUp && (
               <div className="flex justify-end">
-                <Link
-                  to="/app/forgot-password"
+                <a
+                  href="/app/forgot-password"
                   className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
                 >
                   Esqueci minha senha
-                </Link>
+                </a>
               </div>
             )}
 

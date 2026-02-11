@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DateRangeProvider } from "@/contexts/DateRangeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { isDashboardDomain, isPublicDomain, isPreviewOrLocal } from "@/lib/hostname";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -30,6 +31,9 @@ import AppShell from "./components/layout/AppShell";
 
 const queryClient = new QueryClient();
 
+const showPublic = isPublicDomain() || isPreviewOrLocal();
+const showDashboard = isDashboardDomain() || isPreviewOrLocal();
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -39,38 +43,50 @@ const App = () => (
         <BrowserRouter>
           <AuthWatcher />
           <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/app/login" element={<Login />} />
-            <Route path="/app/register" element={<Login />} />
-            
-            {/* Protected App Routes */}
-            <Route path="/app" element={
-              <ProtectedRoute>
-                <DateRangeProvider>
-                  <AppShell />
-                </DateRangeProvider>
-              </ProtectedRoute>
-            }>
-              <Route path="dashboard" element={<Dashboard />} />
-              
-              <Route path="bookings" element={<Bookings />} />
-              <Route path="services" element={<Services />} />
-              <Route path="packages" element={<PackagesPage />} />
-              <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
-              <Route path="staff" element={<Staff />} />
-              <Route path="customers" element={<Customers />} />
-              <Route path="recurring-clients" element={<RecurringClients />} />
-              <Route path="finance" element={<Finance />} />
-              <Route path="commissions" element={<CommissionsPage />} />
-              <Route path="products" element={<Products />} />
-              <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-            
-            {/* Public booking routes */}
-            <Route path="/:slug" element={<BookingPublic />} />
-            <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
-            <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
+            {/* Public routes - barberflow.store */}
+            {showPublic && (
+              <>
+                <Route path="/" element={<Landing />} />
+                <Route path="/:slug" element={<BookingPublic />} />
+                <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
+                <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
+              </>
+            )}
+
+            {/* Dashboard routes - app.barberflow.store */}
+            {showDashboard && (
+              <>
+                <Route path="/app/login" element={<Login />} />
+                <Route path="/app/register" element={<Login />} />
+                
+                <Route path="/app" element={
+                  <ProtectedRoute>
+                    <DateRangeProvider>
+                      <AppShell />
+                    </DateRangeProvider>
+                  </ProtectedRoute>
+                }>
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="bookings" element={<Bookings />} />
+                  <Route path="services" element={<Services />} />
+                  <Route path="packages" element={<PackagesPage />} />
+                  <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
+                  <Route path="staff" element={<Staff />} />
+                  <Route path="customers" element={<Customers />} />
+                  <Route path="recurring-clients" element={<RecurringClients />} />
+                  <Route path="finance" element={<Finance />} />
+                  <Route path="commissions" element={<CommissionsPage />} />
+                  <Route path="products" element={<Products />} />
+                  <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
+              </>
+            )}
+
+            {/* On dashboard domain, redirect root to login */}
+            {isDashboardDomain() && (
+              <Route path="/" element={<Login />} />
+            )}
             
             <Route path="*" element={<NotFound />} />
           </Routes>

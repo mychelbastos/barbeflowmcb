@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Scissors, Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { getDashboardUrl, isPreviewOrLocal } from "@/lib/hostname";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -36,16 +36,16 @@ const Landing = () => {
               <span className="text-lg font-semibold tracking-tight">BarberFlow</span>
             </div>
             <div className="flex items-center gap-3">
-              <Link to="/app/login">
+              <a href={getDashboardUrl('/app/login')}>
                 <Button variant="ghost" className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50">
                   Entrar
                 </Button>
-              </Link>
-              <Link to="/app/register">
+              </a>
+              <a href={getDashboardUrl('/app/register')}>
                 <Button className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium">
                   Começar Grátis
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -92,18 +92,18 @@ const Landing = () => {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link to="/app/register">
+            <a href={getDashboardUrl('/app/register')}>
               <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold h-12 px-8 text-base">
                 <Calendar className="mr-2 h-5 w-5" />
                 Começar Agora — Grátis
               </Button>
-            </Link>
-            <Link to="#demo">
+            </a>
+            <a href="#demo">
               <Button size="lg" variant="ghost" className="w-full sm:w-auto bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 h-12 px-8 text-base text-zinc-100">
                 Ver Demonstração
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </Link>
+            </a>
           </motion.div>
         </div>
       </section>
@@ -340,11 +340,11 @@ const Landing = () => {
               ))}
             </motion.div>
             
-            <Link to="/app/register">
+            <a href={getDashboardUrl('/app/register')}>
               <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold h-12 px-10 text-base">
                 Começar Gratuitamente
               </Button>
-            </Link>
+            </a>
           </motion.div>
         </motion.div>
       </section>
@@ -365,12 +365,12 @@ const Landing = () => {
             Configure em 5 minutos. Sem compromisso.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/app/register">
+            <a href={getDashboardUrl('/app/register')}>
               <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold h-12 px-8 text-base">
                 <Scissors className="mr-2 h-5 w-5" />
                 Criar Minha Barbearia
               </Button>
-            </Link>
+            </a>
             <Button size="lg" variant="ghost" className="w-full sm:w-auto bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 h-12 px-8 text-base text-zinc-100">
               Falar com Especialista
             </Button>
