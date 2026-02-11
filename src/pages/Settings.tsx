@@ -336,6 +336,30 @@ export default function Settings() {
         title: type === 'logo' ? "Logo atualizado" : "Capa atualizada",
         description: "A imagem foi salva com sucesso.",
       });
+
+      // Auto-generate cover when logo is uploaded and no cover exists
+      if (type === 'logo' && !coverUrl) {
+        toast({
+          title: "Gerando capa...",
+          description: "Criando uma capa automaticamente com sua logo.",
+        });
+        try {
+          const { data: coverData, error: coverError } = await supabase.functions.invoke('generate-cover', {
+            body: { tenant_id: currentTenant.id, logo_url: publicUrl }
+          });
+          if (coverError) throw coverError;
+          if (coverData?.cover_url) {
+            setCoverUrl(coverData.cover_url);
+            toast({
+              title: "Capa gerada!",
+              description: "Uma capa foi criada automaticamente com sua logo.",
+            });
+          }
+        } catch (coverErr: any) {
+          console.error('Cover generation error:', coverErr);
+          // Non-blocking: just log the error
+        }
+      }
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
