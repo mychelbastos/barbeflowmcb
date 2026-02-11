@@ -1,3 +1,4 @@
+import mpIcon from "@/assets/mercadopago-icon.jpg";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
@@ -21,7 +22,7 @@ import {
   Store, 
   Clock, 
   Bell, 
-  CreditCard,
+  
   Upload,
   Image as ImageIcon,
   Globe,
@@ -947,7 +948,7 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <CreditCard className="h-5 w-5 mr-2" />
+                <img src={mpIcon} alt="Mercado Pago" className="h-5 w-5 mr-2 object-contain" />
                 Pagamentos
               </CardTitle>
             </CardHeader>
@@ -964,7 +965,7 @@ export default function Settings() {
                       ) : mpConnected ? (
                         <CheckCircle className="h-5 w-5 text-emerald-500" />
                       ) : (
-                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <img src={mpIcon} alt="Mercado Pago" className="h-6 w-6 object-contain" />
                       )}
                     </div>
                     <div>

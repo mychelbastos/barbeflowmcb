@@ -105,6 +105,7 @@ export default function Bookings() {
     timeRange,
     loading: gridLoading,
     refetch,
+    recurringCustomerIds,
   } = useBookingsByDate(currentTenant?.id, selectedDate);
 
   // Initialize visible staff when staff loads
@@ -411,6 +412,7 @@ export default function Bookings() {
                 date={selectedDate}
                 onBookingClick={handleBookingClick}
                 visibleStaffIds={visibleStaffIds}
+                recurringCustomerIds={recurringCustomerIds}
               />
             )}
           </div>

@@ -162,6 +162,21 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
     return { startHour: earliest, endHour: latest };
   }, [schedules]);
 
+  // Fetch recurring client customer IDs
+  const [recurringCustomerIds, setRecurringCustomerIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!tenantId) return;
+    supabase
+      .from("recurring_clients")
+      .select("customer_id")
+      .eq("tenant_id", tenantId)
+      .eq("active", true)
+      .then(({ data }) => {
+        setRecurringCustomerIds(new Set((data || []).map((r) => r.customer_id)));
+      });
+  }, [tenantId]);
+
   return {
     staff,
     schedules,
@@ -171,5 +186,6 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
     timeRange,
     loading,
     refetch: fetchData,
+    recurringCustomerIds,
   };
 }

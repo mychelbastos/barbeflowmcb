@@ -27,6 +27,7 @@ interface ScheduleGridProps {
   date: Date;
   onBookingClick: (booking: BookingData) => void;
   visibleStaffIds: string[];
+  recurringCustomerIds?: Set<string>;
 }
 
 function timeToMinutes(time: string): number {
@@ -50,6 +51,7 @@ export function ScheduleGrid({
   date,
   onBookingClick,
   visibleStaffIds,
+  recurringCustomerIds,
 }: ScheduleGridProps) {
   const isMobile = useIsMobile();
   const { openBookingModal } = useBookingModal();
@@ -224,7 +226,7 @@ export function ScheduleGrid({
             }
             return (
               <div key={slotTime} style={{ height: `${span * SLOT_HEIGHT}px` }} className="px-1 py-0.5">
-                <BookingCard booking={booking} onClick={() => onBookingClick(booking)} />
+                <BookingCard booking={booking} onClick={() => onBookingClick(booking)} isRecurring={recurringCustomerIds?.has(booking.customer_id)} />
               </div>
             );
           }
