@@ -609,7 +609,7 @@ export default function Bookings() {
               </div>
 
               {/* Quick status actions */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
                 {selectedBooking.status !== "cancelled" && selectedBooking.status !== "completed" && (
                   <Button size="sm" variant="outline" onClick={startEditMode}>
                     <Edit className="h-4 w-4 mr-1" /> Editar
@@ -636,6 +636,10 @@ export default function Bookings() {
                     </Button>
                   </a>
                 )}
+                <div className="flex-1" />
+                <Button size="sm" variant="secondary" onClick={() => { setShowDetails(false); setEditMode(false); }}>
+                  Fechar
+                </Button>
               </div>
             </div>
           )}
@@ -684,9 +688,7 @@ export default function Bookings() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowDetails(false); setEditMode(false); }}>Fechar</Button>
-          </DialogFooter>
+          
         </DialogContent>
       </Dialog>
     </div>
