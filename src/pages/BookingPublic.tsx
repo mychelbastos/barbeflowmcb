@@ -60,6 +60,8 @@ const BookingPublic = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [createdBooking, setCreatedBooking] = useState<any>(null);
+  const [customerFound, setCustomerFound] = useState(false);
+  const [lookingUpCustomer, setLookingUpCustomer] = useState(false);
   
   // Payment related states
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
@@ -457,7 +459,43 @@ const BookingPublic = () => {
     setPackageCoveredService(false);
     setBookingTab('services');
     setCreatedCustomerPackageId(null);
+    setCustomerFound(false);
     setStep(1);
+  };
+
+  // Format phone for display
+  const formatPhoneInput = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 2) return digits.length > 0 ? `(${digits}` : '';
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  };
+
+  // Lookup returning customer by phone
+  const lookupCustomerByPhone = async (phoneValue: string) => {
+    const digits = phoneValue.replace(/\D/g, '');
+    if (digits.length < 10 || !tenant) return;
+    
+    setLookingUpCustomer(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('public-customer-bookings', {
+        body: { action: 'lookup', phone: digits, tenant_id: tenant.id },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.found && data.customer) {
+        setCustomerName(data.customer.name);
+        setCustomerEmail(data.customer.email || '');
+        setCustomerFound(true);
+      } else {
+        setCustomerFound(false);
+      }
+    } catch (err) {
+      console.error('Error looking up customer:', err);
+    } finally {
+      setLookingUpCustomer(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1196,31 +1234,55 @@ END:VCALENDAR`;
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Phone first — enables auto-fill for returning customers */}
+              <div>
+                <label className="block text-sm text-zinc-400 mb-2">WhatsApp</label>
+                <div className="relative">
+                  <Input
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={customerPhone}
+                    onChange={(e) => {
+                      const formatted = formatPhoneInput(e.target.value);
+                      setCustomerPhone(formatted);
+                      setCustomerFound(false);
+                      const digits = formatted.replace(/\D/g, '');
+                      if (digits.length >= 10) {
+                        lookupCustomerByPhone(formatted);
+                        checkActivePackage(formatted);
+                      }
+                    }}
+                    required
+                    maxLength={15}
+                    className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                  />
+                  {lookingUpCustomer && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Returning customer banner */}
+              {customerFound && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl animate-in fade-in duration-300">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Check className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-400">Bem-vindo de volta, {customerName}!</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Seus dados foram preenchidos automaticamente. Confira e confirme.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm text-zinc-400 mb-2">Nome completo</label>
                 <Input
                   placeholder="Seu nome"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  required
-                  className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">WhatsApp</label>
-                <Input
-                  type="tel"
-                  placeholder="(11) 99999-9999"
-                  value={customerPhone}
-                  onChange={(e) => {
-                    setCustomerPhone(e.target.value);
-                    // Check for active package when phone has enough digits
-                    const digits = e.target.value.replace(/\D/g, '');
-                    if (digits.length >= 10) {
-                      checkActivePackage(e.target.value);
-                    }
-                  }}
                   required
                   className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
                 />

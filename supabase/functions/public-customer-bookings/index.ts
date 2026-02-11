@@ -8,6 +8,15 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+function buildPhoneVariants(phone: string): string[] {
+  const digits = phone.replace(/\D/g, "");
+  const variants = [digits, "+" + digits, "+55" + digits, "55" + digits];
+  if (digits.startsWith("55") && digits.length >= 12) {
+    variants.push(digits.slice(2));
+  }
+  return [...new Set(variants)];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -35,6 +44,40 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Handle customer lookup action — returns name/email for auto-fill
+    if (action === "lookup" && phone && tenant_id) {
+      const uniqueVariants = buildPhoneVariants(phone);
+
+      const { data: customer, error: customerError } = await supabase
+        .from("customers")
+        .select("id, name, email, phone")
+        .eq("tenant_id", tenant_id)
+        .or(uniqueVariants.map((p) => `phone.eq.${p}`).join(","))
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (customerError) throw customerError;
+
+      if (!customer) {
+        return new Response(
+          JSON.stringify({ found: false }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          found: true,
+          customer: {
+            name: customer.name,
+            email: customer.email || "",
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!phone || !tenant_id) {
       return new Response(
         JSON.stringify({ error: "phone and tenant_id are required" }),
@@ -42,20 +85,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build phone variants for matching
-    const digits = phone.replace(/\D/g, "");
-    const variants = [
-      digits,
-      "+" + digits,
-      "+55" + digits,
-      "55" + digits,
-    ];
-    if (digits.startsWith("55") && digits.length >= 12) {
-      variants.push(digits.slice(2));
-    }
-    const uniqueVariants = [...new Set(variants)];
+    // Default: list future bookings
+    const uniqueVariants = buildPhoneVariants(phone);
 
-    // Find customers by phone
     const { data: customers, error: customerError } = await supabase
       .from("customers")
       .select("id")
