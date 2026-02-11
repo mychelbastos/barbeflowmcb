@@ -226,7 +226,7 @@ function AppSidebar() {
               </Avatar>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-zinc-100">
-                  {user?.user_metadata?.name || 'Usuário'}
+                  {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário'}
                 </p>
                 <p className="text-xs text-zinc-500 truncate">
                   {user?.email}
