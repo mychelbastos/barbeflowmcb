@@ -52,6 +52,18 @@ export interface TenantSettings {
   timezone: string;
 }
 
+export interface RecurringSlot {
+  id: string;
+  customer_id: string;
+  staff_id: string;
+  service_id: string | null;
+  start_time: string;
+  duration_minutes: number;
+  customer: { name: string; phone: string } | null;
+  service: { name: string; color: string | null; duration_minutes: number; price_cents: number } | null;
+  notes: string | null;
+}
+
 export function useBookingsByDate(tenantId: string | undefined, date: Date) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -59,6 +71,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
   const [blocks, setBlocks] = useState<BlockData[]>([]);
   const [settings, setSettings] = useState<TenantSettings>({ slot_duration: 15, buffer_time: 10, timezone: TZ });
   const [loading, setLoading] = useState(true);
+  const [recurringSlots, setRecurringSlots] = useState<RecurringSlot[]>([]);
 
   const dateStr = format(date, "yyyy-MM-dd");
   const weekday = date.getDay();
@@ -71,7 +84,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       const dayStart = `${dateStr}T00:00:00-03:00`;
       const dayEnd = `${dateStr}T23:59:59-03:00`;
 
-      const [staffRes, schedulesRes, bookingsRes, blocksRes, tenantRes] = await Promise.all([
+      const [staffRes, schedulesRes, bookingsRes, blocksRes, tenantRes, recurringRes] = await Promise.all([
         supabase
           .from("staff")
           .select("id, name, photo_url, color, active")
@@ -102,12 +115,20 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
           .select("settings")
           .eq("id", tenantId)
           .single(),
+        supabase
+          .from("recurring_clients")
+          .select("*, customer:customers(name, phone), service:services(name, color, duration_minutes, price_cents)")
+          .eq("tenant_id", tenantId)
+          .eq("weekday", weekday)
+          .eq("active", true)
+          .lte("start_date", dateStr),
       ]);
 
       setStaff(staffRes.data || []);
       setSchedules(schedulesRes.data || []);
       setBookings((bookingsRes.data as any) || []);
       setBlocks(blocksRes.data || []);
+      setRecurringSlots((recurringRes.data as any) || []);
 
       if (tenantRes.data?.settings) {
         const s = tenantRes.data.settings as any;
@@ -162,25 +183,54 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
     return { startHour: earliest, endHour: latest };
   }, [schedules]);
 
-  // Fetch recurring client customer IDs
-  const [recurringCustomerIds, setRecurringCustomerIds] = useState<Set<string>>(new Set());
+  // Build recurring customer IDs set from recurring slots
+  const recurringCustomerIds = useMemo(() => {
+    return new Set(recurringSlots.map((r) => r.customer_id));
+  }, [recurringSlots]);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    supabase
-      .from("recurring_clients")
-      .select("customer_id")
-      .eq("tenant_id", tenantId)
-      .eq("active", true)
-      .then(({ data }) => {
-        setRecurringCustomerIds(new Set((data || []).map((r) => r.customer_id)));
+  // Merge recurring slots as virtual bookings (only if no real booking exists at that slot for that staff)
+  const mergedBookings = useMemo(() => {
+    const real = [...bookings];
+
+    for (const rc of recurringSlots) {
+      // Build the starts_at/ends_at for this recurring slot on this date
+      const startsAt = new Date(`${dateStr}T${rc.start_time}-03:00`);
+      const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
+
+      // Check if a real booking already exists for this staff+customer at this time
+      const alreadyExists = real.some((b) => {
+        return b.staff_id === rc.staff_id &&
+          b.customer_id === rc.customer_id &&
+          Math.abs(new Date(b.starts_at).getTime() - startsAt.getTime()) < 60000;
       });
-  }, [tenantId]);
+
+      if (alreadyExists) continue;
+
+      // Create a virtual booking
+      const virtualBooking: BookingData = {
+        id: `recurring-${rc.id}`,
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        status: "confirmed",
+        notes: rc.notes,
+        staff_id: rc.staff_id,
+        customer_id: rc.customer_id,
+        service_id: rc.service_id || "",
+        service: rc.service || { name: "Horário Fixo", color: null, duration_minutes: rc.duration_minutes, price_cents: 0 },
+        staff: null,
+        customer: rc.customer,
+      };
+
+      real.push(virtualBooking);
+    }
+
+    return real;
+  }, [bookings, recurringSlots, dateStr]);
 
   return {
     staff,
     schedules,
-    bookings,
+    bookings: mergedBookings,
     blocks,
     settings,
     timeRange,
