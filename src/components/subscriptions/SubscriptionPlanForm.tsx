@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +67,11 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
       setPlanServices([{ service_id: '', sessions_per_cycle: '', unlimited: true }]);
     }
   };
+
+  // Sync form with plan prop when dialog opens
+  useEffect(() => {
+    if (open) resetForm();
+  }, [open, plan]);
 
   const handleSave = async () => {
     if (!currentTenant || !name || !price) return;
