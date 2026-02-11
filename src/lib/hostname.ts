@@ -22,7 +22,7 @@ export function isPublicDomain(): boolean {
 
 export function isPreviewOrLocal(): boolean {
   const host = window.location.hostname;
-  return host === 'localhost' || host.includes('lovable.app') || host.includes('127.0.0.1');
+  return host === 'localhost' || host.includes('lovable.app') || host.includes('lovableproject.com') || host.includes('127.0.0.1');
 }
 
 /** Returns the full URL for the dashboard domain */
