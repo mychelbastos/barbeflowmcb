@@ -497,33 +497,6 @@ export default function AppShell() {
                     <Plus className="h-4 w-4 mr-2" />
                     Novo Agendamento
                   </Button>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="hover:bg-zinc-800/50">
-                        <Avatar className="h-7 w-7 mr-2">
-                          <AvatarImage src={user?.user_metadata?.avatar_url} />
-                          <AvatarFallback className="bg-zinc-800 text-zinc-400 text-xs">
-                            {user?.email?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="hidden sm:inline text-zinc-300">
-                          {user?.user_metadata?.name || 'Usuário'}
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-                      <DropdownMenuItem className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
-                        <User className="h-4 w-4 mr-2" />
-                        Perfil
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-zinc-800" />
-                      <DropdownMenuItem onClick={signOut} className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100">
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sair
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </div>
             </header>
