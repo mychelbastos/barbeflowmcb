@@ -466,24 +466,6 @@ export default function Customers() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Ticket Médio</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">
-                  R$ {customers.length > 0 
-                    ? (customers.reduce((sum, c) => sum + c.totalSpent, 0) / 100 / customers.filter(c => c.totalBookings > 0).length || 0).toFixed(0)
-                    : '0'
-                  }
-                </p>
-              </div>
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-warning/10 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-warning" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Customers - Mobile Cards / Desktop Table */}

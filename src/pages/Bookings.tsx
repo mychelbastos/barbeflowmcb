@@ -80,6 +80,11 @@ export default function Bookings() {
   // Detail dialog
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ service_id: "", staff_id: "", date: "", time: "" });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editServices, setEditServices] = useState<any[]>([]);
+  const [editStaff, setEditStaff] = useState<any[]>([]);
 
   // List view state
   const [listBookings, setListBookings] = useState<any[]>([]);
@@ -233,7 +238,58 @@ export default function Bookings() {
 
   const handleBookingClick = (booking: BookingData) => {
     setSelectedBooking(booking);
+    setEditMode(false);
     setShowDetails(true);
+  };
+
+  const startEditMode = async () => {
+    if (!selectedBooking || !currentTenant) return;
+    setEditForm({
+      service_id: selectedBooking.service_id,
+      staff_id: selectedBooking.staff_id || "none",
+      date: format(parseISO(selectedBooking.starts_at), "yyyy-MM-dd"),
+      time: format(parseISO(selectedBooking.starts_at), "HH:mm"),
+    });
+    // Load services and staff for editing
+    const [sRes, stRes] = await Promise.all([
+      supabase.from("services").select("*").eq("tenant_id", currentTenant.id).eq("active", true).order("name"),
+      supabase.from("staff").select("*").eq("tenant_id", currentTenant.id).eq("active", true).order("name"),
+    ]);
+    setEditServices(sRes.data || []);
+    setEditStaff(stRes.data || []);
+    setEditMode(true);
+  };
+
+  const saveBookingEdit = async () => {
+    if (!selectedBooking || !currentTenant) return;
+    setEditLoading(true);
+    try {
+      const service = editServices.find((s) => s.id === editForm.service_id);
+      const startsAt = new Date(`${editForm.date}T${editForm.time}`);
+      const endsAt = new Date(startsAt.getTime() + (service?.duration_minutes || 30) * 60000);
+
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          service_id: editForm.service_id,
+          staff_id: editForm.staff_id === "none" ? null : editForm.staff_id,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+        })
+        .eq("id", selectedBooking.id);
+
+      if (error) throw error;
+
+      toast({ title: "Sucesso", description: "Agendamento atualizado" });
+      setShowDetails(false);
+      setEditMode(false);
+      refetch();
+      if (viewMode === "list") loadListData();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Erro ao atualizar", variant: "destructive" });
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   if (tenantLoading) {
@@ -501,13 +557,13 @@ export default function Bookings() {
       />
 
       {/* Booking Details Dialog */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+      <Dialog open={showDetails} onOpenChange={(open) => { setShowDetails(open); if (!open) setEditMode(false); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Detalhes do Agendamento</DialogTitle>
-            <DialogDescription>Informações completas do agendamento</DialogDescription>
+            <DialogTitle>{editMode ? "Editar Agendamento" : "Detalhes do Agendamento"}</DialogTitle>
+            <DialogDescription>{editMode ? "Altere os dados do agendamento" : "Informações completas do agendamento"}</DialogDescription>
           </DialogHeader>
-          {selectedBooking && (
+          {selectedBooking && !editMode && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -567,14 +623,14 @@ export default function Bookings() {
 
               {/* Quick status actions */}
               <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                {selectedBooking.status === "confirmed" && (
-                  <Button size="sm" variant="outline" onClick={() => { updateBookingStatus(selectedBooking.id, "completed"); setShowDetails(false); }}>
-                    <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
+                {selectedBooking.status !== "cancelled" && selectedBooking.status !== "completed" && (
+                  <Button size="sm" variant="outline" onClick={startEditMode}>
+                    <Edit className="h-4 w-4 mr-1" /> Editar
                   </Button>
                 )}
                 {selectedBooking.status === "confirmed" && (
-                  <Button size="sm" variant="outline" onClick={() => { updateBookingStatus(selectedBooking.id, "no_show"); setShowDetails(false); }}>
-                    Faltou
+                  <Button size="sm" variant="outline" onClick={() => { updateBookingStatus(selectedBooking.id, "completed"); setShowDetails(false); }}>
+                    <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
                   </Button>
                 )}
                 {selectedBooking.status !== "cancelled" && (
@@ -596,8 +652,53 @@ export default function Bookings() {
               </div>
             </div>
           )}
+          {selectedBooking && editMode && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Serviço</Label>
+                <Select value={editForm.service_id} onValueChange={(v) => setEditForm((f) => ({ ...f, service_id: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {editServices.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} - {s.duration_minutes}min - R$ {(s.price_cents / 100).toFixed(2)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Profissional</Label>
+                <Select value={editForm.staff_id} onValueChange={(v) => setEditForm((f) => ({ ...f, staff_id: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Qualquer profissional</SelectItem>
+                    {editStaff.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Data</Label>
+                  <Input type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Horário</Label>
+                  <Input type="time" value={editForm.time} onChange={(e) => setEditForm((f) => ({ ...f, time: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2 border-t border-border">
+                <Button size="sm" onClick={saveBookingEdit} disabled={editLoading}>
+                  {editLoading ? "Salvando..." : "Salvar"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditMode(false)} disabled={editLoading}>
+                  Voltar
+                </Button>
+              </div>
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetails(false)}>Fechar</Button>
+            <Button variant="outline" onClick={() => { setShowDetails(false); setEditMode(false); }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
