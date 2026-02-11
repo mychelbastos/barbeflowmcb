@@ -93,6 +93,7 @@ const navigationItems: NavItem[] = [
     children: [
       { title: "Serviços", url: "/app/services", icon: Scissors },
       { title: "Pacotes", url: "/app/packages", icon: Gift },
+      { title: "Assinaturas", url: "/app/subscription-plans", icon: Repeat },
       { title: "Produtos", url: "/app/products", icon: Package },
     ]
   },
@@ -104,7 +105,6 @@ const navigationItems: NavItem[] = [
     children: [
       { title: "Visão Geral", url: "/app/finance", icon: BarChart3 },
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
-      { title: "Assinaturas", url: "/app/subscription-plans", icon: Repeat },
     ]
   },
   { title: "WhatsApp", url: "/app/whatsapp/inbox", icon: MessageCircle },
