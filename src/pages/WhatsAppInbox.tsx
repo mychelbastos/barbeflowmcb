@@ -123,19 +123,36 @@ export default function WhatsAppInbox() {
         await supabase.functions.invoke("evolution-create-instance", {
           body: { tenant_id: currentTenant.id, tenant_slug: currentTenant.slug }
         });
+        // Wait for instance to initialize before requesting QR
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-      const { data: qrData, error: qrError } = await supabase.functions.invoke("evolution-get-qrcode", {
-        body: { tenant_id: currentTenant.id }
-      });
-      if (qrError) throw qrError;
-      if (qrData?.connected) {
-        toast.success("WhatsApp já está conectado!");
-        await checkConnectionStatus();
-      } else if (qrData?.qrcode) {
+
+      // Retry logic for QR code generation
+      let qrData = null;
+      let lastError = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data, error: qrError } = await supabase.functions.invoke("evolution-get-qrcode", {
+          body: { tenant_id: currentTenant.id }
+        });
+        if (qrError) { lastError = qrError; }
+        if (data?.connected) {
+          toast.success("WhatsApp já está conectado!");
+          await checkConnectionStatus();
+          return;
+        }
+        if (data?.qrcode) {
+          qrData = data;
+          break;
+        }
+        // Wait before retrying
+        if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+
+      if (qrData?.qrcode) {
         setQrCode(qrData.qrcode);
         toast.info("Escaneie o QR Code com seu WhatsApp");
       } else {
-        toast.error("Não foi possível gerar o QR Code.");
+        throw lastError || new Error("Não foi possível gerar o QR Code após várias tentativas.");
       }
     } catch (error: any) {
       toast.error(error.message || "Erro ao conectar WhatsApp");

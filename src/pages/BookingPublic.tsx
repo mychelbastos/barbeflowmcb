@@ -975,24 +975,27 @@ END:VCALENDAR`;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
-      {/* Cover Banner */}
-      {tenant?.cover_url && (
-        <div className="w-full h-40 sm:h-52 overflow-hidden relative">
-          <img
-            src={tenant.cover_url}
-            alt={`Capa ${tenant.name}`}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-950" />
-        </div>
-      )}
+      {/* Cover Banner + Header */}
+      <div className="relative">
+        {tenant?.cover_url ? (
+          <div className="w-full h-48 sm:h-56 overflow-hidden relative">
+            <img
+              src={tenant.cover_url}
+              alt={`Capa ${tenant.name}`}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-zinc-950" />
+          </div>
+        ) : (
+          <div className="w-full h-24 bg-gradient-to-br from-zinc-900 to-zinc-950" />
+        )}
 
-      {/* Header */}
-      <header className="border-b border-zinc-800/50">
-        <div className="max-w-lg mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-4">
+        {/* Floating header card */}
+        <div className="max-w-lg mx-auto px-4">
+          <div className={`relative ${tenant?.cover_url ? '-mt-14' : '-mt-4'} bg-zinc-900/80 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-black/40`}>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center overflow-hidden">
+              {/* Logo */}
+              <div className="w-16 h-16 sm:w-18 sm:h-18 flex-shrink-0 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-zinc-700/50 shadow-lg">
                 {tenant?.logo_url ? (
                   <img 
                     src={tenant.logo_url} 
@@ -1000,33 +1003,41 @@ END:VCALENDAR`;
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Scissors className="h-6 w-6 text-white/80" />
+                  <Scissors className="h-7 w-7 text-white/80" />
                 )}
               </div>
-              <div>
-                <h1 className="font-semibold text-lg">{tenant?.name || "Carregando..."}</h1>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <h1 className="font-bold text-lg sm:text-xl truncate">{tenant?.name || "Carregando..."}</h1>
                 {tenant?.address && (
-                  <p className="text-zinc-500 text-sm flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {tenant.address}
+                  <p className="text-zinc-400 text-xs sm:text-sm flex items-center gap-1.5 mt-0.5 truncate">
+                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">{tenant.address}</span>
+                  </p>
+                )}
+                {tenant?.phone && (
+                  <p className="text-zinc-500 text-xs flex items-center gap-1.5 mt-0.5">
+                    <Phone className="h-3 w-3 flex-shrink-0" />
+                    {tenant.phone}
                   </p>
                 )}
               </div>
+
+              {/* CTA */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCustomerBookings(true)}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white flex-shrink-0 rounded-xl h-9 px-3"
+              >
+                <CalendarCheck className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline text-xs">Meus Agendamentos</span>
+              </Button>
             </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCustomerBookings(true)}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
-            >
-              <CalendarCheck className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Meus Agendamentos</span>
-              <span className="sm:hidden">Consultar</span>
-            </Button>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="max-w-lg mx-auto px-4 py-8">
         <StepIndicator />
