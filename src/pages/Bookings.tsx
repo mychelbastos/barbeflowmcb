@@ -141,6 +141,7 @@ export default function Bookings() {
         .eq("tenant_id", currentTenant.id)
         .gte("starts_at", dayStart)
         .lte("starts_at", dayEnd)
+        .neq("status", "cancelled")
         .order("starts_at", { ascending: true });
 
       if (error) throw error;
