@@ -17,7 +17,26 @@ import {
 } from "@/components/ui/dialog";
 import { format, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+
+const smoothSpring = { type: "spring" as const, stiffness: 260, damping: 30, mass: 0.8 };
+const gentleEase = [0.22, 1, 0.36, 1] as const;
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.05 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  show: { 
+    opacity: 1, y: 0, scale: 1,
+    transition: { duration: 0.5, ease: gentleEase },
+  },
+};
 import { 
   Calendar, 
   Plus, 
@@ -231,24 +250,45 @@ const Dashboard = () => {
       <DateRangeSelector className="overflow-x-auto" />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {statCards.map((card, i) => (
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+      >
+        {statCards.map((card) => (
           <motion.div
             key={card.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+            variants={itemVariants}
+            whileHover={{ y: -4, transition: smoothSpring }}
+            whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
             onClick={() => navigate(card.href)}
             className="group relative cursor-pointer"
           >
             {/* Glow on hover */}
-            <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-zinc-700/0 to-zinc-700/0 group-hover:from-zinc-700/30 group-hover:to-zinc-800/20 transition-all duration-500 pointer-events-none" />
-            <div className="relative p-4 md:p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm hover:border-zinc-700/60 transition-all duration-300">
+            <motion.div
+              className="absolute -inset-px rounded-2xl pointer-events-none"
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              style={{ background: "linear-gradient(135deg, rgba(113,113,122,0.15), rgba(82,82,91,0.08))" }}
+            />
+            <div className="relative p-4 md:p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm hover:border-zinc-700/60 transition-colors duration-500">
               <div className="flex items-start justify-between mb-3">
-                <div className={`w-9 h-9 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                <motion.div
+                  className={`w-9 h-9 rounded-xl ${card.iconBg} flex items-center justify-center`}
+                  whileHover={{ scale: 1.1, rotate: 3 }}
+                  transition={smoothSpring}
+                >
                   <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
-                </div>
-                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200" />
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0.3, x: -2, y: 2 }}
+                  whileHover={{ opacity: 1, x: 2, y: -2 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5 text-zinc-500" />
+                </motion.div>
               </div>
               <p className="text-xl md:text-2xl font-bold text-zinc-100 tracking-tight mb-0.5">
                 {card.value}
@@ -260,15 +300,15 @@ const Dashboard = () => {
             </div>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Main grid: Calendar + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         {/* Calendar */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: gentleEase }}
           className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/40">
@@ -339,11 +379,17 @@ const Dashboard = () => {
 
                       {/* Bookings */}
                       <div className="ml-[18px] border-l-2 border-zinc-800/40 pl-5 pb-2 space-y-1">
-                        {dayBookings.map((booking: any) => (
-                          <div
+                        <AnimatePresence mode="popLayout">
+                        {dayBookings.map((booking: any, bIdx: number) => (
+                          <motion.div
                             key={booking.id}
+                            initial={{ opacity: 0, x: -12 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 12 }}
+                            transition={{ duration: 0.35, delay: bIdx * 0.04, ease: gentleEase }}
+                            whileHover={{ x: 4, backgroundColor: "rgba(63,63,70,0.2)" }}
                             onClick={() => setSelectedBooking(booking)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-800/30 cursor-pointer transition-all duration-150 group/item"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer group/item"
                           >
                             <div
                               className="w-1 h-8 rounded-full flex-shrink-0 opacity-80 group-hover/item:opacity-100 transition-opacity"
@@ -391,8 +437,9 @@ const Dashboard = () => {
                                 R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
                               </span>
                             </div>
-                          </div>
+                          </motion.div>
                         ))}
+                        </AnimatePresence>
                       </div>
                     </div>
                   );
@@ -403,42 +450,61 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Sidebar */}
-        <div className="space-y-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
           {/* Quick Actions */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.25 }}
+            variants={itemVariants}
             className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
           >
             <div className="px-5 py-4 border-b border-zinc-800/40">
               <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                <motion.div
+                  animate={{ rotate: [0, 15, -15, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 5 }}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                </motion.div>
                 Ações Rápidas
               </h3>
             </div>
             <div className="p-3 space-y-1">
-              {quickActions.map((action) => (
-                <button
+              {quickActions.map((action, i) => (
+                <motion.button
                   key={action.label}
                   onClick={action.onClick}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-all duration-150 group"
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={smoothSpring}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-colors duration-300 group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-zinc-800/60 group-hover:bg-zinc-700/60 flex items-center justify-center transition-colors">
+                  <motion.div
+                    className="w-8 h-8 rounded-lg bg-zinc-800/60 group-hover:bg-zinc-700/60 flex items-center justify-center transition-colors duration-300"
+                    whileHover={{ rotate: 90 }}
+                    transition={smoothSpring}
+                  >
                     <action.icon className="h-4 w-4" />
-                  </div>
+                  </motion.div>
                   <span className="text-sm font-medium">{action.label}</span>
-                  <ChevronRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
+                  <motion.div
+                    className="ml-auto"
+                    initial={{ opacity: 0, x: -4 }}
+                    whileHover={{ opacity: 1, x: 0 }}
+                  >
+                    <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </motion.div>
+                </motion.button>
               ))}
             </div>
           </motion.div>
 
           {/* Popular Services */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
+            variants={itemVariants}
             className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
           >
             <div className="px-5 py-4 border-b border-zinc-800/40">
@@ -456,14 +522,23 @@ const Dashboard = () => {
                 <p className="text-sm text-zinc-600 text-center py-6">Nenhum serviço</p>
               ) : (
                 <div className="space-y-2.5">
-                  {services.slice(0, 5).map((service) => (
-                    <div key={service.id} className="flex items-center gap-3 group">
-                      <div
+                  {services.slice(0, 5).map((service, sIdx) => (
+                    <motion.div
+                      key={service.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.35, delay: 0.35 + sIdx * 0.06, ease: gentleEase }}
+                      whileHover={{ x: 3 }}
+                      className="flex items-center gap-3 group cursor-default"
+                    >
+                      <motion.div
                         className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: `${service.color}12` }}
+                        whileHover={{ scale: 1.15 }}
+                        transition={smoothSpring}
                       >
                         <Scissors className="h-3.5 w-3.5" style={{ color: service.color }} />
-                      </div>
+                      </motion.div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-300 truncate">{service.name}</p>
                         <p className="text-[11px] text-zinc-600">{service.duration_minutes} min</p>
@@ -471,13 +546,13 @@ const Dashboard = () => {
                       <span className="text-sm font-semibold text-emerald-400 tabular-nums">
                         R$ {(service.price_cents / 100).toFixed(0)}
                       </span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Modals */}
