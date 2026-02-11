@@ -43,6 +43,7 @@ const bookingFormSchema = z.object({
   staff_id: z.string().optional(),
   date: z.string().min(1, "Data é obrigatória"),
   time: z.string().min(1, "Horário é obrigatório"),
+  extra_slots: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
 
@@ -91,6 +92,7 @@ export function BookingModal() {
       staff_id: "",
       date: "",
       time: "",
+      extra_slots: 0,
       notes: "",
     },
   });
@@ -98,6 +100,7 @@ export function BookingModal() {
   const watchedDate = form.watch("date");
   const watchedServiceId = form.watch("service_id");
   const watchedStaffId = form.watch("staff_id");
+  const watchedExtraSlots = form.watch("extra_slots") || 0;
 
   useEffect(() => {
     if (isOpen && currentTenant) {
@@ -277,8 +280,12 @@ export function BookingModal() {
         .eq('id', data.service_id)
         .single();
 
+      const slotDuration = (currentTenant as any).settings?.slot_duration || 15;
+      const baseDuration = service?.duration_minutes || 60;
+      const totalDuration = baseDuration + (data.extra_slots || 0) * slotDuration;
+
       const startsAt = new Date(`${data.date}T${data.time}`);
-      const endsAt = new Date(startsAt.getTime() + (service?.duration_minutes || 60) * 60000);
+      const endsAt = new Date(startsAt.getTime() + totalDuration * 60000);
 
       const { data: newBooking, error: bookingError } = await supabase
         .from('bookings')
@@ -541,6 +548,50 @@ export function BookingModal() {
                 </FormItem>
               )}
             />
+
+            {/* Extra time slots */}
+            {watchedServiceId && (
+              <FormField
+                control={form.control}
+                name="extra_slots"
+                render={({ field }) => {
+                  const selectedService = services.find(s => s.id === watchedServiceId);
+                  const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
+                  const baseDuration = selectedService?.duration_minutes || 60;
+                  const totalDuration = baseDuration + (field.value || 0) * slotDuration;
+                  return (
+                    <FormItem>
+                      <FormLabel>Tempo adicional</FormLabel>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!field.value || field.value <= 0}
+                          onClick={() => field.onChange(Math.max(0, (field.value || 0) - 1))}
+                        >
+                          −
+                        </Button>
+                        <span className="text-sm font-medium min-w-[100px] text-center">
+                          +{(field.value || 0) * slotDuration} min
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => field.onChange((field.value || 0) + 1)}
+                        >
+                          +
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Duração total: {totalDuration} min (base {baseDuration} min + {(field.value || 0)} slots extras de {slotDuration} min)
+                      </p>
+                    </FormItem>
+                  );
+                }}
+              />
+            )}
 
             {/* Notes */}
             <FormField

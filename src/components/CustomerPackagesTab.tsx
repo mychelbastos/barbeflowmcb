@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Package, CheckCircle, Clock, Loader2, XCircle, Plus } from "lucide-react";
+import { Package, CheckCircle, Clock, Loader2, XCircle, Plus, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -27,6 +27,8 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   // Add package
   const [availablePackages, setAvailablePackages] = useState<any[]>([]);
@@ -89,6 +91,29 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
       toast({ title: "Pagamento confirmado!" });
       setShowConfirmDialog(false);
       setConfirmingId(null);
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleRemovePackage = async () => {
+    if (!removingId) return;
+    try {
+      // Delete per-service tracking first
+      await supabase
+        .from("customer_package_services")
+        .delete()
+        .eq("customer_package_id", removingId);
+      // Delete the customer package
+      const { error } = await supabase
+        .from("customer_packages")
+        .delete()
+        .eq("id", removingId);
+      if (error) throw error;
+      toast({ title: "Pacote removido com sucesso" });
+      setShowRemoveDialog(false);
+      setRemovingId(null);
       loadData();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -255,16 +280,42 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
 
                 {/* Actions */}
                 {cp.payment_status !== "confirmed" && cp.status !== "completed" && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                      onClick={() => {
+                        setConfirmingId(cp.id);
+                        setShowConfirmDialog(true);
+                      }}
+                    >
+                      <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirmar Pagamento
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => {
+                        setRemovingId(cp.id);
+                        setShowRemoveDialog(true);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+                {cp.payment_status === "confirmed" && cp.status !== "completed" && (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
                     onClick={() => {
-                      setConfirmingId(cp.id);
-                      setShowConfirmDialog(true);
+                      setRemovingId(cp.id);
+                      setShowRemoveDialog(true);
                     }}
                   >
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirmar Pagamento
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover Pacote
                   </Button>
                 )}
               </CardContent>
@@ -286,6 +337,24 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
             <AlertDialogCancel onClick={() => setConfirmingId(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmPayment}>
               Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove package dialog */}
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Pacote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este pacote do cliente? Esta ação não pode ser desfeita e todas as sessões serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRemovingId(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemovePackage} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remover
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
