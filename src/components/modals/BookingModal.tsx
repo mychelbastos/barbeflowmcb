@@ -3,9 +3,6 @@ import { useTenant } from "@/hooks/useTenant";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import {
   Dialog,
   DialogContent,
@@ -14,14 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -32,21 +21,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Clock } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const bookingFormSchema = z.object({
-  customer_name: z.string().min(1, "Nome é obrigatório"),
-  customer_phone: z.string().min(1, "Telefone é obrigatório"),
-  customer_email: z.string().email("Email inválido").optional().or(z.literal("")),
-  service_id: z.string().min(1, "Serviço é obrigatório"),
-  staff_id: z.string().optional(),
-  date: z.string().min(1, "Data é obrigatória"),
-  time: z.string().min(1, "Horário é obrigatório"),
-  notes: z.string().optional(),
-});
-
-type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 interface CustomerSuggestion {
   id: string;
@@ -61,15 +40,34 @@ interface AvailableSlot {
   staff_name: string;
 }
 
+interface ServiceItem {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  price_cents: number;
+  color: string | null;
+}
+
 export function BookingModal() {
   const { currentTenant } = useTenant();
-  const { isOpen, closeBookingModal, initialStaffId, initialDate, initialTime, customerPackageId, customerSubscriptionId, allowedServiceIds, preselectedCustomerId } = useBookingModal();
+  const { isOpen, closeBookingModal, initialStaffId, initialDate, initialTime, customerPackageId, customerSubscriptionId, allowedServiceIds } = useBookingModal();
   const { toast } = useToast();
-  const [services, setServices] = useState<any[]>([]);
+
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [formLoading, setFormLoading] = useState(false);
 
-  // Customer autocomplete state
+  // Form fields
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [staffId, setStaffId] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Customer autocomplete
   const [customerSuggestions, setCustomerSuggestions] = useState<CustomerSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingCustomers, setSearchingCustomers] = useState(false);
@@ -77,70 +75,57 @@ export function BookingModal() {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Available slots state
+  // Available slots
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
-  const form = useForm<BookingFormData>({
-    resolver: zodResolver(bookingFormSchema),
-    defaultValues: {
-      customer_name: "",
-      customer_phone: "",
-      customer_email: "",
-      service_id: "",
-      staff_id: "",
-      date: "",
-      time: "",
-      notes: "",
-    },
-  });
-
-  const watchedDate = form.watch("date");
-  const watchedServiceId = form.watch("service_id");
-  const watchedStaffId = form.watch("staff_id");
+  // Derived values
+  const selectedServices = services.filter(s => selectedServiceIds.includes(s.id));
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price_cents, 0);
 
   useEffect(() => {
     if (isOpen && currentTenant) {
       loadFormData();
-      // Apply pre-fill values
-      if (initialDate) form.setValue("date", initialDate);
-      if (initialStaffId) form.setValue("staff_id", initialStaffId);
-      if (initialTime) form.setValue("time", initialTime);
+      if (initialDate) setDate(initialDate);
+      if (initialStaffId) setStaffId(initialStaffId);
+      if (initialTime) setTime(initialTime);
     }
     if (!isOpen) {
-      form.reset();
-      setCustomerSuggestions([]);
-      setSelectedCustomerId(null);
-      setAvailableSlots([]);
+      resetForm();
     }
   }, [isOpen, currentTenant]);
 
-  // Fetch available slots when date/service/staff changes
+  // Fetch available slots when date/services/staff changes
   useEffect(() => {
-    if (watchedDate && currentTenant) {
+    if (date && currentTenant) {
       fetchAvailableSlots();
     } else {
       setAvailableSlots([]);
-      form.setValue("time", "");
+      setTime("");
     }
-  }, [watchedDate, watchedServiceId, watchedStaffId, currentTenant]);
+  }, [date, selectedServiceIds, staffId, currentTenant]);
+
+  const resetForm = () => {
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerEmail("");
+    setSelectedServiceIds([]);
+    setStaffId("");
+    setDate("");
+    setTime("");
+    setNotes("");
+    setCustomerSuggestions([]);
+    setSelectedCustomerId(null);
+    setAvailableSlots([]);
+  };
 
   const loadFormData = async () => {
     if (!currentTenant) return;
     try {
       const [servicesResult, staffResult] = await Promise.all([
-        supabase
-          .from('services')
-          .select('*')
-          .eq('tenant_id', currentTenant.id)
-          .eq('active', true)
-          .order('name'),
-        supabase
-          .from('staff')
-          .select('*')
-          .eq('tenant_id', currentTenant.id)
-          .eq('active', true)
-          .order('name')
+        supabase.from('services').select('id, name, duration_minutes, price_cents, color').eq('tenant_id', currentTenant.id).eq('active', true).order('name'),
+        supabase.from('staff').select('*').eq('tenant_id', currentTenant.id).eq('active', true).order('name')
       ]);
       if (servicesResult.error) throw servicesResult.error;
       if (staffResult.error) throw staffResult.error;
@@ -148,32 +133,24 @@ export function BookingModal() {
       setStaff(staffResult.data || []);
     } catch (error) {
       console.error('Error loading form data:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados do formulário",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Erro ao carregar dados do formulário", variant: "destructive" });
     }
   };
 
   const fetchAvailableSlots = async () => {
-    if (!currentTenant || !watchedDate) return;
+    if (!currentTenant || !date) return;
     setLoadingSlots(true);
     try {
-      const body: any = {
-        tenant_id: currentTenant.id,
-        date: watchedDate,
-      };
-      if (watchedServiceId) body.service_id = watchedServiceId;
-      if (watchedStaffId && watchedStaffId !== "none") body.staff_id = watchedStaffId;
+      const body: any = { tenant_id: currentTenant.id, date };
+      // Use the first selected service for slot calculation, or total duration
+      if (selectedServiceIds.length > 0) body.service_id = selectedServiceIds[0];
+      if (staffId && staffId !== "none") body.staff_id = staffId;
 
       const { data, error } = await supabase.functions.invoke('get-available-slots', { body });
       if (error) throw error;
       setAvailableSlots(data?.available_slots || []);
-      // Reset time if previously selected time is no longer available
-      const currentTime = form.getValues("time");
-      if (currentTime && !data?.available_slots?.find((s: AvailableSlot) => s.time === currentTime)) {
-        form.setValue("time", "");
+      if (time && !data?.available_slots?.find((s: AvailableSlot) => s.time === time)) {
+        setTime("");
       }
     } catch (error) {
       console.error('Error fetching available slots:', error);
@@ -196,27 +173,21 @@ export function BookingModal() {
       setSearchingCustomers(true);
       try {
         const { data, error } = await supabase
-          .from('customers')
-          .select('id, name, phone, email')
-          .eq('tenant_id', currentTenant.id)
-          .ilike('name', `%${name}%`)
-          .order('name')
-          .limit(8);
+          .from('customers').select('id, name, phone, email')
+          .eq('tenant_id', currentTenant.id).ilike('name', `%${name}%`)
+          .order('name').limit(8);
         if (error) throw error;
         setCustomerSuggestions(data || []);
         setShowSuggestions((data || []).length > 0);
-      } catch (err) {
-        console.error('Error searching customers:', err);
-      } finally {
-        setSearchingCustomers(false);
-      }
+      } catch (err) { console.error('Error searching customers:', err); }
+      finally { setSearchingCustomers(false); }
     }, 300);
   }, [currentTenant]);
 
   const selectCustomer = (customer: CustomerSuggestion) => {
-    form.setValue("customer_name", customer.name);
-    form.setValue("customer_phone", customer.phone);
-    form.setValue("customer_email", customer.email || "");
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone);
+    setCustomerEmail(customer.email || "");
     setSelectedCustomerId(customer.id);
     setShowSuggestions(false);
   };
@@ -233,78 +204,91 @@ export function BookingModal() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleSubmit = async (data: BookingFormData) => {
+  const toggleService = (serviceId: string) => {
+    setSelectedServiceIds(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
+  const handleSubmit = async () => {
     if (!currentTenant) return;
+
+    // Validation
+    if (!customerName.trim()) { toast({ title: "Erro", description: "Nome é obrigatório", variant: "destructive" }); return; }
+    if (!customerPhone.trim()) { toast({ title: "Erro", description: "Telefone é obrigatório", variant: "destructive" }); return; }
+    if (selectedServiceIds.length === 0) { toast({ title: "Erro", description: "Selecione ao menos um serviço", variant: "destructive" }); return; }
+    if (!date) { toast({ title: "Erro", description: "Data é obrigatória", variant: "destructive" }); return; }
+    if (!time) { toast({ title: "Erro", description: "Horário é obrigatório", variant: "destructive" }); return; }
+
     try {
       setFormLoading(true);
-
       let customerId = selectedCustomerId;
 
+      // Find or create customer
       if (!customerId) {
-        // Try to find existing customer by phone
         const { data: existingCustomer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('tenant_id', currentTenant.id)
-          .eq('phone', data.customer_phone)
+          .from('customers').select('id')
+          .eq('tenant_id', currentTenant.id).eq('phone', customerPhone.replace(/\D/g, ''))
           .single();
 
         if (existingCustomer) {
           customerId = existingCustomer.id;
-          await supabase
-            .from('customers')
-            .update({ name: data.customer_name, email: data.customer_email || null })
+          await supabase.from('customers')
+            .update({ name: customerName.trim(), email: customerEmail.trim() || null })
             .eq('id', customerId);
         } else {
           const { data: newCustomer, error: customerError } = await supabase
             .from('customers')
             .insert({
               tenant_id: currentTenant.id,
-              name: data.customer_name,
-              phone: data.customer_phone,
-              email: data.customer_email || null,
+              name: customerName.trim(),
+              phone: customerPhone.replace(/\D/g, ''),
+              email: customerEmail.trim() || null,
             })
-            .select()
-            .single();
+            .select().single();
           if (customerError) throw customerError;
           customerId = newCustomer.id;
         }
       }
 
-      const { data: service } = await supabase
-        .from('services')
-        .select('duration_minutes')
-        .eq('id', data.service_id)
-        .single();
+      // Create consecutive bookings for each selected service
+      let currentStartTime = new Date(`${date}T${time}`);
+      const createdBookingIds: string[] = [];
 
-      const startsAt = new Date(`${data.date}T${data.time}`);
-      const endsAt = new Date(startsAt.getTime() + (service?.duration_minutes || 60) * 60000);
+      for (const service of selectedServices) {
+        const startsAt = new Date(currentStartTime);
+        const endsAt = new Date(startsAt.getTime() + service.duration_minutes * 60000);
 
-      const { data: newBooking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          tenant_id: currentTenant.id,
-          customer_id: customerId,
-          service_id: data.service_id,
-          staff_id: data.staff_id === "none" ? null : data.staff_id,
-          starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          status: 'confirmed',
-          notes: data.notes || null,
-        })
-        .select('id')
-        .single();
+        const { data: newBooking, error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            tenant_id: currentTenant.id,
+            customer_id: customerId,
+            service_id: service.id,
+            staff_id: staffId === "none" ? null : staffId || null,
+            starts_at: startsAt.toISOString(),
+            ends_at: endsAt.toISOString(),
+            status: 'confirmed',
+            notes: selectedServices.length > 1
+              ? `${notes ? notes + ' | ' : ''}Combo: ${selectedServices.map(s => s.name).join(' + ')}`
+              : notes || null,
+          })
+          .select('id').single();
 
-      if (bookingError) throw bookingError;
+        if (bookingError) throw bookingError;
+        if (newBooking) createdBookingIds.push(newBooking.id);
 
-      if (newBooking) {
+        // Next service starts where this one ends
+        currentStartTime = endsAt;
+      }
+
+      // Send WhatsApp notification for the first booking
+      if (createdBookingIds.length > 0) {
         try {
           await supabase.functions.invoke('send-whatsapp-notification', {
-            body: {
-              type: 'booking_confirmed',
-              booking_id: newBooking.id,
-              tenant_id: currentTenant.id,
-            },
+            body: { type: 'booking_confirmed', booking_id: createdBookingIds[0], tenant_id: currentTenant.id },
           });
         } catch (notifError) {
           console.error('Error sending WhatsApp notification:', notifError);
@@ -313,270 +297,213 @@ export function BookingModal() {
 
       toast({
         title: "Sucesso",
-        description: "Agendamento criado com sucesso!",
+        description: selectedServices.length > 1
+          ? `${selectedServices.length} agendamentos consecutivos criados!`
+          : "Agendamento criado com sucesso!",
       });
 
-      form.reset();
-      setSelectedCustomerId(null);
+      resetForm();
       closeBookingModal();
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao criar agendamento",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: error.message || "Erro ao criar agendamento", variant: "destructive" });
     } finally {
       setFormLoading(false);
     }
   };
+
+  const availableServices = allowedServiceIds
+    ? services.filter(s => allowedServiceIds.includes(s.id))
+    : services;
 
   return (
     <Dialog open={isOpen} onOpenChange={closeBookingModal}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Agendamento</DialogTitle>
-          <DialogDescription>
-            Criar um novo agendamento para cliente
-          </DialogDescription>
+          <DialogDescription>Criar um novo agendamento para cliente</DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3 md:space-y-4">
-            {/* Customer Name with Autocomplete */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="customer_name"
-                render={({ field }) => (
-                  <FormItem className="relative">
-                    <FormLabel>Nome do Cliente *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ex: João Silva"
-                        {...field}
-                        ref={(e) => {
-                          field.ref(e);
-                          (nameInputRef as any).current = e;
-                        }}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSelectedCustomerId(null);
-                          searchCustomers(e.target.value);
-                        }}
-                        onFocus={() => {
-                          if (customerSuggestions.length > 0) setShowSuggestions(true);
-                        }}
-                        autoComplete="off"
-                      />
-                    </FormControl>
-                    {showSuggestions && customerSuggestions.length > 0 && (
-                      <div
-                        ref={suggestionsRef}
-                        className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto"
-                      >
-                        {customerSuggestions.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors flex flex-col"
-                            onClick={() => selectCustomer(c)}
-                          >
-                            <span className="font-medium text-foreground">{c.name}</span>
-                            <span className="text-xs text-muted-foreground">{c.phone}{c.email ? ` · ${c.email}` : ''}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {searchingCustomers && (
-                      <div className="absolute right-3 top-9">
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <div className="space-y-3 md:space-y-4">
+          {/* Customer Name with Autocomplete */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 relative">
+              <Label>Nome do Cliente *</Label>
+              <Input
+                placeholder="Ex: João Silva"
+                value={customerName}
+                ref={nameInputRef}
+                onChange={(e) => {
+                  setCustomerName(e.target.value);
+                  setSelectedCustomerId(null);
+                  searchCustomers(e.target.value);
+                }}
+                onFocus={() => { if (customerSuggestions.length > 0) setShowSuggestions(true); }}
+                autoComplete="off"
               />
-
-              <FormField
-                control={form.control}
-                name="customer_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(11) 99999-9999" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {showSuggestions && customerSuggestions.length > 0 && (
+                <div ref={suggestionsRef} className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {customerSuggestions.map((c) => (
+                    <button key={c.id} type="button" className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors flex flex-col" onClick={() => selectCustomer(c)}>
+                      <span className="font-medium text-foreground">{c.name}</span>
+                      <span className="text-xs text-muted-foreground">{c.phone}{c.email ? ` · ${c.email}` : ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchingCustomers && (
+                <div className="absolute right-3 top-9">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
             </div>
 
-            <FormField
-              control={form.control}
-              name="customer_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="cliente@email.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Service and Staff */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="service_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Serviço *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um serviço" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {services.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            <div className="flex items-center space-x-2">
-                              <div 
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: service.color }}
-                              />
-                              <span>{service.name} - {service.duration_minutes}min - R$ {(service.price_cents / 100).toFixed(2)}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="staff_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Profissional</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Qualquer profissional" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Qualquer profissional</SelectItem>
-                        {staff.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-2">
+              <Label>Telefone *</Label>
+              <Input placeholder="(11) 99999-9999" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
             </div>
+          </div>
 
-            {/* Date */}
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data *</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="space-y-2">
+            <Label>Email (Opcional)</Label>
+            <Input placeholder="cliente@email.com" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
+          </div>
 
-            {/* Available Time Slots */}
-            <FormField
-              control={form.control}
-              name="time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Horário *</FormLabel>
-                  {!watchedDate ? (
-                    <p className="text-sm text-muted-foreground">Selecione uma data primeiro</p>
-                  ) : loadingSlots ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Carregando horários disponíveis...
-                    </div>
-                  ) : availableSlots.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-2">Nenhum horário disponível para esta data</p>
-                  ) : (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto p-1">
-                      {availableSlots.map((slot) => (
-                        <button
-                          key={slot.time}
-                          type="button"
-                          className={cn(
-                            "flex items-center justify-center gap-1 px-2 py-2 rounded-md text-sm font-medium border transition-colors",
-                            field.value === slot.time
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
-                          )}
-                          onClick={() => field.onChange(slot.time)}
-                        >
-                          <Clock className="h-3 w-3" />
-                          {slot.time}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Notes */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observações</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Observações sobre o agendamento..." 
-                      className="resize-none"
-                      {...field} 
+          {/* Multi-Service Selection */}
+          <div className="space-y-2">
+            <Label>Serviços * <span className="text-muted-foreground font-normal">(selecione um ou mais)</span></Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">
+              {availableServices.map((service) => {
+                const isSelected = selectedServiceIds.includes(service.id);
+                return (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => toggleService(service.id)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border text-left transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:bg-accent/50"
+                    )}
+                  >
+                    <Checkbox checked={isSelected} className="pointer-events-none" />
+                    <div
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: service.color || '#3B82F6' }}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{service.name}</p>
+                      <p className="text-xs text-muted-foreground">{service.duration_minutes}min · R$ {(service.price_cents / 100).toFixed(2)}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => closeBookingModal()}
-                disabled={formLoading}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={formLoading} className="w-full sm:w-auto">
-                {formLoading ? "Criando..." : "Criar Agendamento"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            {/* Summary of selected services */}
+            {selectedServices.length > 1 && (
+              <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 border border-border text-sm">
+                <Badge variant="secondary" className="text-xs">
+                  {selectedServices.length} serviços
+                </Badge>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> {totalDuration}min total
+                </span>
+                <span className="font-medium text-foreground ml-auto">
+                  R$ {(totalPrice / 100).toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Staff */}
+          <div className="space-y-2">
+            <Label>Profissional</Label>
+            <Select value={staffId} onValueChange={setStaffId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Qualquer profissional" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Qualquer profissional</SelectItem>
+                {staff.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date */}
+          <div className="space-y-2">
+            <Label>Data *</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+
+          {/* Available Time Slots */}
+          <div className="space-y-2">
+            <Label>Horário *</Label>
+            {!date ? (
+              <p className="text-sm text-muted-foreground">Selecione uma data primeiro</p>
+            ) : loadingSlots ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando horários disponíveis...
+              </div>
+            ) : availableSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">Nenhum horário disponível para esta data</p>
+            ) : (
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto p-1">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    type="button"
+                    className={cn(
+                      "flex items-center justify-center gap-1 px-2 py-2 rounded-md text-sm font-medium border transition-colors",
+                      time === slot.time
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
+                    )}
+                    onClick={() => setTime(slot.time)}
+                  >
+                    <Clock className="h-3 w-3" />
+                    {slot.time}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Show time range preview when time and multiple services are selected */}
+            {time && selectedServices.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {selectedServices.length > 1 ? 'Período: ' : 'Horário: '}
+                {time} → {(() => {
+                  const [h, m] = time.split(':').map(Number);
+                  const end = new Date(2000, 0, 1, h, m + totalDuration);
+                  return `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+                })()} ({totalDuration}min)
+              </p>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label>Observações</Label>
+            <Textarea
+              placeholder="Observações sobre o agendamento..."
+              className="resize-none"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={() => closeBookingModal()} disabled={formLoading} className="w-full sm:w-auto">
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={formLoading} className="w-full sm:w-auto">
+            {formLoading ? "Criando..." : selectedServices.length > 1 ? `Criar ${selectedServices.length} Agendamentos` : "Criar Agendamento"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
