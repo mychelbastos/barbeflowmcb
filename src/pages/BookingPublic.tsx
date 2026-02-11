@@ -80,6 +80,7 @@ const BookingPublic = () => {
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [activeCustomerPackage, setActiveCustomerPackage] = useState<any>(null);
   const [packageCoveredService, setPackageCoveredService] = useState(false);
+  const [createdCustomerPackageId, setCreatedCustomerPackageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -455,6 +456,7 @@ const BookingPublic = () => {
     setActiveCustomerPackage(null);
     setPackageCoveredService(false);
     setBookingTab('services');
+    setCreatedCustomerPackageId(null);
     setStep(1);
   };
 
@@ -557,6 +559,11 @@ const BookingPublic = () => {
                 })
                 .select()
                 .single();
+
+              // Store the customer package ID for payment linking
+              if (newCp) {
+                setCreatedCustomerPackageId(newCp.id);
+              }
 
               // Create per-service tracking
               if (newCp && selectedPackage.package_services) {
@@ -1323,14 +1330,22 @@ END:VCALENDAR`;
             <MercadoPagoCheckout
               bookingId={createdBooking.id}
               tenantSlug={slug || ''}
-              amount={(createdBooking.service?.price_cents || 0) / 100}
-              serviceName={createdBooking.service?.name || 'Serviço'}
+              amount={selectedPackage 
+                ? (selectedPackage.price_cents / 100) 
+                : (createdBooking.service?.price_cents || 0) / 100
+              }
+              serviceName={selectedPackage 
+                ? selectedPackage.name 
+                : (createdBooking.service?.name || 'Serviço')
+              }
               payer={{
                 email: customerEmail || 'cliente@email.com',
               }}
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
               onPending={handlePaymentPending}
+              customerPackageId={createdCustomerPackageId || undefined}
+              packageAmountCents={selectedPackage ? selectedPackage.price_cents : undefined}
             />
             
             <button

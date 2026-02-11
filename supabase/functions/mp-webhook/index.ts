@@ -108,6 +108,9 @@ serve(async (req) => {
       .select('*, booking:bookings(*)')
       .eq('id', paymentId)
       .maybeSingle();
+
+    // Also check for customer_package_id on the payment
+    let customerPackageId: string | null = null;
     
     // If not found, it might be a booking_id (old format) - try to find by booking_id
     if (!payment) {
@@ -161,6 +164,9 @@ serve(async (req) => {
     }
 
     console.log(`Payment ${paymentId}: ${previousStatus} -> ${newStatus}`);
+
+    // Track customer_package_id from the payment record
+    customerPackageId = payment.customer_package_id || null;
 
     // Update payment record with MP payment_id in external_id
     const { error: updatePaymentError } = await supabase
@@ -294,6 +300,20 @@ serve(async (req) => {
         }
       } else {
         console.log('Cash entry already exists for booking:', payment.booking_id);
+      }
+      // Auto-confirm customer_package payment_status if linked
+      if (customerPackageId) {
+        console.log('Auto-confirming customer_package payment:', customerPackageId);
+        const { error: cpError } = await supabase
+          .from('customer_packages')
+          .update({ payment_status: 'confirmed' })
+          .eq('id', customerPackageId);
+
+        if (cpError) {
+          console.error('Error confirming customer_package payment:', cpError);
+        } else {
+          console.log('Customer package payment confirmed:', customerPackageId);
+        }
       }
     }
 
