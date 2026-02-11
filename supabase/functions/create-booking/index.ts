@@ -66,10 +66,23 @@ function createErrorResponse(type: ErrorType, message: string, status: number, d
   );
 }
 
-// Function to normalize phone numbers for consistent comparison
+// Function to normalize phone numbers to canonical Brazilian format
+// Canonical: DDD (2 digits) + 9-digit mobile = 11 digits total
 function normalizePhone(phone: string): string {
-  // Remove all non-digit characters
-  return phone.replace(/\D/g, '');
+  let digits = phone.replace(/\D/g, '');
+  
+  // Remove country code 55 if present (results in 10 or 11 digits)
+  if (digits.startsWith('55') && digits.length >= 12) {
+    digits = digits.slice(2);
+  }
+  
+  // If 10 digits (DDD + 8-digit old format), insert 9 after DDD
+  // This handles the 8→9 digit mobile migration in Brazil
+  if (digits.length === 10) {
+    digits = digits.slice(0, 2) + '9' + digits.slice(2);
+  }
+  
+  return digits;
 }
 
 function validatePayload(payload: any): { isValid: boolean; errors: string[] } {
@@ -106,8 +119,8 @@ function validatePayload(payload: any): { isValid: boolean; errors: string[] } {
   // Validate phone format (flexible Brazilian phone validation)
   if (payload.customer_phone) {
     const normalizedPhone = normalizePhone(payload.customer_phone);
-    if (normalizedPhone.length < 10 || normalizedPhone.length > 11) {
-      errors.push('customer_phone must contain 10 or 11 digits');
+    if (normalizedPhone.length < 10 || normalizedPhone.length > 13) {
+      errors.push('customer_phone must contain a valid phone number');
     }
   }
   

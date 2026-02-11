@@ -8,13 +8,32 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function buildPhoneVariants(phone: string): string[] {
-  const digits = phone.replace(/\D/g, "");
-  const variants = [digits, "+" + digits, "+55" + digits, "55" + digits];
+// Normalize phone to canonical Brazilian format: DDD (2) + 9-digit mobile = 11 digits
+function canonicalPhone(phone: string): string {
+  let digits = phone.replace(/\D/g, "");
   if (digits.startsWith("55") && digits.length >= 12) {
-    variants.push(digits.slice(2));
+    digits = digits.slice(2);
   }
-  return [...new Set(variants)];
+  if (digits.length === 10) {
+    digits = digits.slice(0, 2) + "9" + digits.slice(2);
+  }
+  return digits;
+}
+
+function buildPhoneVariants(phone: string): string[] {
+  const canonical = canonicalPhone(phone);
+  // Generate all possible stored formats for this canonical number
+  const variants = new Set<string>();
+  variants.add(canonical);                              // 75999038366
+  variants.add("55" + canonical);                       // 5575999038366
+  variants.add("+" + "55" + canonical);                 // +5575999038366
+  // Also add old 10-digit format (without 9th digit)
+  if (canonical.length === 11) {
+    const oldFormat = canonical.slice(0, 2) + canonical.slice(3);
+    variants.add(oldFormat);                            // 7599038366
+    variants.add("55" + oldFormat);                     // 557599038366
+  }
+  return [...variants];
 }
 
 Deno.serve(async (req) => {

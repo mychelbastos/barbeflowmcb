@@ -55,7 +55,10 @@ import { ptBR } from "date-fns/locale";
 
 // Helper functions for duplicate detection
 const normalizePhoneNumbers = (phone: string): string => {
-  return phone.replace(/\D/g, '');
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length >= 12) digits = digits.slice(2);
+  if (digits.length === 10) digits = digits.slice(0, 2) + '9' + digits.slice(2);
+  return digits;
 };
 
 const normalizeNameForComparison = (name: string): string => {

@@ -76,7 +76,14 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
         .eq('tenant_id', tenant.id);
 
       let customerId: string;
-      const matched = customers?.find(c => c.phone.replace(/\D/g, '') === digits);
+      const canonicalize = (p: string) => {
+        let d = p.replace(/\D/g, '');
+        if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
+        if (d.length === 10) d = d.slice(0, 2) + '9' + d.slice(2);
+        return d;
+      };
+      const canonicalDigits = canonicalize(digits);
+      const matched = customers?.find(c => canonicalize(c.phone) === canonicalDigits);
 
       if (matched) {
         customerId = matched.id;

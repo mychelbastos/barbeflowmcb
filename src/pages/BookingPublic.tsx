@@ -331,33 +331,30 @@ const BookingPublic = () => {
     setStep(2);
   };
 
+  // Canonical phone normalization for Brazilian numbers
+  const canonicalPhone = (phone: string): string => {
+    let digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('55') && digits.length >= 12) digits = digits.slice(2);
+    if (digits.length === 10) digits = digits.slice(0, 2) + '9' + digits.slice(2);
+    return digits;
+  };
+
   // Check if customer has an active package covering the selected service
   const checkActivePackage = async (phone: string) => {
     if (!tenant || !selectedService) return;
     
-    const normalizedPhone = phone.replace(/\D/g, '');
-    if (normalizedPhone.length < 10) return;
+    const canonical = canonicalPhone(phone);
+    if (canonical.length < 10) return;
 
     try {
-      // Find customer by phone
-      const { data: customers } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('tenant_id', tenant.id);
-
-      const customer = customers?.find(c => {
-        // We need to check phone - but we only have id here
-        return true; // will refine below
-      });
-
-      // Get all customers matching this phone for this tenant
+      // Get all customers for this tenant and match by canonical phone
       const { data: matchingCustomers } = await supabase
         .from('customers')
         .select('id, phone')
         .eq('tenant_id', tenant.id);
 
       const matchedCustomer = matchingCustomers?.find(c => 
-        c.phone.replace(/\D/g, '') === normalizedPhone
+        canonicalPhone(c.phone) === canonical
       );
 
       if (!matchedCustomer) {
@@ -410,8 +407,8 @@ const BookingPublic = () => {
   // Check if customer has an active subscription covering the selected service
   const checkActiveSubscription = async (phone: string) => {
     if (!tenant || !selectedService) return;
-    const normalizedPhone = phone.replace(/\D/g, '');
-    if (normalizedPhone.length < 10) return;
+    const canonical = canonicalPhone(phone);
+    if (canonical.length < 10) return;
 
     try {
       const { data: matchingCustomers } = await supabase
@@ -420,7 +417,7 @@ const BookingPublic = () => {
         .eq('tenant_id', tenant.id);
 
       const matchedCustomer = matchingCustomers?.find(c =>
-        c.phone.replace(/\D/g, '') === normalizedPhone
+        canonicalPhone(c.phone) === canonical
       );
 
       if (!matchedCustomer) {
@@ -719,14 +716,14 @@ const BookingPublic = () => {
         // If buying a package, create the customer_package record
         if (selectedPackage) {
           try {
-            const normalizedPhone = customerPhone.replace(/\D/g, '');
+            const canonical = canonicalPhone(customerPhone);
             // Find customer
             const { data: allCusts } = await supabase
               .from('customers')
               .select('id, phone')
               .eq('tenant_id', tenant.id);
             
-            const matchedCust = allCusts?.find(c => c.phone.replace(/\D/g, '') === normalizedPhone);
+            const matchedCust = allCusts?.find(c => canonicalPhone(c.phone) === canonical);
             
             if (matchedCust) {
               const paymentSt = paymentMethod === 'online' ? 'pending' : 'pending';
