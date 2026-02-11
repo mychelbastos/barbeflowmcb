@@ -74,6 +74,7 @@ const settingsSchema = z.object({
   timezone: z.string(),
   buffer_time: z.number().min(0).max(60),
   slot_duration: z.number().min(15).max(120),
+  extra_slot_duration: z.number().min(5).max(60),
   cancellation_hours: z.number().min(0).max(48),
   max_advance_days: z.number().min(0).max(365),
   whatsapp_enabled: z.boolean(),
@@ -128,6 +129,7 @@ export default function Settings() {
       timezone: "America/Bahia",
       buffer_time: 10,
       slot_duration: 15,
+      extra_slot_duration: 5,
       cancellation_hours: 2,
       max_advance_days: 30,
       whatsapp_enabled: false,
@@ -282,6 +284,7 @@ export default function Settings() {
       timezone: settings.timezone ?? "America/Bahia",
       buffer_time: settings.buffer_time ?? 10,
       slot_duration: settings.slot_duration ?? 15,
+      extra_slot_duration: settings.extra_slot_duration ?? 5,
       cancellation_hours: settings.cancellation_hours ?? 2,
       max_advance_days: settings.max_advance_days ?? 30,
       whatsapp_enabled: settings.whatsapp_enabled ?? false,
@@ -772,6 +775,37 @@ export default function Settings() {
                           </Select>
                           <FormDescription>
                             Intervalo entre horários disponíveis
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={settingsForm.control}
+                      name="extra_slot_duration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Incremento de Tempo Extra (minutos)</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="5">5 minutos</SelectItem>
+                              <SelectItem value="10">10 minutos</SelectItem>
+                              <SelectItem value="15">15 minutos</SelectItem>
+                              <SelectItem value="20">20 minutos</SelectItem>
+                              <SelectItem value="30">30 minutos</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Incremento ao adicionar tempo extra no agendamento
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
