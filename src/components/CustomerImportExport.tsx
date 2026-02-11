@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Upload,
   Download,
   FileSpreadsheet,
-  Users,
   Loader2,
   CheckCircle,
   AlertCircle,
@@ -21,6 +19,7 @@ import {
 interface ImportResult {
   imported: number;
   skipped: number;
+  failed: number;
   errors: string[];
 }
 
@@ -33,7 +32,7 @@ function parseCSVLine(line: string): string[] {
     const char = line[i];
     if (char === '"') {
       inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+    } else if ((char === "," || char === ";") && !inQuotes) {
       result.push(current.trim());
       current = "";
     } else {
@@ -46,20 +45,61 @@ function parseCSVLine(line: string): string[] {
 
 function parseBrazilianDate(dateStr: string): string | null {
   if (!dateStr || dateStr === "N/A" || dateStr.trim() === "") return null;
+  // Try DD/MM/YYYY
   const parts = dateStr.split("/");
-  if (parts.length !== 3) return null;
-  const [day, month, year] = parts;
-  if (!day || !month || !year) return null;
-  const y = parseInt(year);
-  const m = parseInt(month);
-  const d = parseInt(day);
-  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
-  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    const y = parseInt(year);
+    const m = parseInt(month);
+    const d = parseInt(day);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d) && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+  }
+  // Try YYYY-MM-DD
+  const isoParts = dateStr.split("-");
+  if (isoParts.length === 3 && isoParts[0].length === 4) {
+    return dateStr;
+  }
+  return null;
 }
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
+}
+
+/** Detect separator by checking the header line */
+function detectSeparator(headerLine: string): string {
+  const semicolons = (headerLine.match(/;/g) || []).length;
+  const commas = (headerLine.match(/,/g) || []).length;
+  return semicolons > commas ? ";" : ",";
+}
+
+/** Fetch ALL existing phones with pagination to avoid the 1000-row limit */
+async function fetchAllExistingPhones(tenantId: string): Promise<Set<string>> {
+  const phones = new Set<string>();
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("phone")
+      .eq("tenant_id", tenantId)
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error("Error fetching existing phones:", error);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    data.forEach((c) => phones.add(normalizePhone(c.phone)));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return phones;
 }
 
 export function CustomerImportExport() {
@@ -79,66 +119,101 @@ export function CustomerImportExport() {
     setResult(null);
 
     const text = await file.text();
-    const lines = text.split("\n").filter((l) => l.trim());
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) {
-      toast({ title: "Arquivo vazio", description: "O CSV não contém dados.", variant: "destructive" });
+      toast({ title: "Arquivo vazio", description: "O arquivo não contém dados válidos.", variant: "destructive" });
       return;
     }
 
-    const headers = parseCSVLine(lines[0]).map((h) => h.replace(/^\uFEFF/, "").toLowerCase());
+    // Detect separator (comma or semicolon)
+    const separator = detectSeparator(lines[0]);
+    
+    const parseRow = (line: string): string[] => {
+      if (separator === ";") {
+        // Simple split for semicolons (rare to have semicolons in quoted fields)
+        return line.split(";").map((c) => c.trim().replace(/^"|"$/g, ""));
+      }
+      return parseCSVLine(line);
+    };
 
-    // Map columns
-    const nameIdx = headers.findIndex((h) => h.includes("nome"));
-    const phoneIdx = headers.findIndex((h) => h.includes("telefone") || h.includes("phone"));
-    const emailIdx = headers.findIndex((h) => h.includes("email"));
-    const birthdayIdx = headers.findIndex((h) => h.includes("nascimento") || h.includes("birthday"));
+    const headers = parseRow(lines[0]).map((h) => h.replace(/^\uFEFF/, "").toLowerCase().trim());
+
+    // Flexible column detection
+    const nameIdx = headers.findIndex((h) => h.includes("nome") || h.includes("name") || h === "cliente");
+    const phoneIdx = headers.findIndex((h) => h.includes("telefone") || h.includes("phone") || h.includes("celular") || h.includes("whatsapp") || h.includes("fone"));
+    const emailIdx = headers.findIndex((h) => h.includes("email") || h.includes("e-mail"));
+    const birthdayIdx = headers.findIndex((h) => h.includes("nascimento") || h.includes("birthday") || h.includes("aniversário") || h.includes("aniversario"));
 
     if (nameIdx === -1 || phoneIdx === -1) {
-      toast({ title: "Formato inválido", description: "O CSV precisa ter colunas 'Nome' e 'Telefone'.", variant: "destructive" });
+      toast({
+        title: "Formato inválido",
+        description: `Colunas encontradas: ${headers.join(", ")}. O arquivo precisa ter colunas 'Nome' e 'Telefone'.`,
+        variant: "destructive",
+      });
       return;
     }
 
     const rows: any[] = [];
+    const parseErrors: string[] = [];
+
     for (let i = 1; i < lines.length; i++) {
-      const cols = parseCSVLine(lines[i]);
+      const cols = parseRow(lines[i]);
       const name = cols[nameIdx]?.trim();
-      const phone = normalizePhone(cols[phoneIdx] || "");
+      const rawPhone = cols[phoneIdx] || "";
+      const phone = normalizePhone(rawPhone);
       const email = emailIdx >= 0 ? cols[emailIdx]?.trim() : null;
       const birthday = birthdayIdx >= 0 ? parseBrazilianDate(cols[birthdayIdx] || "") : null;
 
-      if (!name || phone.length < 10) continue;
+      if (!name) {
+        if (rawPhone.trim()) parseErrors.push(`Linha ${i + 1}: nome vazio (tel: ${rawPhone})`);
+        continue;
+      }
+      if (phone.length < 10) {
+        parseErrors.push(`Linha ${i + 1}: telefone inválido "${rawPhone}" (${name})`);
+        continue;
+      }
+
       rows.push({ name, phone, email: email || null, birthday });
     }
 
     setTotalRows(rows.length);
     setPreviewData(rows.slice(0, 5));
-    // Store full data in a ref-like closure
-    handleImport(rows);
+
+    if (rows.length === 0) {
+      toast({
+        title: "Nenhum registro válido",
+        description: `${parseErrors.length} linhas com problemas. Verifique o formato do arquivo.`,
+        variant: "destructive",
+      });
+      setResult({ imported: 0, skipped: 0, failed: parseErrors.length, errors: parseErrors.slice(0, 20) });
+      return;
+    }
+
+    handleImport(rows, parseErrors);
   };
 
-  const handleImport = async (rows: any[]) => {
+  const handleImport = async (rows: any[], parseErrors: string[] = []) => {
     if (!currentTenant) return;
     setImporting(true);
     setProgress(0);
 
-    const imported: number[] = [];
-    const skipped: number[] = [];
-    const errors: string[] = [];
-    const batchSize = 20;
+    let importedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [...parseErrors.slice(0, 10)];
+    const batchSize = 50;
 
-    // Get existing customers phones for dedup
-    const { data: existing } = await supabase
-      .from("customers")
-      .select("phone")
-      .eq("tenant_id", currentTenant.id);
+    // Fetch ALL existing phones with pagination
+    const existingPhones = await fetchAllExistingPhones(currentTenant.id);
 
-    const existingPhones = new Set((existing || []).map((c) => normalizePhone(c.phone)));
-
+    // Also deduplicate within the import itself
+    const seenPhones = new Set<string>();
     const toInsert = rows.filter((r) => {
-      if (existingPhones.has(r.phone)) {
-        skipped.push(1);
+      if (existingPhones.has(r.phone) || seenPhones.has(r.phone)) {
+        skippedCount++;
         return false;
       }
+      seenPhones.add(r.phone);
       return true;
     });
 
@@ -152,26 +227,39 @@ export function CustomerImportExport() {
       }));
 
       const { error } = await supabase.from("customers").insert(batch);
+      
       if (error) {
-        errors.push(`Lote ${Math.floor(i / batchSize) + 1}: ${error.message}`);
+        // If batch failed (likely unique constraint), try one by one
+        for (const record of batch) {
+          const { error: singleError } = await supabase.from("customers").insert(record);
+          if (singleError) {
+            failedCount++;
+            if (errors.length < 20) {
+              errors.push(`${record.name} (${record.phone}): ${singleError.message}`);
+            }
+          } else {
+            importedCount++;
+          }
+        }
       } else {
-        imported.push(...batch.map(() => 1));
+        importedCount += batch.length;
       }
 
-      setProgress(Math.round(((i + batchSize) / toInsert.length) * 100));
+      setProgress(Math.min(100, Math.round(((i + batchSize) / toInsert.length) * 100)));
     }
 
     setProgress(100);
     setResult({
-      imported: imported.length,
-      skipped: skipped.length,
+      imported: importedCount,
+      skipped: skippedCount,
+      failed: failedCount,
       errors,
     });
     setImporting(false);
 
     toast({
       title: "Importação concluída",
-      description: `${imported.length} clientes importados, ${skipped.length} já existiam.`,
+      description: `${importedCount} importados, ${skippedCount} já existiam${failedCount > 0 ? `, ${failedCount} falharam` : ""}.`,
     });
   };
 
@@ -180,16 +268,28 @@ export function CustomerImportExport() {
     setExporting(true);
 
     try {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("name, phone, email, birthday, created_at")
-        .eq("tenant_id", currentTenant.id)
-        .order("name");
+      // Paginate export to avoid 1000-row limit
+      let allData: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
 
-      if (error) throw error;
+      while (true) {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("name, phone, email, birthday, created_at")
+          .eq("tenant_id", currentTenant.id)
+          .order("name")
+          .range(from, from + pageSize - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
 
       const csvHeader = "Nome,Telefone,Email,Data de Nascimento,Data de Cadastro";
-      const csvRows = (data || []).map((c) => {
+      const csvRows = allData.map((c) => {
         const birthday = c.birthday
           ? new Date(c.birthday + "T00:00:00").toLocaleDateString("pt-BR")
           : "";
@@ -208,7 +308,7 @@ export function CustomerImportExport() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({ title: "Exportação concluída", description: `${data?.length || 0} clientes exportados.` });
+      toast({ title: "Exportação concluída", description: `${allData.length} clientes exportados.` });
     } catch (err: any) {
       toast({ title: "Erro na exportação", description: err.message, variant: "destructive" });
     } finally {
@@ -230,16 +330,17 @@ export function CustomerImportExport() {
           <div className="flex items-start gap-3 p-3 bg-secondary/50 rounded-lg">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>O CSV deve conter pelo menos as colunas <strong>Nome</strong> e <strong>Telefone</strong>.</p>
-              <p>Colunas opcionais: <strong>Email</strong>, <strong>Data de Nascimento</strong> (formato DD/MM/AAAA).</p>
-              <p>Clientes com telefone já cadastrado serão ignorados automaticamente.</p>
+              <p>Aceita arquivos <strong>CSV</strong> (separados por vírgula ou ponto-e-vírgula).</p>
+              <p>O arquivo deve conter pelo menos as colunas <strong>Nome</strong> e <strong>Telefone</strong>.</p>
+              <p>Colunas opcionais: <strong>Email</strong>, <strong>Data de Nascimento</strong> (DD/MM/AAAA).</p>
+              <p>Clientes com telefone duplicado serão ignorados automaticamente.</p>
             </div>
           </div>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".csv,.txt"
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -267,10 +368,10 @@ export function CustomerImportExport() {
 
           {previewData && !importing && (
             <div className="text-xs text-muted-foreground">
-              <p className="font-medium mb-1">Prévia ({totalRows} registros encontrados):</p>
+              <p className="font-medium mb-1">Prévia ({totalRows} registros válidos encontrados):</p>
               <div className="space-y-0.5 bg-secondary/30 rounded p-2">
                 {previewData.map((r, i) => (
-                  <p key={i}>{r.name} — {r.phone}</p>
+                  <p key={i}>{r.name} — {r.phone}{r.email ? ` — ${r.email}` : ""}</p>
                 ))}
                 {totalRows > 5 && <p className="text-muted-foreground/60">...e mais {totalRows - 5}</p>}
               </div>
@@ -283,18 +384,18 @@ export function CustomerImportExport() {
                 <CheckCircle className="h-4 w-4 text-emerald-500" />
                 <span className="text-sm font-medium">Resultado da importação</span>
               </div>
-              <div className="flex gap-3 text-sm">
+              <div className="flex flex-wrap gap-2 text-sm">
                 <Badge variant="default" className="bg-emerald-600">{result.imported} importados</Badge>
                 <Badge variant="secondary">{result.skipped} já existiam</Badge>
-                {result.errors.length > 0 && (
-                  <Badge variant="destructive">{result.errors.length} erros</Badge>
+                {result.failed > 0 && (
+                  <Badge variant="destructive">{result.failed} falharam</Badge>
                 )}
               </div>
               {result.errors.length > 0 && (
-                <div className="text-xs text-destructive space-y-1 mt-2">
+                <div className="text-xs text-destructive space-y-1 mt-2 max-h-40 overflow-y-auto">
                   {result.errors.map((e, i) => (
-                    <p key={i} className="flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 shrink-0" /> {e}
+                    <p key={i} className="flex items-start gap-1">
+                      <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" /> {e}
                     </p>
                   ))}
                 </div>
