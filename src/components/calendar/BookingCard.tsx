@@ -29,8 +29,8 @@ export function BookingCard({ booking, onClick, isRecurring }: BookingCardProps)
       className={`w-full h-full rounded-lg px-2 py-1.5 text-left transition-all hover:brightness-110 cursor-pointer overflow-hidden ${style}`}
     >
       <p className="text-xs font-semibold text-foreground truncate flex items-center gap-1">
-        {isRecurring && <UserCheck className="h-3 w-3 text-violet-400 flex-shrink-0" />}
         {booking.customer?.name || "Cliente"}
+        {isRecurring && <span title="Cliente fixo"><UserCheck className="h-3 w-3 text-violet-400 flex-shrink-0" /></span>}
       </p>
       <p className="text-[10px] text-muted-foreground truncate">
         {booking.service?.name}

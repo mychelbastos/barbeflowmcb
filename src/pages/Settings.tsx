@@ -948,7 +948,6 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <img src={mpIcon} alt="Mercado Pago" className="h-5 w-5 mr-2 object-contain" />
                 Pagamentos
               </CardTitle>
             </CardHeader>
@@ -957,15 +956,13 @@ export default function Settings() {
               <div className="rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden ${
                       mpConnected ? 'bg-emerald-500/10' : 'bg-muted'
                     }`}>
                       {mpLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      ) : mpConnected ? (
-                        <CheckCircle className="h-5 w-5 text-emerald-500" />
                       ) : (
-                        <img src={mpIcon} alt="Mercado Pago" className="h-6 w-6 object-contain" />
+                        <img src={mpIcon} alt="Mercado Pago" className="h-7 w-7 object-contain" />
                       )}
                     </div>
                     <div>
