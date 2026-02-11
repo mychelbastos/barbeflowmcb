@@ -19,16 +19,21 @@ import { format, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-const spring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
-const ease = [0.22, 1, 0.36, 1] as const;
+const spring = { type: "spring" as const, stiffness: 200, damping: 26, mass: 0.6 };
+const gentleSpring = { type: "spring" as const, stiffness: 120, damping: 20, mass: 0.8 };
+const ease = [0.16, 1, 0.3, 1] as const;
 
 const stagger = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
 const fadeUp = {
-  hidden: { opacity: 0, y: 16, scale: 0.98 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease } },
+  hidden: { opacity: 0, y: 20, scale: 0.96, filter: "blur(4px)" },
+  show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.6, ease } },
+};
+const slideIn = {
+  hidden: { opacity: 0, x: -16, filter: "blur(3px)" },
+  show: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.5, ease } },
 };
 
 import { 
@@ -253,32 +258,46 @@ const Dashboard = () => {
 
       {/* Stat Cards */}
       <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {statCards.map((card) => (
+        {statCards.map((card, idx) => (
           <motion.div
             key={card.label}
             variants={fadeUp}
-            whileHover={{ y: -6, transition: spring }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -8, scale: 1.02, transition: gentleSpring }}
+            whileTap={{ scale: 0.96, transition: { duration: 0.1 } }}
             onClick={() => navigate(card.href)}
-            className={`group relative cursor-pointer rounded-2xl glass-panel glass-panel-hover transition-all duration-500 shadow-lg shadow-transparent ${card.glowColor} overflow-hidden`}
+            className={`group relative cursor-pointer rounded-2xl glass-panel glass-panel-hover transition-shadow duration-700 shadow-lg shadow-transparent ${card.glowColor} overflow-hidden`}
           >
             {/* Gradient overlay */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`} />
+            <motion.div 
+              className={`absolute inset-0 bg-gradient-to-br ${card.gradient} rounded-2xl`}
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+            />
             
             <div className="relative p-4 md:p-5">
               <div className="flex items-start justify-between mb-4">
                 <motion.div
                   className="w-10 h-10 rounded-xl bg-zinc-800/40 flex items-center justify-center backdrop-blur-sm"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={spring}
+                  whileHover={{ scale: 1.15, rotate: 8 }}
+                  transition={gentleSpring}
                 >
                   <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
                 </motion.div>
-                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors duration-300" />
+                <motion.div
+                  initial={{ opacity: 0, x: -4 }}
+                  whileHover={{ opacity: 1, x: 0 }}
+                  className="text-zinc-700 group-hover:text-zinc-400 transition-colors duration-500"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </motion.div>
               </div>
-              <p className="text-2xl md:text-[28px] font-bold text-zinc-100 tracking-tight leading-none mb-1.5">
+              <motion.p 
+                className="text-2xl md:text-[28px] font-bold text-zinc-100 tracking-tight leading-none mb-1.5"
+                layout
+              >
                 {card.value}
-              </p>
+              </motion.p>
               <p className="text-xs text-zinc-500 font-medium">{card.label}</p>
               {card.sub && (
                 <p className="text-[10px] text-zinc-600 mt-0.5 font-medium">{card.sub}</p>
@@ -292,9 +311,9 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 md:gap-5">
         {/* Calendar Timeline */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15, ease }}
+          initial={{ opacity: 0, y: 28, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.7, delay: 0.15, ease }}
           className="rounded-2xl glass-panel overflow-hidden"
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/30">
@@ -373,11 +392,11 @@ const Dashboard = () => {
                           return (
                             <motion.div
                               key={booking.id}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 10 }}
-                              transition={{ duration: 0.3, delay: bIdx * 0.03, ease }}
-                              whileHover={{ x: 4 }}
+                              initial={{ opacity: 0, x: -14, filter: "blur(3px)" }}
+                              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                              exit={{ opacity: 0, x: 14, filter: "blur(3px)" }}
+                              transition={{ duration: 0.4, delay: bIdx * 0.04, ease }}
+                              whileHover={{ x: 6, transition: gentleSpring }}
                               onClick={() => setSelectedBooking(booking)}
                               className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer group/item hover:bg-zinc-800/20 transition-colors duration-300"
                             >
@@ -441,13 +460,13 @@ const Dashboard = () => {
               <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Ações Rápidas</h3>
             </div>
             <div className="p-3 space-y-1">
-              {quickActions.map((action) => (
+               {quickActions.map((action) => (
                 <motion.button
                   key={action.label}
                   onClick={action.onClick}
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={spring}
+                  whileHover={{ x: 6, transition: gentleSpring }}
+                  whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
+                  transition={gentleSpring}
                   className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/30 transition-all duration-300 group"
                 >
                   <div className="w-9 h-9 rounded-xl bg-zinc-800/40 group-hover:bg-zinc-700/40 flex items-center justify-center transition-all duration-300 group-hover:shadow-sm">
@@ -501,10 +520,10 @@ const Dashboard = () => {
                   {services.slice(0, 5).map((service, sIdx) => (
                     <motion.div
                       key={service.id}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.35, delay: 0.3 + sIdx * 0.05, ease }}
-                      whileHover={{ x: 3 }}
+                      initial={{ opacity: 0, x: -12, filter: "blur(3px)" }}
+                      animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                      transition={{ duration: 0.45, delay: 0.3 + sIdx * 0.06, ease }}
+                      whileHover={{ x: 5, transition: gentleSpring }}
                       className="flex items-center gap-3 group cursor-default p-2 rounded-xl hover:bg-zinc-800/20 transition-colors duration-300"
                     >
                       <div
@@ -542,9 +561,9 @@ const Dashboard = () => {
           </DialogHeader>
           {selectedBooking && (
             <motion.div 
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.5, ease }}
               className="space-y-4"
             >
               {/* Customer */}

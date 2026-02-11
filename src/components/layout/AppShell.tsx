@@ -135,7 +135,7 @@ function NavItemLink({ item, isActive, onClick }: { item: { title: string; url: 
     <NavLink
       to={item.url}
       onClick={onClick}
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 relative overflow-hidden ${
+      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-500 relative overflow-hidden ${
         isActive 
           ? 'text-emerald-400' 
           : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/30'
@@ -145,15 +145,22 @@ function NavItemLink({ item, isActive, onClick }: { item: { title: string; url: 
         <motion.div 
           layoutId="activeNav"
           className="absolute inset-0 bg-emerald-500/[0.08] rounded-xl border border-emerald-500/20"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          transition={{ type: "spring", stiffness: 180, damping: 24, mass: 0.8 }}
         />
       )}
-      <item.icon className={`h-4 w-4 relative z-10 transition-colors duration-300 ${isActive ? 'text-emerald-400' : 'text-zinc-600 group-hover:text-zinc-400'}`} />
+      <motion.div
+        animate={isActive ? { scale: 1.1 } : { scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+        className="relative z-10"
+      >
+        <item.icon className={`h-4 w-4 transition-colors duration-500 ${isActive ? 'text-emerald-400' : 'text-zinc-600 group-hover:text-zinc-400'}`} />
+      </motion.div>
       <span className="text-sm font-medium relative z-10">{item.title}</span>
       {isActive && (
         <motion.div 
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
           className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 relative z-10"
         />
       )}
@@ -415,12 +422,12 @@ function BottomTabs() {
                 <motion.div 
                   layoutId="bottomTab"
                   className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[2px] bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 22, mass: 0.6 }}
                 />
               )}
               <motion.div
-                animate={isActive ? { scale: 1.1, y: -1 } : { scale: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                animate={isActive ? { scale: 1.15, y: -2 } : { scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 220, damping: 18, mass: 0.5 }}
               >
                 <item.icon className="h-5 w-5" />
               </motion.div>
@@ -439,8 +446,11 @@ function FloatingActionButton() {
   return (
     <motion.div
       className="md:hidden fixed bottom-[76px] right-4 z-50"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.92 }}
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 200, damping: 18, delay: 0.3 }}
+      whileHover={{ scale: 1.08, transition: { type: "spring", stiffness: 300, damping: 15 } }}
+      whileTap={{ scale: 0.88, transition: { duration: 0.1 } }}
     >
       <Button
         onClick={() => openBookingModal()}
@@ -554,7 +564,7 @@ export default function AppShell() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                  <motion.div whileHover={{ scale: 1.04, transition: { type: "spring", stiffness: 300, damping: 20 } }} whileTap={{ scale: 0.94, transition: { duration: 0.08 } }}>
                     <Button 
                       size="sm" 
                       onClick={() => openBookingModal()}
