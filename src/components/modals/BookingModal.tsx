@@ -280,9 +280,9 @@ export function BookingModal() {
         .eq('id', data.service_id)
         .single();
 
-      const slotDuration = (currentTenant as any).settings?.slot_duration || 15;
+      const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
       const baseDuration = service?.duration_minutes || 60;
-      const totalDuration = baseDuration + (data.extra_slots || 0) * slotDuration;
+      const totalDuration = baseDuration + (data.extra_slots || 0) * extraSlotDuration;
 
       const startsAt = new Date(`${data.date}T${data.time}`);
       const endsAt = new Date(startsAt.getTime() + totalDuration * 60000);
@@ -556,9 +556,9 @@ export function BookingModal() {
                 name="extra_slots"
                 render={({ field }) => {
                   const selectedService = services.find(s => s.id === watchedServiceId);
-                  const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
+                  const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
                   const baseDuration = selectedService?.duration_minutes || 60;
-                  const totalDuration = baseDuration + (field.value || 0) * slotDuration;
+                  const totalDuration = baseDuration + (field.value || 0) * extraSlotDuration;
                   return (
                     <FormItem>
                       <FormLabel>Tempo adicional</FormLabel>
@@ -573,7 +573,7 @@ export function BookingModal() {
                           −
                         </Button>
                         <span className="text-sm font-medium min-w-[100px] text-center">
-                          +{(field.value || 0) * slotDuration} min
+                          +{(field.value || 0) * extraSlotDuration} min
                         </span>
                         <Button
                           type="button"
@@ -585,7 +585,7 @@ export function BookingModal() {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Duração total: {totalDuration} min (base {baseDuration} min + {(field.value || 0)} slots extras de {slotDuration} min)
+                        Duração total: {totalDuration} min (base {baseDuration} min + {(field.value || 0) * extraSlotDuration} min extras)
                       </p>
                     </FormItem>
                   );
