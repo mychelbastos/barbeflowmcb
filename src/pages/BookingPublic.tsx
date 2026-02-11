@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
 import { CustomerBookingsModal } from "@/components/modals/CustomerBookingsModal";
@@ -1246,6 +1246,9 @@ END:VCALENDAR`;
                       const formatted = formatPhoneInput(e.target.value);
                       setCustomerPhone(formatted);
                       setCustomerFound(false);
+                      // Clear previous customer data when phone changes
+                      setCustomerName('');
+                      setCustomerEmail('');
                       const digits = formatted.replace(/\D/g, '');
                       if (digits.length >= 10) {
                         lookupCustomerByPhone(formatted);

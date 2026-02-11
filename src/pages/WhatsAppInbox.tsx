@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ interface Conversation {
 
 export default function WhatsAppInbox() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -242,6 +243,14 @@ export default function WhatsAppInbox() {
       loadConversations();
     }
   }, [currentTenant?.id]);
+
+  // Auto-select contact from query param (e.g. from WhatsApp buttons)
+  useEffect(() => {
+    const contact = searchParams.get('contact');
+    if (contact && !selectedConversation) {
+      setSelectedConversation(contact);
+    }
+  }, [searchParams, selectedConversation]);
 
   useEffect(() => {
     if (selectedConversation) {

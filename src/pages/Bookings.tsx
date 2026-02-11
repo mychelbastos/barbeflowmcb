@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { NoTenantState } from "@/components/NoTenantState";
@@ -66,6 +67,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function Bookings() {
+  const navigate = useNavigate();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -626,15 +628,18 @@ export default function Bookings() {
                   </Button>
                 )}
                 {selectedBooking.customer?.phone && (
-                  <a
-                    href={`https://wa.me/${selectedBooking.customer.phone.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    type="button"
+                    onClick={() => {
+                      const digits = selectedBooking.customer.phone.replace(/\D/g, '');
+                      const remoteJid = `${digits.startsWith('55') ? digits : '55' + digits}@s.whatsapp.net`;
+                      navigate(`/app/whatsapp/inbox?contact=${encodeURIComponent(remoteJid)}`);
+                    }}
                   >
-                    <Button size="sm" variant="outline" type="button">
-                      <MessageCircle className="h-4 w-4 mr-1 text-emerald-500" /> WhatsApp
-                    </Button>
-                  </a>
+                    <MessageCircle className="h-4 w-4 mr-1 text-emerald-500" /> WhatsApp
+                  </Button>
                 )}
               
               </div>
