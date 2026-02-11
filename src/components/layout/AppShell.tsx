@@ -374,7 +374,7 @@ function BottomTabs() {
   const navigate = useNavigate();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/50 safe-area-pb z-50">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/50 z-50 safe-area-pb">
       <div className="grid grid-cols-4 max-w-md mx-auto">
         {bottomTabItems.map((item) => {
           const isActive = location.pathname === item.url || 
@@ -383,7 +383,7 @@ function BottomTabs() {
             <button
               key={item.title}
               onClick={() => navigate(item.url)}
-              className={`flex flex-col items-center gap-0.5 py-2.5 transition-all duration-150 relative ${
+              className={`flex flex-col items-center gap-0.5 py-3 min-h-[56px] transition-all duration-150 relative ${
                 isActive 
                   ? 'text-emerald-400' 
                   : 'text-zinc-600 active:text-zinc-300'
@@ -409,7 +409,7 @@ function FloatingActionButton() {
     <Button
       onClick={() => openBookingModal()}
       size="lg"
-      className="md:hidden fixed bottom-20 right-4 rounded-full w-14 h-14 shadow-lg z-50 bg-emerald-500 hover:bg-emerald-400 text-zinc-950"
+      className="md:hidden fixed bottom-[76px] right-4 rounded-full w-14 h-14 shadow-lg shadow-emerald-500/20 z-50 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 safe-area-pb"
     >
       <Plus className="h-6 w-6" />
     </Button>
@@ -480,8 +480,10 @@ export default function AppShell() {
           </header>
 
           {/* Mobile Content */}
-          <main className="pb-24 bg-zinc-950">
-            <Outlet />
+          <main className="pb-28 bg-zinc-950">
+            <div className="pt-3">
+              <Outlet />
+            </div>
           </main>
 
           {/* Mobile Bottom Navigation */}

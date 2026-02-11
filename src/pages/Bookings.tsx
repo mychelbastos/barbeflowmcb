@@ -379,22 +379,24 @@ export default function Bookings() {
 
           {/* Mobile staff filter as sheet */}
           {isMobile && staff.length > 1 && (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="absolute right-4 top-[8.5rem] z-10 h-8">
-                  <Filter className="h-3.5 w-3.5 mr-1" />
-                  Filtrar
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <SheetHeader>
-                  <SheetTitle>Profissionais</SheetTitle>
-                </SheetHeader>
-                <div className="mt-4">
-                  <StaffFilter />
-                </div>
-              </SheetContent>
-            </Sheet>
+            <div className="mb-3">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 w-full">
+                    <Filter className="h-3.5 w-3.5 mr-1.5" />
+                    Filtrar Profissionais ({visibleStaffIds.length}/{staff.length})
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-72">
+                  <SheetHeader>
+                    <SheetTitle>Profissionais</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-4">
+                    <StaffFilter />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           )}
 
           {/* Grid */}
