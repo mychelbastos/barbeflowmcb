@@ -61,6 +61,15 @@ All colors MUST be HSL.
     --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
     --shadow-large: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
     --shadow-accent: 0 4px 16px -4px hsl(160 84% 39% / 0.3);
+    --shadow-glow-emerald: 0 0 20px -4px hsl(160 84% 39% / 0.25);
+    --shadow-glow-blue: 0 0 20px -4px hsl(217 91% 60% / 0.2);
+    --shadow-glow-violet: 0 0 20px -4px hsl(263 70% 50% / 0.2);
+    --shadow-glow-amber: 0 0 20px -4px hsl(38 92% 50% / 0.2);
+
+    /* Glass */
+    --glass-bg: hsl(240 6% 8% / 0.7);
+    --glass-border: hsl(240 4% 20% / 0.5);
+    --glass-hover: hsl(240 4% 14% / 0.8);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -152,6 +161,56 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Premium glass panel */
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-panel-hover:hover {
+  background: var(--glass-hover);
+  border-color: hsl(240 4% 24% / 0.6);
+}
+
+/* Gradient text utility */
+.text-gradient-emerald {
+  background: linear-gradient(135deg, hsl(160 84% 45%), hsl(160 84% 60%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtle noise texture overlay */
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Animated gradient border */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, hsl(160 84% 39% / 0.3), hsl(217 91% 60% / 0.1), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* Safe area support for mobile devices with notches/home indicators */

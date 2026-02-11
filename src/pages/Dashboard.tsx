@@ -19,37 +19,21 @@ import { format, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-const smoothSpring = { type: "spring" as const, stiffness: 260, damping: 30, mass: 0.8 };
-const gentleEase = [0.22, 1, 0.36, 1] as const;
+const spring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.8 };
+const ease = [0.22, 1, 0.36, 1] as const;
 
-const containerVariants = {
+const stagger = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.07, delayChildren: 0.05 },
-  },
+  show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 16, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease } },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.97 },
-  show: { 
-    opacity: 1, y: 0, scale: 1,
-    transition: { duration: 0.5, ease: gentleEase },
-  },
-};
 import { 
-  Calendar, 
-  Plus, 
-  Clock, 
-  Users, 
-  TrendingUp, 
-  Scissors, 
-  Phone,
-  ArrowUpRight,
-  Sparkles,
-  UserCheck,
-  User,
-  ChevronRight,
+  Calendar, Plus, Clock, Users, TrendingUp, Scissors, Phone,
+  ArrowUpRight, Sparkles, UserCheck, User, ChevronRight, Zap,
 } from "lucide-react";
 import { NewServiceModal, NewStaffModal, BlockTimeModal } from "@/components/modals/QuickActions";
 
@@ -155,7 +139,13 @@ const Dashboard = () => {
     return (
       <div className="space-y-4 p-4 md:p-0">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 bg-zinc-900/50 rounded-2xl animate-pulse" />
+          <motion.div 
+            key={i} 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            transition={{ delay: i * 0.1 }}
+            className="h-24 rounded-2xl animate-pulse glass-panel" 
+          />
         ))}
       </div>
     );
@@ -174,8 +164,9 @@ const Dashboard = () => {
       value: loading ? "—" : String(todayBookings.length),
       sub: loading ? "" : `${confirmedToday} confirmados`,
       icon: Calendar,
-      iconBg: "bg-blue-500/10",
+      gradient: "from-blue-500/20 to-blue-600/5",
       iconColor: "text-blue-400",
+      glowColor: "group-hover:shadow-blue-500/10",
       href: dashPath('/app/bookings'),
     },
     {
@@ -183,8 +174,9 @@ const Dashboard = () => {
       value: loading ? "—" : String(services.length),
       sub: "catálogo",
       icon: Scissors,
-      iconBg: "bg-emerald-500/10",
+      gradient: "from-emerald-500/20 to-emerald-600/5",
       iconColor: "text-emerald-400",
+      glowColor: "group-hover:shadow-emerald-500/10",
       href: dashPath('/app/services'),
     },
     {
@@ -192,8 +184,9 @@ const Dashboard = () => {
       value: loading ? "—" : String(staff.length),
       sub: "na equipe",
       icon: Users,
-      iconBg: "bg-violet-500/10",
+      gradient: "from-violet-500/20 to-violet-600/5",
       iconColor: "text-violet-400",
+      glowColor: "group-hover:shadow-violet-500/10",
       href: dashPath('/app/staff'),
     },
     {
@@ -201,8 +194,9 @@ const Dashboard = () => {
       value: loading ? "—" : `R$ ${(revenue / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
       sub: "no período",
       icon: TrendingUp,
-      iconBg: "bg-amber-500/10",
+      gradient: "from-amber-500/20 to-amber-600/5",
       iconColor: "text-amber-400",
+      glowColor: "group-hover:shadow-amber-500/10",
       href: dashPath('/app/finance'),
     },
   ];
@@ -239,206 +233,193 @@ const Dashboard = () => {
   const hasAnyBookings = daysWithBookings.some(d => d.bookings.length > 0);
 
   const quickActions = [
-    { label: "Novo Serviço", icon: Plus, onClick: () => setShowNewService(true) },
-    { label: "Adicionar Profissional", icon: Users, onClick: () => setShowNewStaff(true) },
-    { label: "Bloquear Horário", icon: Calendar, onClick: () => setShowBlockTime(true) },
+    { label: "Novo Serviço", desc: "Adicionar ao catálogo", icon: Scissors, onClick: () => setShowNewService(true) },
+    { label: "Profissional", desc: "Adicionar à equipe", icon: Users, onClick: () => setShowNewStaff(true) },
+    { label: "Bloquear Horário", desc: "Reservar intervalo", icon: Calendar, onClick: () => setShowBlockTime(true) },
   ];
+
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    confirmed: { label: 'Confirmado', className: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
+    completed: { label: 'Concluído', className: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
+    cancelled: { label: 'Cancelado', className: 'bg-red-500/10 text-red-400 border border-red-500/20' },
+    no_show: { label: 'Faltou', className: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
+    pending: { label: 'Pendente', className: 'bg-zinc-800/60 text-zinc-400 border border-zinc-700/30' },
+  };
 
   return (
     <div className="space-y-6 px-4 md:px-0">
       {/* Date Range */}
       <DateRangeSelector className="overflow-x-auto" />
 
-      {/* Stats */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
-      >
+      {/* Stat Cards */}
+      <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {statCards.map((card) => (
           <motion.div
             key={card.label}
-            variants={itemVariants}
-            whileHover={{ y: -4, transition: smoothSpring }}
-            whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
+            variants={fadeUp}
+            whileHover={{ y: -6, transition: spring }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => navigate(card.href)}
-            className="group relative cursor-pointer"
+            className={`group relative cursor-pointer rounded-2xl glass-panel glass-panel-hover transition-all duration-500 shadow-lg shadow-transparent ${card.glowColor} overflow-hidden`}
           >
-            {/* Glow on hover */}
-            <motion.div
-              className="absolute -inset-px rounded-2xl pointer-events-none"
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              style={{ background: "linear-gradient(135deg, rgba(113,113,122,0.15), rgba(82,82,91,0.08))" }}
-            />
-            <div className="relative p-4 md:p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm hover:border-zinc-700/60 transition-colors duration-500">
-              <div className="flex items-start justify-between mb-3">
+            {/* Gradient overlay */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`} />
+            
+            <div className="relative p-4 md:p-5">
+              <div className="flex items-start justify-between mb-4">
                 <motion.div
-                  className={`w-9 h-9 rounded-xl ${card.iconBg} flex items-center justify-center`}
-                  whileHover={{ scale: 1.1, rotate: 3 }}
-                  transition={smoothSpring}
+                  className="w-10 h-10 rounded-xl bg-zinc-800/40 flex items-center justify-center backdrop-blur-sm"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  transition={spring}
                 >
                   <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
                 </motion.div>
-                <motion.div
-                  initial={{ opacity: 0.3, x: -2, y: 2 }}
-                  whileHover={{ opacity: 1, x: 2, y: -2 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ArrowUpRight className="h-3.5 w-3.5 text-zinc-500" />
-                </motion.div>
+                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors duration-300" />
               </div>
-              <p className="text-xl md:text-2xl font-bold text-zinc-100 tracking-tight mb-0.5">
+              <p className="text-2xl md:text-[28px] font-bold text-zinc-100 tracking-tight leading-none mb-1.5">
                 {card.value}
               </p>
               <p className="text-xs text-zinc-500 font-medium">{card.label}</p>
               {card.sub && (
-                <p className="text-[10px] text-zinc-600 mt-0.5">{card.sub}</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5 font-medium">{card.sub}</p>
               )}
             </div>
           </motion.div>
         ))}
       </motion.div>
 
-      {/* Main grid: Calendar + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        {/* Calendar */}
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 md:gap-5">
+        {/* Calendar Timeline */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: gentleEase }}
-          className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
+          transition={{ duration: 0.6, delay: 0.15, ease }}
+          className="rounded-2xl glass-panel overflow-hidden"
         >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/40">
-            <div>
-              <h2 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-blue-400" />
-                Agenda
-              </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                {format(dateRange.from, "dd/MM", { locale: ptBR })} — {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
-              </p>
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-zinc-100 tracking-tight">Agenda</h2>
+                <p className="text-[11px] text-zinc-600">
+                  {format(dateRange.from, "dd/MM", { locale: ptBR })} — {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
+                </p>
+              </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate(dashPath('/app/bookings'))}
-              className="text-xs text-zinc-500 hover:text-zinc-100 gap-1"
+              className="text-xs text-zinc-500 hover:text-zinc-100 gap-1 rounded-lg"
             >
               Ver Todos <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
 
-          <div className="p-4">
+          <div className="p-4 md:p-5">
             {loading ? (
               <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 bg-zinc-800/30 rounded-xl animate-pulse" />
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-14 bg-zinc-800/20 rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : !hasAnyBookings ? (
-              <div className="text-center py-16">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-800/60 flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="h-5 w-5 text-zinc-600" />
+              <div className="text-center py-20">
+                <div className="w-14 h-14 rounded-2xl bg-zinc-800/40 flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                  <Calendar className="h-6 w-6 text-zinc-600" />
                 </div>
-                <p className="text-sm text-zinc-500 font-medium">Nenhum agendamento</p>
+                <p className="text-sm text-zinc-400 font-semibold">Nenhum agendamento</p>
                 <p className="text-xs text-zinc-600 mt-1">no período selecionado</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {daysWithBookings.map(({ day, bookings: dayBookings }) => {
                   if (dayBookings.length === 0) return null;
                   const isToday = isSameDay(day, new Date());
                   return (
-                    <div key={day.toISOString()} className="group/day">
+                    <div key={day.toISOString()}>
                       {/* Day header */}
-                      <div className="flex items-center gap-3 px-3 py-2.5">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm transition-colors ${
+                      <div className="flex items-center gap-3 px-2 py-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
                           isToday 
-                            ? 'bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20' 
-                            : 'bg-zinc-800/60 text-zinc-400'
+                            ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/25' 
+                            : 'bg-zinc-800/40 text-zinc-400'
                         }`}>
                           {format(day, 'dd')}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium capitalize ${isToday ? 'text-emerald-400' : 'text-zinc-300'}`}>
+                          <p className={`text-sm font-semibold capitalize ${isToday ? 'text-emerald-400' : 'text-zinc-300'}`}>
                             {format(day, 'EEEE', { locale: ptBR })}
                           </p>
                           <p className="text-[11px] text-zinc-600">{format(day, "dd 'de' MMMM", { locale: ptBR })}</p>
                         </div>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
                           isToday 
-                            ? 'bg-emerald-500/10 text-emerald-400' 
-                            : 'bg-zinc-800/60 text-zinc-500'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-zinc-800/40 text-zinc-500'
                         }`}>
                           {dayBookings.length}
                         </span>
                       </div>
 
                       {/* Bookings */}
-                      <div className="ml-[18px] border-l-2 border-zinc-800/40 pl-5 pb-2 space-y-1">
+                      <div className="ml-5 border-l-2 border-zinc-800/30 pl-5 pb-3 space-y-1">
                         <AnimatePresence mode="popLayout">
-                        {dayBookings.map((booking: any, bIdx: number) => (
-                          <motion.div
-                            key={booking.id}
-                            initial={{ opacity: 0, x: -12 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 12 }}
-                            transition={{ duration: 0.35, delay: bIdx * 0.04, ease: gentleEase }}
-                            whileHover={{ x: 4, backgroundColor: "rgba(63,63,70,0.2)" }}
-                            onClick={() => setSelectedBooking(booking)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer group/item"
-                          >
-                            <div
-                              className="w-1 h-8 rounded-full flex-shrink-0 opacity-80 group-hover/item:opacity-100 transition-opacity"
-                              style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
-                            />
-                            <div className="flex items-center gap-2 text-zinc-500 w-14 flex-shrink-0">
-                              <Clock className="h-3 w-3" />
-                              <span className="text-xs font-mono font-medium">
-                                {format(new Date(booking.starts_at), 'HH:mm')}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                {booking.is_recurring && <UserCheck className="h-3 w-3 text-violet-400 flex-shrink-0" />}
-                                <p className="text-sm font-medium text-zinc-200 truncate">
-                                  {booking.customer?.name}
+                        {dayBookings.map((booking: any, bIdx: number) => {
+                          const st = statusConfig[booking.status] || statusConfig.pending;
+                          return (
+                            <motion.div
+                              key={booking.id}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 10 }}
+                              transition={{ duration: 0.3, delay: bIdx * 0.03, ease }}
+                              whileHover={{ x: 4 }}
+                              onClick={() => setSelectedBooking(booking)}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer group/item hover:bg-zinc-800/20 transition-colors duration-300"
+                            >
+                              <div
+                                className="w-1 h-8 rounded-full flex-shrink-0 opacity-70 group-hover/item:opacity-100 transition-opacity"
+                                style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
+                              />
+                              <div className="flex items-center gap-1.5 text-zinc-600 w-14 flex-shrink-0">
+                                <Clock className="h-3 w-3" />
+                                <span className="text-xs font-mono font-semibold">
+                                  {format(new Date(booking.starts_at), 'HH:mm')}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  {booking.is_recurring && <UserCheck className="h-3 w-3 text-violet-400 flex-shrink-0" />}
+                                  <p className="text-sm font-medium text-zinc-200 truncate">
+                                    {booking.customer?.name}
+                                  </p>
+                                </div>
+                                <p className="text-[11px] text-zinc-600 truncate">
+                                  {booking.service?.name}
+                                  {booking.staff?.name ? ` · ${booking.staff.name}` : ''}
                                 </p>
                               </div>
-                              <p className="text-[11px] text-zinc-600 truncate">
-                                {booking.service?.name}
-                                {booking.staff?.name ? ` · ${booking.staff.name}` : ''}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {booking.is_recurring ? (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">
-                                  Fixo
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {booking.is_recurring ? (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                                    Fixo
+                                  </span>
+                                ) : (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${st.className}`}>
+                                    {st.label}
+                                  </span>
+                                )}
+                                <span className="text-xs font-bold text-zinc-500 hidden sm:block tabular-nums">
+                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
                                 </span>
-                              ) : (
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                  booking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400' :
-                                  booking.status === 'completed' ? 'bg-blue-500/10 text-blue-400' :
-                                  booking.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
-                                  booking.status === 'no_show' ? 'bg-amber-500/10 text-amber-400' :
-                                  'bg-zinc-800/60 text-zinc-500'
-                                }`}>
-                                  {booking.status === 'confirmed' ? 'Confirmado' :
-                                   booking.status === 'completed' ? 'Concluído' :
-                                   booking.status === 'cancelled' ? 'Cancelado' :
-                                   booking.status === 'no_show' ? 'Faltou' :
-                                   booking.status === 'pending' ? 'Pendente' : booking.status}
-                                </span>
-                              )}
-                              <span className="text-xs font-semibold text-zinc-400 hidden sm:block tabular-nums">
-                                R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
-                              </span>
-                            </div>
-                          </motion.div>
-                        ))}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
                         </AnimatePresence>
                       </div>
                     </div>
@@ -450,100 +431,93 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Sidebar */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="space-y-4"
-        >
+        <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-4">
           {/* Quick Actions */}
-          <motion.div
-            variants={itemVariants}
-            className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
-          >
-            <div className="px-5 py-4 border-b border-zinc-800/40">
-              <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: [0, 15, -15, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 5 }}
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                </motion.div>
-                Ações Rápidas
-              </h3>
+          <motion.div variants={fadeUp} className="rounded-2xl glass-panel overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800/30 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center">
+                <Zap className="h-3.5 w-3.5 text-emerald-400" />
+              </div>
+              <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Ações Rápidas</h3>
             </div>
             <div className="p-3 space-y-1">
-              {quickActions.map((action, i) => (
+              {quickActions.map((action) => (
                 <motion.button
                   key={action.label}
                   onClick={action.onClick}
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.97 }}
-                  transition={smoothSpring}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-colors duration-300 group"
+                  transition={spring}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/30 transition-all duration-300 group"
                 >
-                  <motion.div
-                    className="w-8 h-8 rounded-lg bg-zinc-800/60 group-hover:bg-zinc-700/60 flex items-center justify-center transition-colors duration-300"
-                    whileHover={{ rotate: 90 }}
-                    transition={smoothSpring}
-                  >
+                  <div className="w-9 h-9 rounded-xl bg-zinc-800/40 group-hover:bg-zinc-700/40 flex items-center justify-center transition-all duration-300 group-hover:shadow-sm">
                     <action.icon className="h-4 w-4" />
-                  </motion.div>
-                  <span className="text-sm font-medium">{action.label}</span>
-                  <motion.div
-                    className="ml-auto"
-                    initial={{ opacity: 0, x: -4 }}
-                    whileHover={{ opacity: 1, x: 0 }}
-                  >
-                    <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </motion.div>
+                  </div>
+                  <div className="text-left flex-1">
+                    <span className="text-sm font-semibold block">{action.label}</span>
+                    <span className="text-[11px] text-zinc-600 block">{action.desc}</span>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-zinc-500" />
                 </motion.button>
               ))}
             </div>
           </motion.div>
 
           {/* Popular Services */}
-          <motion.div
-            variants={itemVariants}
-            className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
-          >
-            <div className="px-5 py-4 border-b border-zinc-800/40">
-              <h3 className="text-sm font-semibold text-zinc-100">Serviços Populares</h3>
-              <p className="text-[11px] text-zinc-600 mt-0.5">Catálogo ativo</p>
+          <motion.div variants={fadeUp} className="rounded-2xl glass-panel overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Serviços</h3>
+                  <p className="text-[10px] text-zinc-600">Catálogo ativo</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(dashPath('/app/services'))}
+                className="text-[11px] text-zinc-600 hover:text-zinc-300 h-7 px-2 rounded-lg"
+              >
+                Ver todos
+              </Button>
             </div>
             <div className="p-4">
               {loading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-10 bg-zinc-800/30 rounded-lg animate-pulse" />
+                    <div key={i} className="h-11 bg-zinc-800/20 rounded-xl animate-pulse" />
                   ))}
                 </div>
               ) : services.length === 0 ? (
-                <p className="text-sm text-zinc-600 text-center py-6">Nenhum serviço</p>
+                <div className="text-center py-8">
+                  <Scissors className="h-5 w-5 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-sm text-zinc-600">Nenhum serviço</p>
+                </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {services.slice(0, 5).map((service, sIdx) => (
                     <motion.div
                       key={service.id}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.35, delay: 0.35 + sIdx * 0.06, ease: gentleEase }}
+                      transition={{ duration: 0.35, delay: 0.3 + sIdx * 0.05, ease }}
                       whileHover={{ x: 3 }}
-                      className="flex items-center gap-3 group cursor-default"
+                      className="flex items-center gap-3 group cursor-default p-2 rounded-xl hover:bg-zinc-800/20 transition-colors duration-300"
                     >
-                      <motion.div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${service.color}12` }}
-                        whileHover={{ scale: 1.15 }}
-                        transition={smoothSpring}
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+                        style={{ backgroundColor: `${service.color}15` }}
                       >
                         <Scissors className="h-3.5 w-3.5" style={{ color: service.color }} />
-                      </motion.div>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-300 truncate">{service.name}</p>
                         <p className="text-[11px] text-zinc-600">{service.duration_minutes} min</p>
                       </div>
-                      <span className="text-sm font-semibold text-emerald-400 tabular-nums">
+                      <span className="text-sm font-bold text-emerald-400 tabular-nums">
                         R$ {(service.price_cents / 100).toFixed(0)}
                       </span>
                     </motion.div>
@@ -562,22 +536,27 @@ const Dashboard = () => {
 
       {/* Booking Detail Modal */}
       <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
-        <DialogContent className="sm:max-w-md bg-zinc-900/95 backdrop-blur-xl border-zinc-800/60 shadow-2xl">
+        <DialogContent className="sm:max-w-md glass-panel border-zinc-800/30 shadow-2xl shadow-black/40">
           <DialogHeader>
-            <DialogTitle className="text-zinc-100 text-base">Detalhes do Agendamento</DialogTitle>
+            <DialogTitle className="text-zinc-100 text-base font-bold tracking-tight">Detalhes do Agendamento</DialogTitle>
           </DialogHeader>
           {selectedBooking && (
-            <div className="space-y-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
               {/* Customer */}
-              <div className="p-4 rounded-xl bg-zinc-800/30 space-y-3">
+              <div className="p-4 rounded-xl bg-zinc-800/20 border border-zinc-800/30 space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-700/50 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
                     <User className="h-5 w-5 text-zinc-400" />
                   </div>
                   <div>
-                    <p className="font-semibold text-zinc-100">{selectedBooking.customer?.name}</p>
+                    <p className="font-bold text-zinc-100">{selectedBooking.customer?.name}</p>
                     {selectedBooking.is_recurring && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 mt-0.5 inline-block">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 mt-0.5 inline-block">
                         Cliente Fixo
                       </span>
                     )}
@@ -599,40 +578,37 @@ const Dashboard = () => {
                   ...(selectedBooking.staff?.name ? [{ icon: Users, label: "Profissional", value: selectedBooking.staff.name }] : []),
                   { icon: TrendingUp, label: "Valor", value: `R$ ${((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}`, highlight: true },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                  <div key={i} className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2 text-sm text-zinc-500">
                       <item.icon className="h-3.5 w-3.5" />
                       <span>{item.label}</span>
                     </div>
-                    <span className={`text-sm font-medium ${(item as any).highlight ? 'text-emerald-400 font-bold' : 'text-zinc-200'}`}>
+                    <span className={`text-sm font-semibold ${(item as any).highlight ? 'text-emerald-400 font-bold' : 'text-zinc-200'}`}>
                       {item.value}
                     </span>
                   </div>
                 ))}
                 {!selectedBooking.is_recurring && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between py-1">
                     <span className="text-sm text-zinc-500">Status</span>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                      selectedBooking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400' :
-                      selectedBooking.status === 'completed' ? 'bg-blue-500/10 text-blue-400' :
-                      selectedBooking.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
-                      'bg-zinc-800/60 text-zinc-500'
-                    }`}>
-                      {selectedBooking.status === 'confirmed' ? 'Confirmado' :
-                       selectedBooking.status === 'completed' ? 'Concluído' :
-                       selectedBooking.status === 'cancelled' ? 'Cancelado' :
-                       selectedBooking.status === 'no_show' ? 'Faltou' : selectedBooking.status}
-                    </span>
+                    {(() => {
+                      const st = statusConfig[selectedBooking.status] || statusConfig.pending;
+                      return (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${st.className}`}>
+                          {st.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                 )}
                 {selectedBooking.notes && (
-                  <div className="pt-3 border-t border-zinc-800/40">
-                    <p className="text-[11px] text-zinc-600 mb-1">Observações</p>
+                  <div className="pt-3 border-t border-zinc-800/30">
+                    <p className="text-[11px] text-zinc-600 mb-1 font-medium">Observações</p>
                     <p className="text-sm text-zinc-300">{selectedBooking.notes}</p>
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
         </DialogContent>
       </Dialog>
