@@ -612,7 +612,7 @@ const BookingPublic = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!tenant || !selectedService || !selectedDate || !selectedTime || !customerName || !customerPhone || !customerEmail) {
+    if (!tenant || !selectedService || !selectedDate || !selectedTime || !customerName || !customerPhone || (!customerFound && (!customerEmail || !customerBirthday))) {
       toast({
         title: "Dados incompletos",
         description: "Preencha todos os campos obrigatórios.",
