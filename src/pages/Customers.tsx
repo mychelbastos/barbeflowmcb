@@ -122,18 +122,27 @@ export default function Customers() {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('customers')
-        .select(`
-          *
-        `)
-        .eq('tenant_id', currentTenant.id)
-        .order('created_at', { ascending: false });
+      const [customersResult, recurringResult] = await Promise.all([
+        supabase
+          .from('customers')
+          .select('*')
+          .eq('tenant_id', currentTenant.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('recurring_clients')
+          .select('customer_id')
+          .eq('tenant_id', currentTenant.id)
+          .eq('active', true)
+      ]);
 
-      if (error) throw error;
+      if (customersResult.error) throw customersResult.error;
+
+      const recurringCustomerIds = new Set(
+        (recurringResult.data || []).map((r: any) => r.customer_id)
+      );
 
       // Get booking stats for each customer
-      const customersWithStats = await Promise.all((data || []).map(async (customer) => {
+      const customersWithStats = await Promise.all((customersResult.data || []).map(async (customer) => {
         const { data: bookings } = await supabase
           .from('bookings')
           .select(`
@@ -156,6 +165,7 @@ export default function Customers() {
           totalBookings,
           totalSpent,
           lastVisit,
+          isRecurring: recurringCustomerIds.has(customer.id),
         };
       }));
 
@@ -499,7 +509,12 @@ export default function Customers() {
                         <User className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate">{customer.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-foreground truncate">{customer.name}</p>
+                          {customer.isRecurring && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary flex-shrink-0">Fixo</Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
                         </p>
@@ -591,7 +606,12 @@ export default function Customers() {
                             <User className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <div className="font-medium">{customer.name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{customer.name}</span>
+                              {customer.isRecurring && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary">Fixo</Badge>
+                              )}
+                            </div>
                             <div className="text-sm text-muted-foreground">
                               Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
                             </div>

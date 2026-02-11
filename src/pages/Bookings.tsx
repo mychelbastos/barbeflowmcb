@@ -45,6 +45,7 @@ import {
   Banknote,
   AlertCircle,
   Ban,
+  MessageCircle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -515,7 +516,20 @@ export default function Bookings() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Telefone</Label>
-                  <p className="text-sm">{selectedBooking.customer?.phone}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm">{selectedBooking.customer?.phone}</p>
+                    {selectedBooking.customer?.phone && (
+                      <a
+                        href={`https://wa.me/${selectedBooking.customer.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+                        title="Abrir WhatsApp"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -552,7 +566,7 @@ export default function Bookings() {
               </div>
 
               {/* Quick status actions */}
-              <div className="flex gap-2 pt-2 border-t border-border">
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                 {selectedBooking.status === "confirmed" && (
                   <Button size="sm" variant="outline" onClick={() => { updateBookingStatus(selectedBooking.id, "completed"); setShowDetails(false); }}>
                     <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
@@ -567,6 +581,17 @@ export default function Bookings() {
                   <Button size="sm" variant="destructive" onClick={() => { updateBookingStatus(selectedBooking.id, "cancelled"); setShowDetails(false); }}>
                     <XCircle className="h-4 w-4 mr-1" /> Cancelar
                   </Button>
+                )}
+                {selectedBooking.customer?.phone && (
+                  <a
+                    href={`https://wa.me/${selectedBooking.customer.phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button size="sm" variant="outline" type="button">
+                      <MessageCircle className="h-4 w-4 mr-1 text-emerald-500" /> WhatsApp
+                    </Button>
+                  </a>
                 )}
               </div>
             </div>
