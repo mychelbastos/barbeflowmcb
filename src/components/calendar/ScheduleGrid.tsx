@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import type { StaffMember, Schedule, BookingData, BlockData, TenantSettings } from "@/hooks/useBookingsByDate";
 import { useBookingModal } from "@/hooks/useBookingModal";
@@ -109,8 +109,24 @@ export function ScheduleGrid({
     return { map, general };
   }, [blocks]);
 
-  function getSlotType(staffId: string, slotTime: string): "free" | "off" | "break" | "block" | "booking" {
+  // Get current time in TZ for past-slot detection
+  const nowMinutes = useMemo(() => {
+    if (!isToday(date)) return -1; // Not today, no slots are past
+    const nowInTZ = formatInTimeZone(new Date(), TZ, "HH:mm");
+    return timeToMinutes(nowInTZ);
+  }, [date]);
+
+  function isSlotPast(slotTime: string): boolean {
+    if (nowMinutes < 0) return false;
+    return timeToMinutes(slotTime) < nowMinutes;
+  }
+
+  function getSlotType(staffId: string, slotTime: string): "free" | "off" | "break" | "block" | "booking" | "past" {
     const slotMins = timeToMinutes(slotTime);
+
+    // Check past first
+    if (isSlotPast(slotTime)) return "past";
+
     const schedule = scheduleMap.map[staffId] || scheduleMap.generalSchedule;
 
     // Check if outside working hours
@@ -126,7 +142,6 @@ export function ScheduleGrid({
         if (slotMins >= breakStart && slotMins < breakEnd) return "break";
       }
     } else {
-      // No schedule for this day = day off
       return "off";
     }
 
@@ -223,7 +238,7 @@ export function ScheduleGrid({
           const slotType = getSlotType(member.id, slotTime);
           renderedSlots.add(slotTime);
 
-          if (slotType === "off") {
+          if (slotType === "off" || slotType === "past") {
             return (
               <div key={slotTime} style={{ height: `${SLOT_HEIGHT}px` }}
                 className="bg-muted/30 border-b border-border/20" />
