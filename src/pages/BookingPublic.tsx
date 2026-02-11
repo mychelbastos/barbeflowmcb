@@ -1236,7 +1236,7 @@ END:VCALENDAR`;
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Phone first — enables auto-fill for returning customers */}
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">WhatsApp</label>
+                <label className="block text-sm text-zinc-400 mb-2">WhatsApp *</label>
                 <div className="relative">
                   <Input
                     type="tel"
@@ -1272,21 +1272,10 @@ END:VCALENDAR`;
                     <span className="text-sm font-medium text-emerald-400">Bem-vindo de volta, {customerName}!</span>
                   </div>
                   <p className="text-xs text-zinc-400">
-                    Seus dados foram preenchidos automaticamente. Confira e confirme.
+                    Seus dados foram preenchidos automaticamente.
                   </p>
                 </div>
               )}
-
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Nome completo</label>
-                <Input
-                  placeholder="Seu nome"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  required
-                  className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
-                />
-              </div>
 
               {/* Active package detected banner */}
               {packageCoveredService && activeCustomerPackage && (
@@ -1301,18 +1290,41 @@ END:VCALENDAR`;
                   </p>
                 </div>
               )}
-              
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">E-mail <span className="text-zinc-600">(opcional)</span></label>
-                <Input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
-                />
-              </div>
-              
+
+              {/* Show name/email/notes only if customer NOT found */}
+              {!customerFound && customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="p-3 bg-zinc-800/30 border border-zinc-700/40 rounded-xl">
+                    <p className="text-xs text-zinc-400">
+                      Não encontramos um cadastro com esse número. Preencha seus dados abaixo.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">Nome completo *</label>
+                    <Input
+                      placeholder="Seu nome"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      required
+                      className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">E-mail *</label>
+                    <Input
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      required
+                      className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm text-zinc-400 mb-2">Observações <span className="text-zinc-600">(opcional)</span></label>
                 <Textarea
@@ -1327,7 +1339,7 @@ END:VCALENDAR`;
               <div className="pt-4 space-y-3">
                 <Button 
                   type="submit" 
-                  disabled={submitting || !customerName || !customerPhone}
+                  disabled={submitting || !customerName || !customerPhone || (!customerFound && !customerEmail)}
                   className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50"
                 >
                   {submitting ? (
