@@ -76,7 +76,15 @@ interface NavItem {
 const navigationItems: NavItem[] = [
   { title: "Dashboard", url: "/app/dashboard", icon: Home },
   { title: "Agendamentos", url: "/app/bookings", icon: FileText },
-  { title: "Clientes", url: "/app/customers", icon: User },
+  { 
+    title: "Clientes", 
+    url: "/app/customers", 
+    icon: User,
+    children: [
+      { title: "Listar Clientes", url: "/app/customers", icon: User },
+      { title: "Clientes Fixos", url: "/app/recurring-clients", icon: CalendarCheck },
+    ]
+  },
   { 
     title: "Catálogo", 
     url: "/app/services", 
