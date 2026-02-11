@@ -21,6 +21,8 @@ interface MercadoPagoCheckoutProps {
   onError: (error: string) => void;
   onPending?: (paymentData: any) => void;
   payer: PayerInfo;
+  customerPackageId?: string;
+  packageAmountCents?: number;
 }
 
 type PaymentMethod = 'card' | 'pix' | null;
@@ -41,6 +43,8 @@ export const MercadoPagoCheckout = ({
   onError,
   onPending,
   payer,
+  customerPackageId,
+  packageAmountCents,
 }: MercadoPagoCheckoutProps) => {
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
@@ -245,6 +249,8 @@ export const MercadoPagoCheckout = ({
             email: formData.payer?.email || payer.email,
             identification: formData.payer?.identification,
           },
+          customer_package_id: customerPackageId || undefined,
+          package_amount_cents: packageAmountCents || undefined,
         },
       });
 
@@ -352,6 +358,8 @@ export const MercadoPagoCheckout = ({
             email: payer.email,
             identification: payer.identification,
           },
+          customer_package_id: customerPackageId || undefined,
+          package_amount_cents: packageAmountCents || undefined,
         },
       });
 

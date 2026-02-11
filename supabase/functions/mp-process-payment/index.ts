@@ -18,10 +18,12 @@ serve(async (req) => {
       token, 
       payment_method_id, 
       payer,
-      payment_type // 'card' or 'pix'
+      payment_type, // 'card' or 'pix'
+      customer_package_id, // optional: for package purchases
+      package_amount_cents, // optional: override amount for packages
     } = await req.json();
     
-    console.log('Processing payment for booking:', booking_id, 'type:', payment_type);
+    console.log('Processing payment for booking:', booking_id, 'type:', payment_type, 'package:', customer_package_id);
 
     if (!booking_id) {
       return new Response(
@@ -84,7 +86,10 @@ serve(async (req) => {
     const prepaymentPercentage = settings.prepayment_percentage || 0;
     
     let amountCents = servicePriceCents;
-    if (requirePrepayment && prepaymentPercentage > 0 && prepaymentPercentage < 100) {
+    // If it's a package purchase, use the package amount
+    if (package_amount_cents && customer_package_id) {
+      amountCents = package_amount_cents;
+    } else if (requirePrepayment && prepaymentPercentage > 0 && prepaymentPercentage < 100) {
       amountCents = Math.round(servicePriceCents * prepaymentPercentage / 100);
     }
 
@@ -108,6 +113,7 @@ serve(async (req) => {
           status: 'pending',
           provider: 'mercadopago',
           currency: 'BRL',
+          customer_package_id: customer_package_id || null,
         })
         .select()
         .single();

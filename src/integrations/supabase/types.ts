@@ -550,6 +550,7 @@ export type Database = {
           checkout_url: string | null
           created_at: string
           currency: string
+          customer_package_id: string | null
           expires_at: string | null
           external_id: string | null
           id: string
@@ -564,6 +565,7 @@ export type Database = {
           checkout_url?: string | null
           created_at?: string
           currency?: string
+          customer_package_id?: string | null
           expires_at?: string | null
           external_id?: string | null
           id?: string
@@ -578,6 +580,7 @@ export type Database = {
           checkout_url?: string | null
           created_at?: string
           currency?: string
+          customer_package_id?: string | null
           expires_at?: string | null
           external_id?: string | null
           id?: string
@@ -592,6 +595,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_customer_package_id_fkey"
+            columns: ["customer_package_id"]
+            isOneToOne: false
+            referencedRelation: "customer_packages"
             referencedColumns: ["id"]
           },
           {
