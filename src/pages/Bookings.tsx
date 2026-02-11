@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { NoTenantState } from "@/components/NoTenantState";
@@ -50,6 +50,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useBookingsByDate, type BookingData } from "@/hooks/useBookingsByDate";
+import { useBookingModal } from "@/hooks/useBookingModal";
 import { DateNavigator } from "@/components/calendar/DateNavigator";
 import { ScheduleGrid } from "@/components/calendar/ScheduleGrid";
 import { BlockDialog } from "@/components/calendar/BlockDialog";
@@ -67,6 +68,7 @@ export default function Bookings() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { isOpen: modalIsOpen } = useBookingModal();
 
   // View state
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -103,6 +105,16 @@ export default function Bookings() {
       setVisibleStaffIds(staff.map((s) => s.id));
     }
   }, [staff]);
+
+  // Refetch grid when booking modal closes (new booking created)
+  const prevModalOpen = useRef(modalIsOpen);
+  useEffect(() => {
+    if (prevModalOpen.current && !modalIsOpen) {
+      refetch();
+      if (viewMode === "list") loadListData();
+    }
+    prevModalOpen.current = modalIsOpen;
+  }, [modalIsOpen]);
 
   // Load list view data
   useEffect(() => {
