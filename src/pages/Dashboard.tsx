@@ -30,24 +30,9 @@ import {
   Sparkles,
   UserCheck,
   User,
-  MapPin,
-  Mail,
+  ChevronRight,
 } from "lucide-react";
 import { NewServiceModal, NewStaffModal, BlockTimeModal } from "@/components/modals/QuickActions";
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4 }
-};
-
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
 
 const Dashboard = () => {
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
@@ -58,7 +43,6 @@ const Dashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  // Modal states
   const [showNewService, setShowNewService] = useState(false);
   const [showNewStaff, setShowNewStaff] = useState(false);
   const [showBlockTime, setShowBlockTime] = useState(false);
@@ -77,7 +61,6 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
       if (!currentTenant) {
         setTodayBookings([]);
         setPeriodBookings([]);
@@ -92,49 +75,14 @@ const Dashboard = () => {
       const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
       
       const [todayBookingsRes, periodBookingsRes, servicesRes, staffRes, recurringRes] = await Promise.all([
-        supabase
-          .from('bookings')
-          .select(`
-            *,
-            service:services(name, color, price_cents),
-            staff:staff(name),
-            customer:customers(name, phone)
-          `)
-          .eq('tenant_id', currentTenant.id)
-          .gte('starts_at', startOfDay.toISOString())
-          .lt('starts_at', endOfDay.toISOString())
-          .order('starts_at'),
-        
-        supabase
-          .from('bookings')
-          .select(`
-            *,
-            service:services(name, color, price_cents, duration_minutes),
-            staff:staff(name, color),
-            customer:customers(name, phone)
-          `)
-          .eq('tenant_id', currentTenant.id)
-          .gte('starts_at', dateRange.from.toISOString())
-          .lte('starts_at', dateRange.to.toISOString())
-          .order('starts_at'),
-        
-        supabase
-          .from('services')
-          .select('*')
-          .eq('tenant_id', currentTenant.id)
-          .eq('active', true),
-        
-        supabase
-          .from('staff')
-          .select('*')
-          .eq('tenant_id', currentTenant.id)
-          .eq('active', true),
-
-        supabase
-          .from('recurring_clients')
-          .select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents), customer:customers(name, phone)')
-          .eq('tenant_id', currentTenant.id)
-          .eq('active', true)
+        supabase.from('bookings').select(`*, service:services(name, color, price_cents), staff:staff(name), customer:customers(name, phone)`)
+          .eq('tenant_id', currentTenant.id).gte('starts_at', startOfDay.toISOString()).lt('starts_at', endOfDay.toISOString()).order('starts_at'),
+        supabase.from('bookings').select(`*, service:services(name, color, price_cents, duration_minutes), staff:staff(name, color), customer:customers(name, phone)`)
+          .eq('tenant_id', currentTenant.id).gte('starts_at', dateRange.from.toISOString()).lte('starts_at', dateRange.to.toISOString()).order('starts_at'),
+        supabase.from('services').select('*').eq('tenant_id', currentTenant.id).eq('active', true),
+        supabase.from('staff').select('*').eq('tenant_id', currentTenant.id).eq('active', true),
+        supabase.from('recurring_clients').select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents), customer:customers(name, phone)')
+          .eq('tenant_id', currentTenant.id).eq('active', true)
       ]);
 
       if (todayBookingsRes.error) throw todayBookingsRes.error;
@@ -159,53 +107,24 @@ const Dashboard = () => {
 
   const calculateRevenue = async (bookingsList: any[]) => {
     if (!currentTenant) return 0;
-    
     try {
       let totalRevenue = 0;
-      
-      // Calculate revenue from bookings
       if (bookingsList.length > 0) {
         const bookingIds = bookingsList.map(b => b.id);
-        
-        // Fetch all paid payments for these bookings
-        const { data: payments } = await supabase
-          .from('payments')
-          .select('amount_cents, status')
-          .in('booking_id', bookingIds)
-          .eq('status', 'paid');
-
+        const { data: payments } = await supabase.from('payments').select('amount_cents, status').in('booking_id', bookingIds).eq('status', 'paid');
         const paidPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
-        
-        // If there are paid payments, use that value
         if (paidPayments > 0) {
           totalRevenue += paidPayments;
         } else {
-          // For bookings without online payment (confirmed/completed),
-          // calculate expected revenue based on service price
-          const revenueBookings = bookingsList.filter(
-            booking => booking.status === 'confirmed' || booking.status === 'completed'
-          );
-          
-          totalRevenue += revenueBookings.reduce((sum, booking) => {
-            return sum + (booking.service?.price_cents || 0);
-          }, 0);
+          const revenueBookings = bookingsList.filter(booking => booking.status === 'confirmed' || booking.status === 'completed');
+          totalRevenue += revenueBookings.reduce((sum, booking) => sum + (booking.service?.price_cents || 0), 0);
         }
       }
-      
-      // Add product sales revenue for the period
-      const { data: productSales } = await supabase
-        .from('product_sales')
-        .select('sale_price_snapshot_cents, quantity')
-        .eq('tenant_id', currentTenant.id)
-        .gte('sale_date', dateRange.from.toISOString())
-        .lte('sale_date', dateRange.to.toISOString());
-      
+      const { data: productSales } = await supabase.from('product_sales').select('sale_price_snapshot_cents, quantity')
+        .eq('tenant_id', currentTenant.id).gte('sale_date', dateRange.from.toISOString()).lte('sale_date', dateRange.to.toISOString());
       if (productSales && productSales.length > 0) {
-        const productRevenue = productSales.reduce((sum, sale) => 
-          sum + (sale.sale_price_snapshot_cents * sale.quantity), 0);
-        totalRevenue += productRevenue;
+        totalRevenue += productSales.reduce((sum, sale) => sum + (sale.sale_price_snapshot_cents * sale.quantity), 0);
       }
-      
       return totalRevenue;
     } catch (error) {
       console.error('Error fetching revenue data:', error);
@@ -213,18 +132,12 @@ const Dashboard = () => {
     }
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Bom dia";
-    if (hour < 18) return "Boa tarde";
-    return "Boa noite";
-  };
-
   if (tenantLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 bg-muted rounded animate-pulse" />
-        <div className="h-32 bg-muted rounded animate-pulse" />
+      <div className="space-y-4 p-4 md:p-0">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-24 bg-zinc-900/50 rounded-2xl animate-pulse" />
+        ))}
       </div>
     );
   }
@@ -233,102 +146,138 @@ const Dashboard = () => {
     return <NoTenantState />;
   }
 
+  const confirmedToday = todayBookings.filter(b => b.status === 'confirmed' || b.status === 'completed').length;
+  const pendingToday = todayBookings.filter(b => b.status === 'pending').length;
+
+  const statCards = [
+    {
+      label: "Agendamentos hoje",
+      value: loading ? "—" : String(todayBookings.length),
+      sub: loading ? "" : `${confirmedToday} confirmados`,
+      icon: Calendar,
+      iconBg: "bg-blue-500/10",
+      iconColor: "text-blue-400",
+      href: dashPath('/app/bookings'),
+    },
+    {
+      label: "Serviços ativos",
+      value: loading ? "—" : String(services.length),
+      sub: "catálogo",
+      icon: Scissors,
+      iconBg: "bg-emerald-500/10",
+      iconColor: "text-emerald-400",
+      href: dashPath('/app/services'),
+    },
+    {
+      label: "Profissionais",
+      value: loading ? "—" : String(staff.length),
+      sub: "na equipe",
+      icon: Users,
+      iconBg: "bg-violet-500/10",
+      iconColor: "text-violet-400",
+      href: dashPath('/app/staff'),
+    },
+    {
+      label: "Faturamento",
+      value: loading ? "—" : `R$ ${(revenue / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
+      sub: "no período",
+      icon: TrendingUp,
+      iconBg: "bg-amber-500/10",
+      iconColor: "text-amber-400",
+      href: dashPath('/app/finance'),
+    },
+  ];
+
+  // Calendar helpers
+  const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+  const getBookingsForDay = (day: Date) => {
+    const dayBookings = periodBookings.filter(b => isSameDay(new Date(b.starts_at), day));
+    const dayOfWeek = day.getDay();
+    const recurringForDay = recurringClients
+      .filter(r => r.weekday === dayOfWeek && new Date(r.start_date) <= day)
+      .map(r => {
+        const [h, m] = r.start_time.split(':').map(Number);
+        const startsAt = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
+        const duration = r.service?.duration_minutes || r.duration_minutes;
+        const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
+        return {
+          id: `recurring-${r.id}-${day.toISOString()}`,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          status: 'recurring',
+          customer: r.customer || { name: 'Cliente Fixo', phone: '' },
+          service: r.service || { name: 'Cliente Fixo', color: '#8B5CF6', price_cents: 0 },
+          staff: r.staff,
+          is_recurring: true,
+          notes: r.notes,
+        };
+      });
+    return [...dayBookings, ...recurringForDay]
+      .sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+  };
+
+  const daysWithBookings = days.map(day => ({ day, bookings: getBookingsForDay(day) }));
+  const hasAnyBookings = daysWithBookings.some(d => d.bookings.length > 0);
+
+  const quickActions = [
+    { label: "Novo Serviço", icon: Plus, onClick: () => setShowNewService(true) },
+    { label: "Adicionar Profissional", icon: Users, onClick: () => setShowNewStaff(true) },
+    { label: "Bloquear Horário", icon: Calendar, onClick: () => setShowBlockTime(true) },
+  ];
+
   return (
-    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
-      {/* Date Range Selector */}
+    <div className="space-y-6 px-4 md:px-0">
+      {/* Date Range */}
       <DateRangeSelector className="overflow-x-auto" />
 
-
-      {/* Stats Grid */}
-      <motion.div 
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-        className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4 mb-4 md:mb-8"
-      >
-        <motion.div 
-          variants={fadeInUp}
-          onClick={() => navigate(dashPath('/app/bookings'))}
-          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
-        >
-          <div className="flex items-start justify-between mb-2 md:mb-4">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <Calendar className="h-4 w-4 md:h-5 md:w-5 text-blue-400" />
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {statCards.map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+            onClick={() => navigate(card.href)}
+            className="group relative cursor-pointer"
+          >
+            {/* Glow on hover */}
+            <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-zinc-700/0 to-zinc-700/0 group-hover:from-zinc-700/30 group-hover:to-zinc-800/20 transition-all duration-500 pointer-events-none" />
+            <div className="relative p-4 md:p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm hover:border-zinc-700/60 transition-all duration-300">
+              <div className="flex items-start justify-between mb-3">
+                <div className={`w-9 h-9 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
+                </div>
+                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200" />
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-zinc-100 tracking-tight mb-0.5">
+                {card.value}
+              </p>
+              <p className="text-xs text-zinc-500 font-medium">{card.label}</p>
+              {card.sub && (
+                <p className="text-[10px] text-zinc-600 mt-0.5">{card.sub}</p>
+              )}
             </div>
-            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-          </div>
-          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
-            {loading ? "..." : todayBookings.length}
-          </p>
-          <p className="text-xs md:text-sm text-zinc-500">Agendamentos hoje</p>
-        </motion.div>
+          </motion.div>
+        ))}
+      </div>
 
-        <motion.div 
-          variants={fadeInUp}
-          onClick={() => navigate(dashPath('/app/services'))}
-          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
+      {/* Main grid: Calendar + Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        {/* Calendar */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
         >
-          <div className="flex items-start justify-between mb-2 md:mb-4">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Scissors className="h-4 w-4 md:h-5 md:w-5 text-emerald-400" />
-            </div>
-            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-          </div>
-          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
-            {loading ? "..." : services.length}
-          </p>
-          <p className="text-xs md:text-sm text-zinc-500">Serviços ativos</p>
-        </motion.div>
-
-        <motion.div 
-          variants={fadeInUp}
-          onClick={() => navigate(dashPath('/app/staff'))}
-          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
-        >
-          <div className="flex items-start justify-between mb-2 md:mb-4">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-violet-500/10 flex items-center justify-center">
-              <Users className="h-4 w-4 md:h-5 md:w-5 text-violet-400" />
-            </div>
-            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-          </div>
-          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
-            {loading ? "..." : staff.length}
-          </p>
-          <p className="text-xs md:text-sm text-zinc-500">Profissionais</p>
-        </motion.div>
-
-        <motion.div 
-          variants={fadeInUp}
-          onClick={() => navigate(dashPath('/app/finance'))}
-          className="group p-3 md:p-5 rounded-xl md:rounded-2xl bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700/50 cursor-pointer transition-all duration-300"
-        >
-          <div className="flex items-start justify-between mb-2 md:mb-4">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-amber-400" />
-            </div>
-            <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-          </div>
-          <p className="text-lg md:text-2xl font-bold text-zinc-100 mb-0.5 md:mb-1">
-            {loading ? "..." : `R$ ${(revenue / 100).toFixed(0)}`}
-          </p>
-          <p className="text-xs md:text-sm text-zinc-500">Faturamento</p>
-        </motion.div>
-      </motion.div>
-
-      {/* Calendar Section - Full Width */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.15 }}
-      >
-        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
-          <div className="flex items-center justify-between p-3 md:p-5 border-b border-zinc-800/50">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/40">
             <div>
-              <h2 className="text-base md:text-lg font-semibold text-zinc-100 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-400" />
-                Calendário de Agendamentos
+              <h2 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-400" />
+                Agenda
               </h2>
-              <p className="text-xs md:text-sm text-zinc-500 mt-0.5">
+              <p className="text-xs text-zinc-500 mt-0.5">
                 {format(dateRange.from, "dd/MM", { locale: ptBR })} — {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
               </p>
             </div>
@@ -336,324 +285,274 @@ const Dashboard = () => {
               variant="ghost"
               size="sm"
               onClick={() => navigate(dashPath('/app/bookings'))}
-              className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 text-xs md:text-sm"
+              className="text-xs text-zinc-500 hover:text-zinc-100 gap-1"
             >
-              Ver Todos
+              Ver Todos <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
-          <div className="p-3 md:p-5">
+
+          <div className="p-4">
             {loading ? (
-              <div className="text-center text-zinc-500 py-8 text-sm">Carregando calendário...</div>
-            ) : (() => {
-              const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
-              const getBookingsForDay = (day: Date) => {
-                const dayBookings = periodBookings.filter(b => isSameDay(new Date(b.starts_at), day));
-                const dayOfWeek = day.getDay();
-                const recurringForDay = recurringClients
-                  .filter(r => r.weekday === dayOfWeek && new Date(r.start_date) <= day)
-                  .map(r => {
-                    const [h, m] = r.start_time.split(':').map(Number);
-                    const startsAt = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
-                    const duration = r.service?.duration_minutes || r.duration_minutes;
-                    const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
-                    return {
-                      id: `recurring-${r.id}-${day.toISOString()}`,
-                      starts_at: startsAt.toISOString(),
-                      ends_at: endsAt.toISOString(),
-                      status: 'recurring',
-                      customer: r.customer || { name: 'Cliente Fixo', phone: '' },
-                      service: r.service || { name: 'Cliente Fixo', color: '#8B5CF6', price_cents: 0 },
-                      staff: r.staff,
-                      is_recurring: true,
-                      notes: r.notes,
-                    };
-                  });
-                return [...dayBookings, ...recurringForDay]
-                  .sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-              };
-
-              const daysWithBookings = days.map(day => ({
-                day,
-                bookings: getBookingsForDay(day),
-              }));
-
-              const hasAnyBookings = daysWithBookings.some(d => d.bookings.length > 0);
-
-              if (!hasAnyBookings) {
-                return (
-                  <div className="text-center py-10">
-                    <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                      <Calendar className="h-6 w-6 text-zinc-600" />
-                    </div>
-                    <p className="text-sm text-zinc-500">Nenhum agendamento no período selecionado</p>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="space-y-3">
-                  {daysWithBookings.map(({ day, bookings: dayBookings }) => {
-                    if (dayBookings.length === 0) return null;
-                    const isToday = isSameDay(day, new Date());
-                    return (
-                      <div key={day.toISOString()} className={`rounded-xl border ${isToday ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-zinc-800/50 bg-zinc-800/20'}`}>
-                        <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/30">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg ${isToday ? 'bg-emerald-500 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}>
-                            {format(day, 'dd')}
-                          </div>
-                          <div>
-                            <p className={`font-medium text-sm capitalize ${isToday ? 'text-emerald-400' : 'text-zinc-200'}`}>
-                              {format(day, 'EEEE', { locale: ptBR })}
-                            </p>
-                            <p className="text-xs text-zinc-500">{format(day, "dd 'de' MMMM", { locale: ptBR })}</p>
-                          </div>
-                          <Badge className={`ml-auto text-xs ${isToday ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-zinc-700/50 text-zinc-400 border-zinc-600/30'}`}>
-                            {dayBookings.length} {dayBookings.length === 1 ? 'agendamento' : 'agendamentos'}
-                          </Badge>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 bg-zinc-800/30 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : !hasAnyBookings ? (
+              <div className="text-center py-16">
+                <div className="w-12 h-12 rounded-2xl bg-zinc-800/60 flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-5 w-5 text-zinc-600" />
+                </div>
+                <p className="text-sm text-zinc-500 font-medium">Nenhum agendamento</p>
+                <p className="text-xs text-zinc-600 mt-1">no período selecionado</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {daysWithBookings.map(({ day, bookings: dayBookings }) => {
+                  if (dayBookings.length === 0) return null;
+                  const isToday = isSameDay(day, new Date());
+                  return (
+                    <div key={day.toISOString()} className="group/day">
+                      {/* Day header */}
+                      <div className="flex items-center gap-3 px-3 py-2.5">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm transition-colors ${
+                          isToday 
+                            ? 'bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20' 
+                            : 'bg-zinc-800/60 text-zinc-400'
+                        }`}>
+                          {format(day, 'dd')}
                         </div>
-                        <div className="divide-y divide-zinc-800/30">
-                          {dayBookings.map((booking: any) => (
-                            <div key={booking.id} className="flex items-center gap-3 md:gap-4 px-4 py-3 hover:bg-zinc-800/20 transition-colors cursor-pointer" onClick={() => setSelectedBooking(booking)}>
-                              <div
-                                className="w-1 h-10 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
-                              />
-                              <div className="flex items-center gap-2 text-zinc-400 w-16 flex-shrink-0">
-                                <Clock className="h-3.5 w-3.5" />
-                                <span className="text-sm font-medium">
-                                  {format(new Date(booking.starts_at), 'HH:mm')}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  {booking.is_recurring && <UserCheck className="h-3.5 w-3.5 text-violet-400 flex-shrink-0" />}
-                                  <p className="text-sm font-medium text-zinc-100 truncate">
-                                    {booking.customer?.name}
-                                  </p>
-                                </div>
-                                <p className="text-xs text-zinc-500 truncate">
-                                  {booking.service?.name}
-                                  {booking.staff?.name ? ` • ${booking.staff.name}` : ''}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium capitalize ${isToday ? 'text-emerald-400' : 'text-zinc-300'}`}>
+                            {format(day, 'EEEE', { locale: ptBR })}
+                          </p>
+                          <p className="text-[11px] text-zinc-600">{format(day, "dd 'de' MMMM", { locale: ptBR })}</p>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          isToday 
+                            ? 'bg-emerald-500/10 text-emerald-400' 
+                            : 'bg-zinc-800/60 text-zinc-500'
+                        }`}>
+                          {dayBookings.length}
+                        </span>
+                      </div>
+
+                      {/* Bookings */}
+                      <div className="ml-[18px] border-l-2 border-zinc-800/40 pl-5 pb-2 space-y-1">
+                        {dayBookings.map((booking: any) => (
+                          <div
+                            key={booking.id}
+                            onClick={() => setSelectedBooking(booking)}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-800/30 cursor-pointer transition-all duration-150 group/item"
+                          >
+                            <div
+                              className="w-1 h-8 rounded-full flex-shrink-0 opacity-80 group-hover/item:opacity-100 transition-opacity"
+                              style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
+                            />
+                            <div className="flex items-center gap-2 text-zinc-500 w-14 flex-shrink-0">
+                              <Clock className="h-3 w-3" />
+                              <span className="text-xs font-mono font-medium">
+                                {format(new Date(booking.starts_at), 'HH:mm')}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                {booking.is_recurring && <UserCheck className="h-3 w-3 text-violet-400 flex-shrink-0" />}
+                                <p className="text-sm font-medium text-zinc-200 truncate">
+                                  {booking.customer?.name}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                {booking.is_recurring ? (
-                                  <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-xs">
-                                    Fixo
-                                  </Badge>
-                                ) : (
-                                  <Badge className={`text-xs ${
-                                    booking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                                    booking.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
-                                    booking.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
-                                    booking.status === 'no_show' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                                    'bg-zinc-700/50 text-zinc-400 border-zinc-600/30'
-                                  }`}>
-                                    {booking.status === 'confirmed' ? 'Confirmado' :
-                                     booking.status === 'completed' ? 'Concluído' :
-                                     booking.status === 'cancelled' ? 'Cancelado' :
-                                     booking.status === 'no_show' ? 'Faltou' :
-                                     booking.status === 'pending' ? 'Pendente' : booking.status}
-                                  </Badge>
-                                )}
-                                <span className="text-sm font-medium text-emerald-400 hidden sm:block">
-                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
-                                </span>
-                              </div>
+                              <p className="text-[11px] text-zinc-600 truncate">
+                                {booking.service?.name}
+                                {booking.staff?.name ? ` · ${booking.staff.name}` : ''}
+                              </p>
                             </div>
-                          ))}
-                        </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {booking.is_recurring ? (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">
+                                  Fixo
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                  booking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400' :
+                                  booking.status === 'completed' ? 'bg-blue-500/10 text-blue-400' :
+                                  booking.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
+                                  booking.status === 'no_show' ? 'bg-amber-500/10 text-amber-400' :
+                                  'bg-zinc-800/60 text-zinc-500'
+                                }`}>
+                                  {booking.status === 'confirmed' ? 'Confirmado' :
+                                   booking.status === 'completed' ? 'Concluído' :
+                                   booking.status === 'cancelled' ? 'Cancelado' :
+                                   booking.status === 'no_show' ? 'Faltou' :
+                                   booking.status === 'pending' ? 'Pendente' : booking.status}
+                                </span>
+                              )}
+                              <span className="text-xs font-semibold text-zinc-400 hidden sm:block tabular-nums">
+                                R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Sidebar with quick actions and popular services */}
-      <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
-        {/* Top Services */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
-            <div className="p-3 md:p-5 border-b border-zinc-800/50">
-              <h2 className="text-base md:text-lg font-semibold text-zinc-100">Serviços Populares</h2>
-              <p className="text-xs md:text-sm text-zinc-500">Este mês</p>
-            </div>
-            <div className="p-3 md:p-5">
-              <div className="space-y-3 md:space-y-4">
-                {loading ? (
-                  <div className="text-center text-zinc-500">Carregando...</div>
-                ) : services.length === 0 ? (
-                  <div className="text-center text-zinc-500">Nenhum serviço cadastrado</div>
-                ) : (
-                  services.slice(0, 5).map((service) => (
-                    <div key={service.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${service.color}15`, color: service.color }}
-                        >
-                          <Scissors className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-zinc-200 text-sm">{service.name}</p>
-                          <p className="text-xs text-zinc-500">{service.duration_minutes}min</p>
-                        </div>
-                      </div>
-                      <p className="font-medium text-emerald-400 text-sm">
-                        R$ {(service.price_cents / 100).toFixed(0)}
-                      </p>
                     </div>
-                  ))
-                )}
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
 
-        {/* Quick Actions */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl md:rounded-2xl">
-            <div className="p-3 md:p-5 border-b border-zinc-800/50">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
-                <h2 className="text-base md:text-lg font-semibold text-zinc-100">Ações Rápidas</h2>
-              </div>
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.25 }}
+            className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
+          >
+            <div className="px-5 py-4 border-b border-zinc-800/40">
+              <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                Ações Rápidas
+              </h3>
             </div>
-            <div className="p-3 md:p-5 space-y-2">
-              <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" size="sm" onClick={() => setShowNewService(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Novo Serviço
-              </Button>
-              <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" size="sm" onClick={() => setShowNewStaff(true)}>
-                <Users className="h-4 w-4 mr-2" /> Adicionar Profissional
-              </Button>
-              <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50" size="sm" onClick={() => setShowBlockTime(true)}>
-                <Calendar className="h-4 w-4 mr-2" /> Bloquear Horário
-              </Button>
+            <div className="p-3 space-y-1">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  onClick={action.onClick}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-all duration-150 group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-zinc-800/60 group-hover:bg-zinc-700/60 flex items-center justify-center transition-colors">
+                    <action.icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">{action.label}</span>
+                  <ChevronRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+
+          {/* Popular Services */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="rounded-2xl bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-sm overflow-hidden"
+          >
+            <div className="px-5 py-4 border-b border-zinc-800/40">
+              <h3 className="text-sm font-semibold text-zinc-100">Serviços Populares</h3>
+              <p className="text-[11px] text-zinc-600 mt-0.5">Catálogo ativo</p>
+            </div>
+            <div className="p-4">
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-10 bg-zinc-800/30 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              ) : services.length === 0 ? (
+                <p className="text-sm text-zinc-600 text-center py-6">Nenhum serviço</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {services.slice(0, 5).map((service) => (
+                    <div key={service.id} className="flex items-center gap-3 group">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${service.color}12` }}
+                      >
+                        <Scissors className="h-3.5 w-3.5" style={{ color: service.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-300 truncate">{service.name}</p>
+                        <p className="text-[11px] text-zinc-600">{service.duration_minutes} min</p>
+                      </div>
+                      <span className="text-sm font-semibold text-emerald-400 tabular-nums">
+                        R$ {(service.price_cents / 100).toFixed(0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
       {/* Modals */}
-      <NewServiceModal 
-        open={showNewService} 
-        onOpenChange={setShowNewService}
-        onSuccess={loadDashboardData}
-      />
-      <NewStaffModal 
-        open={showNewStaff} 
-        onOpenChange={setShowNewStaff}
-        onSuccess={loadDashboardData}
-      />
-      <BlockTimeModal 
-        open={showBlockTime} 
-        onOpenChange={setShowBlockTime}
-        onSuccess={loadDashboardData}
-      />
+      <NewServiceModal open={showNewService} onOpenChange={setShowNewService} onSuccess={loadDashboardData} />
+      <NewStaffModal open={showNewStaff} onOpenChange={setShowNewStaff} onSuccess={loadDashboardData} />
+      <BlockTimeModal open={showBlockTime} onOpenChange={setShowBlockTime} onSuccess={loadDashboardData} />
 
       {/* Booking Detail Modal */}
       <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
-        <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
+        <DialogContent className="sm:max-w-md bg-zinc-900/95 backdrop-blur-xl border-zinc-800/60 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-zinc-100">Detalhes do Agendamento</DialogTitle>
+            <DialogTitle className="text-zinc-100 text-base">Detalhes do Agendamento</DialogTitle>
           </DialogHeader>
           {selectedBooking && (
             <div className="space-y-4">
-              {/* Customer Info */}
-              <div className="p-4 rounded-xl bg-zinc-800/50 space-y-3">
+              {/* Customer */}
+              <div className="p-4 rounded-xl bg-zinc-800/30 space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-700/50 flex items-center justify-center">
                     <User className="h-5 w-5 text-zinc-400" />
                   </div>
                   <div>
                     <p className="font-semibold text-zinc-100">{selectedBooking.customer?.name}</p>
                     {selectedBooking.is_recurring && (
-                      <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-xs mt-0.5">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 mt-0.5 inline-block">
                         Cliente Fixo
-                      </Badge>
+                      </span>
                     )}
                   </div>
                 </div>
                 {selectedBooking.customer?.phone && (
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <Phone className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm text-zinc-500">
+                    <Phone className="h-3.5 w-3.5" />
                     <span>{selectedBooking.customer.phone}</span>
                   </div>
                 )}
               </div>
 
-              {/* Booking Info */}
+              {/* Details */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <Scissors className="h-4 w-4" />
-                    <span>Serviço</span>
-                  </div>
-                  <span className="text-sm font-medium text-zinc-100">{selectedBooking.service?.name}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <Clock className="h-4 w-4" />
-                    <span>Horário</span>
-                  </div>
-                  <span className="text-sm font-medium text-zinc-100">
-                    {format(new Date(selectedBooking.starts_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    {' — '}
-                    {format(new Date(selectedBooking.ends_at), "HH:mm")}
-                  </span>
-                </div>
-                {selectedBooking.staff?.name && (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                      <Users className="h-4 w-4" />
-                      <span>Profissional</span>
+                {[
+                  { icon: Scissors, label: "Serviço", value: selectedBooking.service?.name },
+                  { icon: Clock, label: "Horário", value: `${format(new Date(selectedBooking.starts_at), "dd/MM 'às' HH:mm", { locale: ptBR })} — ${format(new Date(selectedBooking.ends_at), "HH:mm")}` },
+                  ...(selectedBooking.staff?.name ? [{ icon: Users, label: "Profissional", value: selectedBooking.staff.name }] : []),
+                  { icon: TrendingUp, label: "Valor", value: `R$ ${((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}`, highlight: true },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                      <item.icon className="h-3.5 w-3.5" />
+                      <span>{item.label}</span>
                     </div>
-                    <span className="text-sm font-medium text-zinc-100">{selectedBooking.staff.name}</span>
+                    <span className={`text-sm font-medium ${(item as any).highlight ? 'text-emerald-400 font-bold' : 'text-zinc-200'}`}>
+                      {item.value}
+                    </span>
                   </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <TrendingUp className="h-4 w-4" />
-                    <span>Valor</span>
-                  </div>
-                  <span className="text-sm font-bold text-emerald-400">
-                    R$ {((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}
-                  </span>
-                </div>
+                ))}
                 {!selectedBooking.is_recurring && (
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                      <Calendar className="h-4 w-4" />
-                      <span>Status</span>
-                    </div>
-                    <Badge className={`text-xs ${
-                      selectedBooking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                      selectedBooking.status === 'completed' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
-                      selectedBooking.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
-                      'bg-zinc-700/50 text-zinc-400 border-zinc-600/30'
+                    <span className="text-sm text-zinc-500">Status</span>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      selectedBooking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400' :
+                      selectedBooking.status === 'completed' ? 'bg-blue-500/10 text-blue-400' :
+                      selectedBooking.status === 'cancelled' ? 'bg-red-500/10 text-red-400' :
+                      'bg-zinc-800/60 text-zinc-500'
                     }`}>
                       {selectedBooking.status === 'confirmed' ? 'Confirmado' :
                        selectedBooking.status === 'completed' ? 'Concluído' :
                        selectedBooking.status === 'cancelled' ? 'Cancelado' :
                        selectedBooking.status === 'no_show' ? 'Faltou' : selectedBooking.status}
-                    </Badge>
+                    </span>
                   </div>
                 )}
                 {selectedBooking.notes && (
-                  <div className="pt-2 border-t border-zinc-800">
-                    <p className="text-xs text-zinc-500 mb-1">Observações</p>
+                  <div className="pt-3 border-t border-zinc-800/40">
+                    <p className="text-[11px] text-zinc-600 mb-1">Observações</p>
                     <p className="text-sm text-zinc-300">{selectedBooking.notes}</p>
                   </div>
                 )}
