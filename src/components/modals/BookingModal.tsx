@@ -63,7 +63,7 @@ interface AvailableSlot {
 
 export function BookingModal() {
   const { currentTenant } = useTenant();
-  const { isOpen, closeBookingModal, initialStaffId, initialDate, initialTime } = useBookingModal();
+  const { isOpen, closeBookingModal, initialStaffId, initialDate, initialTime, customerPackageId, customerSubscriptionId, allowedServiceIds, preselectedCustomerId } = useBookingModal();
   const { toast } = useToast();
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
