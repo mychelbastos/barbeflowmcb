@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerBalanceTab } from "@/components/CustomerBalanceTab";
+import { CustomerPackagesTab } from "@/components/CustomerPackagesTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -714,6 +715,7 @@ export default function Customers() {
               <Tabs defaultValue="history" className="space-y-3">
                 <TabsList>
                   <TabsTrigger value="history">Histórico</TabsTrigger>
+                  <TabsTrigger value="packages">Pacotes</TabsTrigger>
                   <TabsTrigger value="balance">Saldo</TabsTrigger>
                 </TabsList>
 
@@ -765,6 +767,10 @@ export default function Customers() {
                       ))}
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="packages">
+                  <CustomerPackagesTab customerId={selectedCustomer.id} />
                 </TabsContent>
 
                 <TabsContent value="balance">
