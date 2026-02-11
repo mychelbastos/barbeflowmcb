@@ -366,15 +366,27 @@ serve(async (req) => {
       );
     }
 
-    // Find customer with matching normalized phone and name
+    // Find customer with matching normalized phone (phone is unique per tenant)
     const existingCustomer = allCustomers?.find(customer => 
-      normalizePhone(customer.phone) === normalizedPhone && 
-      customer.name.toLowerCase().trim() === customer_name.toLowerCase().trim()
+      normalizePhone(customer.phone) === normalizedPhone
     );
 
     if (existingCustomer) {
       customer_id = existingCustomer.id;
-      console.log('Using existing customer:', existingCustomer.name);
+      console.log('Using existing customer:', existingCustomer.name, '(phone match)');
+      
+      // Update name/email if provided and different
+      const updates: Record<string, string> = {};
+      if (customer_name.trim() && customer_name.trim() !== existingCustomer.name) {
+        updates.name = customer_name.trim();
+      }
+      if (customer_email) updates.email = customer_email;
+      if (customer_birthday) updates.birthday = customer_birthday;
+      
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('customers').update(updates).eq('id', customer_id);
+        console.log('Customer info updated:', updates);
+      }
     } else {
       // Create new customer
       console.log('Creating new customer:', customer_name);
@@ -384,7 +396,7 @@ serve(async (req) => {
           tenant_id,
           name: customer_name.trim(),
           phone: normalizedPhone,
-          email: customer_email,
+          email: customer_email || null,
           birthday: customer_birthday || null,
         })
         .select('id')
