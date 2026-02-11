@@ -508,6 +508,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          notes: string | null
           phone: string
           tenant_id: string
           updated_at: string
@@ -518,6 +519,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          notes?: string | null
           phone: string
           tenant_id: string
           updated_at?: string
@@ -528,6 +530,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          notes?: string | null
           phone?: string
           tenant_id?: string
           updated_at?: string

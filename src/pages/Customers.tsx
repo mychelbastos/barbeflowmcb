@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,8 @@ import {
   Clock,
   DollarSign,
   Edit,
-  Trash2
+  Trash2,
+  FileText
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -107,8 +109,8 @@ export default function Customers() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '' });
-  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '' });
+  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -248,7 +250,8 @@ export default function Customers() {
       name: customer.name,
       phone: customer.phone,
       email: customer.email || '',
-      birthday: customer.birthday || ''
+      birthday: customer.birthday || '',
+      notes: customer.notes || ''
     });
     setShowEditModal(true);
   };
@@ -259,10 +262,10 @@ export default function Customers() {
     const trimmedName = addForm.name.trim();
     const trimmedPhone = addForm.phone.trim();
     
-    if (!trimmedName || !trimmedPhone || !addForm.email.trim()) {
+    if (!trimmedName || !trimmedPhone) {
       toast({
         title: "Erro",
-        description: "Nome, telefone e e-mail são obrigatórios",
+        description: "Nome e telefone são obrigatórios",
         variant: "destructive",
       });
       return;
@@ -292,15 +295,16 @@ export default function Customers() {
           tenant_id: currentTenant.id,
           name: trimmedName,
           phone: normalizedPhone,
-          email: addForm.email.trim(),
+          email: addForm.email.trim() || null,
           birthday: addForm.birthday || null,
+          notes: addForm.notes.trim() || null,
         });
 
       if (error) throw error;
 
       toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso" });
       setShowAddModal(false);
-      setAddForm({ name: '', phone: '', email: '', birthday: '' });
+      setAddForm({ name: '', phone: '', email: '', birthday: '', notes: '' });
       loadCustomers();
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -356,6 +360,7 @@ export default function Customers() {
           phone: trimmedPhone,
           email: editForm.email.trim() || null,
           birthday: editForm.birthday || null,
+          notes: editForm.notes.trim() || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', customerToEdit.id);
@@ -781,11 +786,21 @@ export default function Customers() {
                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{selectedCustomer.phone}</span>
                     {selectedCustomer.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{selectedCustomer.email}</span>}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                   <p className="text-xs text-muted-foreground mt-0.5">
                     Cliente desde {format(parseISO(selectedCustomer.created_at), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
                 </div>
               </div>
+
+              {selectedCustomer.notes && (
+                <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-muted-foreground">Observações / Anamnese</p>
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{selectedCustomer.notes}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
@@ -909,7 +924,7 @@ export default function Customers() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email *</Label>
+              <Label htmlFor="edit-email">Email</Label>
               <Input
                 id="edit-email"
                 type="email"
@@ -926,6 +941,18 @@ export default function Customers() {
                 type="date"
                 value={editForm.birthday}
                 onChange={(e) => setEditForm(prev => ({ ...prev, birthday: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">Observações / Anamnese</Label>
+              <Textarea
+                id="edit-notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Alergias, preferências, informações relevantes..."
+                className="resize-none"
+                rows={3}
               />
             </div>
           </div>
@@ -996,7 +1023,7 @@ export default function Customers() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="add-email">Email *</Label>
+              <Label htmlFor="add-email">Email</Label>
               <Input
                 id="add-email"
                 type="email"
@@ -1013,6 +1040,18 @@ export default function Customers() {
                 type="date"
                 value={addForm.birthday}
                 onChange={(e) => setAddForm(prev => ({ ...prev, birthday: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-notes">Observações / Anamnese</Label>
+              <Textarea
+                id="add-notes"
+                value={addForm.notes}
+                onChange={(e) => setAddForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Alergias, preferências, informações relevantes..."
+                className="resize-none"
+                rows={3}
               />
             </div>
           </div>
