@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Select,
@@ -617,26 +618,18 @@ const Products = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Valor de Compra (R$) *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <label className="block text-sm text-zinc-400 mb-2">Valor de Compra *</label>
+                <CurrencyInput
                   value={productForm.purchase_price}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, purchase_price: e.target.value }))}
-                  placeholder="0.00"
+                  onChange={(v) => setProductForm(prev => ({ ...prev, purchase_price: v }))}
                   className="bg-zinc-800/50 border-zinc-700"
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Valor de Venda (R$) *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <label className="block text-sm text-zinc-400 mb-2">Valor de Venda *</label>
+                <CurrencyInput
                   value={productForm.sale_price}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, sale_price: e.target.value }))}
-                  placeholder="0.00"
+                  onChange={(v) => setProductForm(prev => ({ ...prev, sale_price: v }))}
                   className="bg-zinc-800/50 border-zinc-700"
                 />
               </div>

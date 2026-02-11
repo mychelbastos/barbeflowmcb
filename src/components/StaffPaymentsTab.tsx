@@ -5,6 +5,7 @@ import { useDateRange } from "@/contexts/DateRangeContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -228,7 +229,7 @@ export function StaffPaymentsTab() {
             </div>
             <div className="space-y-2">
               <Label>Valor (R$)</Label>
-              <Input type="number" step="0.01" min="0.01" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} />
+              <CurrencyInput value={formData.amount} onChange={(v) => setFormData(prev => ({ ...prev, amount: v }))} />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

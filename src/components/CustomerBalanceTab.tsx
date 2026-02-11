@@ -4,6 +4,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,7 +160,7 @@ export function CustomerBalanceTab({ customerId }: Props) {
             </div>
             <div className="space-y-2">
               <Label>Valor (R$)</Label>
-              <Input type="number" step="0.01" min="0.01" placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <CurrencyInput value={amount} onChange={setAmount} />
             </div>
             <div className="space-y-2">
               <Label>Descrição (opcional)</Label>

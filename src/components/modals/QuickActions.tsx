@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -201,14 +202,9 @@ export function NewServiceModal({
                   <FormItem>
                     <FormLabel>Preço (R$) *</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                      <CurrencyInput
                         value={field.value ? (field.value / 100).toFixed(2) : ""}
+                        onChange={(v) => field.onChange(Math.round(parseFloat(v || "0") * 100))}
                       />
                     </FormControl>
                     <FormMessage />

@@ -4,6 +4,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -318,12 +319,9 @@ export function ServicePackagesTab() {
 
             <div className="space-y-2">
               <Label>Preço total (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
+              <CurrencyInput
                 value={formData.price}
-                onChange={(e) => setFormData(p => ({ ...p, price: e.target.value }))}
+                onChange={(v) => setFormData(p => ({ ...p, price: v }))}
               />
             </div>
           </div>

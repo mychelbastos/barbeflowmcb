@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -523,14 +524,9 @@ export default function Services() {
                     <FormItem>
                       <FormLabel>Preço (R$) *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                        <CurrencyInput
                           value={field.value ? (field.value / 100).toFixed(2) : ""}
+                          onChange={(v) => field.onChange(Math.round(parseFloat(v || "0") * 100))}
                         />
                       </FormControl>
                       <FormMessage />
