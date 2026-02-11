@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
 import { CustomerBookingsModal } from "@/components/modals/CustomerBookingsModal";
+import { Badge } from "@/components/ui/badge";
 import { 
   Calendar, 
   Clock, 
@@ -23,7 +24,8 @@ import {
   Sparkles,
   CreditCard,
   Banknote,
-  CalendarCheck
+  CalendarCheck,
+  Package
 } from "lucide-react";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import { formatInTimeZone } from "date-fns-tz";
@@ -31,6 +33,7 @@ import { ptBR } from "date-fns/locale";
 import type { DateValue } from "react-aria-components";
 
 type PaymentMethod = 'on_site' | 'online' | null;
+type BookingTab = 'services' | 'packages';
 
 const BookingPublic = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -70,6 +73,13 @@ const BookingPublic = () => {
   
   // Customer bookings modal
   const [showCustomerBookings, setShowCustomerBookings] = useState(false);
+
+  // Packages
+  const [packages, setPackages] = useState<any[]>([]);
+  const [bookingTab, setBookingTab] = useState<BookingTab>('services');
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [activeCustomerPackage, setActiveCustomerPackage] = useState<any>(null);
+  const [packageCoveredService, setPackageCoveredService] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -163,6 +173,28 @@ const BookingPublic = () => {
 
       setServices(servicesRes.data || []);
       setStaff(staffRes.data || []);
+
+      // Load active packages with their services
+      const { data: pkgsData } = await supabase
+        .from("service_packages")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .eq("active", true)
+        .order("name");
+
+      if (pkgsData && pkgsData.length > 0) {
+        const { data: pkgSvcs } = await supabase
+          .from("package_services")
+          .select("*, service:services(name, duration_minutes, price_cents, photo_url)")
+          .in("package_id", pkgsData.map(p => p.id));
+
+        for (const pkg of pkgsData) {
+          (pkg as any).package_services = (pkgSvcs || []).filter((ps: any) => ps.package_id === pkg.id);
+        }
+        setPackages(pkgsData);
+      } else {
+        setPackages([]);
+      }
     } catch (error) {
       console.error('Error loading tenant data:', error);
       toast({
@@ -228,6 +260,9 @@ const BookingPublic = () => {
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId);
+    setSelectedPackage(null);
+    setActiveCustomerPackage(null);
+    setPackageCoveredService(false);
     setSelectedTime(null);
     setAvailableSlots([]);
     setOccupiedSlots([]);
@@ -240,6 +275,104 @@ const BookingPublic = () => {
     setSelectedCalendarDate(parseDate(tomorrowStr));
     
     setStep(2);
+  };
+
+  const handlePackageSelect = (pkg: any) => {
+    // When buying a package, we still need to select the first service to schedule
+    // The package will be purchased and linked to the customer
+    setSelectedPackage(pkg);
+    const firstService = pkg.package_services?.[0];
+    if (firstService) {
+      setSelectedService(firstService.service_id);
+    }
+    setSelectedTime(null);
+    setAvailableSlots([]);
+    setOccupiedSlots([]);
+    setAllTimeSlots([]);
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    setSelectedDate(tomorrowStr);
+    setSelectedCalendarDate(parseDate(tomorrowStr));
+
+    setStep(2);
+  };
+
+  // Check if customer has an active package covering the selected service
+  const checkActivePackage = async (phone: string) => {
+    if (!tenant || !selectedService) return;
+    
+    const normalizedPhone = phone.replace(/\D/g, '');
+    if (normalizedPhone.length < 10) return;
+
+    try {
+      // Find customer by phone
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('tenant_id', tenant.id);
+
+      const customer = customers?.find(c => {
+        // We need to check phone - but we only have id here
+        return true; // will refine below
+      });
+
+      // Get all customers matching this phone for this tenant
+      const { data: matchingCustomers } = await supabase
+        .from('customers')
+        .select('id, phone')
+        .eq('tenant_id', tenant.id);
+
+      const matchedCustomer = matchingCustomers?.find(c => 
+        c.phone.replace(/\D/g, '') === normalizedPhone
+      );
+
+      if (!matchedCustomer) {
+        setActiveCustomerPackage(null);
+        setPackageCoveredService(false);
+        return;
+      }
+
+      // Check for active packages with remaining sessions for this service
+      const { data: custPkgs } = await supabase
+        .from('customer_packages')
+        .select('*, package:service_packages(*)')
+        .eq('customer_id', matchedCustomer.id)
+        .eq('tenant_id', tenant.id)
+        .eq('status', 'active')
+        .eq('payment_status', 'confirmed');
+
+      if (!custPkgs || custPkgs.length === 0) {
+        setActiveCustomerPackage(null);
+        setPackageCoveredService(false);
+        return;
+      }
+
+      // Check customer_package_services for remaining sessions
+      for (const cp of custPkgs) {
+        const { data: cpServices } = await supabase
+          .from('customer_package_services')
+          .select('*')
+          .eq('customer_package_id', cp.id)
+          .eq('service_id', selectedService);
+
+        const cpService = cpServices?.[0];
+        if (cpService && cpService.sessions_used < cpService.sessions_total) {
+          setActiveCustomerPackage({
+            ...cp,
+            serviceUsage: cpService,
+          });
+          setPackageCoveredService(true);
+          return;
+        }
+      }
+
+      setActiveCustomerPackage(null);
+      setPackageCoveredService(false);
+    } catch (err) {
+      console.error('Error checking active package:', err);
+    }
   };
 
   const handleStaffSelect = (staffId: string) => {
@@ -318,6 +451,10 @@ const BookingPublic = () => {
     setOccupiedSlots([]);
     setAllTimeSlots([]);
     setPaymentMethod(null);
+    setSelectedPackage(null);
+    setActiveCustomerPackage(null);
+    setPackageCoveredService(false);
+    setBookingTab('services');
     setStep(1);
   };
 
@@ -339,6 +476,9 @@ const BookingPublic = () => {
       const [hours, minutes] = selectedTime.split(':');
       const [year, month, day] = selectedDate.split('-').map(Number);
       const startsAt = new Date(year, month - 1, day, parseInt(hours), parseInt(minutes), 0, 0);
+
+      // If covered by active package, skip payment entirely
+      const effectivePaymentMethod = packageCoveredService ? 'onsite' : (paymentMethod === 'online' ? 'online' : 'onsite');
       
       const { data, error } = await supabase.functions.invoke('create-booking', {
         body: {
@@ -350,7 +490,7 @@ const BookingPublic = () => {
           customer_email: customerEmail || undefined,
           starts_at: startsAt.toISOString(),
           notes: notes || undefined,
-          payment_method: paymentMethod === 'online' ? 'online' : 'onsite',
+          payment_method: effectivePaymentMethod,
         },
       });
 
@@ -359,6 +499,80 @@ const BookingPublic = () => {
       if (data.success) {
         const booking = data.booking;
         setCreatedBooking(booking);
+
+        // If covered by package, decrement session and skip payment
+        if (packageCoveredService && activeCustomerPackage) {
+          try {
+            await supabase
+              .from('customer_package_services')
+              .update({ sessions_used: activeCustomerPackage.serviceUsage.sessions_used + 1 })
+              .eq('id', activeCustomerPackage.serviceUsage.id);
+
+            // Check if all services are fully used
+            const { data: allUsage } = await supabase
+              .from('customer_package_services')
+              .select('sessions_total, sessions_used')
+              .eq('customer_package_id', activeCustomerPackage.id);
+
+            const allUsed = allUsage?.every(u => u.sessions_used >= u.sessions_total);
+            if (allUsed) {
+              await supabase
+                .from('customer_packages')
+                .update({ status: 'completed' })
+                .eq('id', activeCustomerPackage.id);
+            }
+          } catch (pkgErr) {
+            console.error('Error updating package usage:', pkgErr);
+          }
+
+          setStep(6);
+          toast({ title: "Agendamento confirmado!", description: "Sessão do pacote utilizada." });
+          return;
+        }
+
+        // If buying a package, create the customer_package record
+        if (selectedPackage) {
+          try {
+            const normalizedPhone = customerPhone.replace(/\D/g, '');
+            // Find customer
+            const { data: allCusts } = await supabase
+              .from('customers')
+              .select('id, phone')
+              .eq('tenant_id', tenant.id);
+            
+            const matchedCust = allCusts?.find(c => c.phone.replace(/\D/g, '') === normalizedPhone);
+            
+            if (matchedCust) {
+              const paymentSt = paymentMethod === 'online' ? 'pending' : 'pending';
+              const { data: newCp } = await supabase
+                .from('customer_packages')
+                .insert({
+                  customer_id: matchedCust.id,
+                  package_id: selectedPackage.id,
+                  tenant_id: tenant.id,
+                  sessions_total: selectedPackage.total_sessions || 0,
+                  sessions_used: 0,
+                  status: 'active',
+                  payment_status: paymentSt,
+                })
+                .select()
+                .single();
+
+              // Create per-service tracking
+              if (newCp && selectedPackage.package_services) {
+                const svcRows = selectedPackage.package_services.map((ps: any) => ({
+                  customer_package_id: newCp.id,
+                  service_id: ps.service_id,
+                  sessions_total: ps.sessions_count,
+                  sessions_used: 0,
+                }));
+                await supabase.from('customer_package_services').insert(svcRows);
+              }
+            }
+          } catch (pkgErr) {
+            console.error('Error creating customer package:', pkgErr);
+          }
+        }
         
         // If user chose online payment, go to checkout step (transparent)
         if (paymentMethod === 'online') {
@@ -536,7 +750,7 @@ END:VCALENDAR`;
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500 text-sm">Valor</span>
                 <span className="font-semibold text-emerald-400">
-                  R$ {((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}
+                  {packageCoveredService ? 'Incluso no pacote' : `R$ ${((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}`}
                 </span>
               </div>
             </div>
@@ -609,20 +823,47 @@ END:VCALENDAR`;
       <div className="max-w-lg mx-auto px-4 py-8">
         <StepIndicator />
 
-        {/* Step 1: Select Service */}
+        {/* Step 1: Select Service or Package */}
         {step === 1 && (
           <div className="animate-in fade-in duration-300">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <h2 className="text-xl font-semibold mb-2">Escolha o serviço</h2>
               <p className="text-zinc-500 text-sm">Selecione o que você precisa</p>
             </div>
+
+            {/* Tabs - only show when packages exist */}
+            {packages.length > 0 && (
+              <div className="flex bg-zinc-900 rounded-xl p-1 mb-6">
+                <button
+                  onClick={() => setBookingTab('services')}
+                  className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                    bookingTab === 'services'
+                      ? 'bg-zinc-800 text-white shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  Serviços
+                </button>
+                <button
+                  onClick={() => setBookingTab('packages')}
+                  className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                    bookingTab === 'packages'
+                      ? 'bg-zinc-800 text-white shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Package className="h-4 w-4 inline mr-1" />
+                  Pacotes
+                </button>
+              </div>
+            )}
             
             {loading ? (
               <div className="flex flex-col items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-zinc-500 mb-4" />
-                <p className="text-zinc-500">Carregando serviços...</p>
+                <p className="text-zinc-500">Carregando...</p>
               </div>
-            ) : (
+            ) : bookingTab === 'services' ? (
               <div className="space-y-3">
                 {services.map((service) => (
                   <button
@@ -631,7 +872,6 @@ END:VCALENDAR`;
                     className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
                   >
                     <div className="flex items-start gap-4">
-                      {/* Service Image */}
                       <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-zinc-800">
                         {service.photo_url ? (
                           <img 
@@ -645,7 +885,6 @@ END:VCALENDAR`;
                           </div>
                         )}
                       </div>
-                      
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="font-medium mb-1 group-hover:text-white transition-colors">{service.name}</h3>
@@ -659,9 +898,41 @@ END:VCALENDAR`;
                             <Clock className="h-3 w-3" />
                             {service.duration_minutes}min
                           </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              /* Packages Tab */
+              <div className="space-y-3">
+                {packages.map((pkg: any) => (
+                  <button
+                    key={pkg.id}
+                    onClick={() => handlePackageSelect(pkg)}
+                    className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Package className="h-4 w-4 text-emerald-400 shrink-0" />
+                          <h3 className="font-medium group-hover:text-white transition-colors">{pkg.name}</h3>
+                        </div>
+                        <div className="space-y-1">
+                          {(pkg.package_services || []).map((ps: any) => (
+                            <div key={ps.id || ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shrink-0" />
+                              <span className="truncate">{ps.service?.name}</span>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{ps.sessions_count}x</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <span className="font-semibold text-emerald-400 whitespace-nowrap text-lg">
+                        R$ {(pkg.price_cents / 100).toFixed(0)}
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -894,7 +1165,10 @@ END:VCALENDAR`;
                   <span className="text-zinc-400">{selectedTime}</span>
                 </div>
                 <span className="text-emerald-400 font-semibold">
-                  R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}
+                  {packageCoveredService ? 'Pacote' : selectedPackage 
+                    ? `R$ ${(selectedPackage.price_cents / 100).toFixed(0)}`
+                    : `R$ ${((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}`
+                  }
                 </span>
               </div>
               {paymentMethod && (
@@ -932,11 +1206,32 @@ END:VCALENDAR`;
                   type="tel"
                   placeholder="(11) 99999-9999"
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  onChange={(e) => {
+                    setCustomerPhone(e.target.value);
+                    // Check for active package when phone has enough digits
+                    const digits = e.target.value.replace(/\D/g, '');
+                    if (digits.length >= 10) {
+                      checkActivePackage(e.target.value);
+                    }
+                  }}
                   required
                   className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
                 />
               </div>
+
+              {/* Active package detected banner */}
+              {packageCoveredService && activeCustomerPackage && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Check className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-400">Pacote ativo detectado!</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Sessões restantes: {activeCustomerPackage.serviceUsage.sessions_total - activeCustomerPackage.serviceUsage.sessions_used}. 
+                    O pagamento será dispensado.
+                  </p>
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm text-zinc-400 mb-2">E-mail <span className="text-zinc-600">(opcional)</span></label>

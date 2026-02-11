@@ -316,6 +316,48 @@ export type Database = {
           },
         ]
       }
+      customer_package_services: {
+        Row: {
+          created_at: string
+          customer_package_id: string
+          id: string
+          service_id: string
+          sessions_total: number
+          sessions_used: number
+        }
+        Insert: {
+          created_at?: string
+          customer_package_id: string
+          id?: string
+          service_id: string
+          sessions_total?: number
+          sessions_used?: number
+        }
+        Update: {
+          created_at?: string
+          customer_package_id?: string
+          id?: string
+          service_id?: string
+          sessions_total?: number
+          sessions_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_package_services_customer_package_id_fkey"
+            columns: ["customer_package_id"]
+            isOneToOne: false
+            referencedRelation: "customer_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_package_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_packages: {
         Row: {
           created_at: string
@@ -323,6 +365,7 @@ export type Database = {
           expires_at: string | null
           id: string
           package_id: string
+          payment_status: string
           purchased_at: string
           sessions_total: number
           sessions_used: number
@@ -335,6 +378,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           package_id: string
+          payment_status?: string
           purchased_at?: string
           sessions_total: number
           sessions_used?: number
@@ -347,6 +391,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           package_id?: string
+          payment_status?: string
           purchased_at?: string
           sessions_total?: number
           sessions_used?: number
@@ -455,6 +500,45 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: true
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_services: {
+        Row: {
+          created_at: string
+          id: string
+          package_id: string
+          service_id: string
+          sessions_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_id: string
+          service_id: string
+          sessions_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_id?: string
+          service_id?: string
+          sessions_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_services_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "service_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -797,7 +881,7 @@ export type Database = {
           id: string
           name: string
           price_cents: number
-          service_id: string
+          service_id: string | null
           tenant_id: string
           total_sessions: number
           updated_at: string
@@ -808,9 +892,9 @@ export type Database = {
           id?: string
           name: string
           price_cents: number
-          service_id: string
+          service_id?: string | null
           tenant_id: string
-          total_sessions: number
+          total_sessions?: number
           updated_at?: string
         }
         Update: {
@@ -819,7 +903,7 @@ export type Database = {
           id?: string
           name?: string
           price_cents?: number
-          service_id?: string
+          service_id?: string | null
           tenant_id?: string
           total_sessions?: number
           updated_at?: string
