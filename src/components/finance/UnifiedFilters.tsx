@@ -25,9 +25,9 @@ export function UnifiedFilters({
   hasData,
 }: UnifiedFiltersProps) {
   return (
-    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4">
+    <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-xl p-4 ring-1 ring-white/[0.03]">
       <div className="flex flex-col md:flex-row md:items-end gap-3 md:gap-4">
-        {/* Date Range - takes most space */}
+        {/* Date Range */}
         <div className="flex-1 min-w-0">
           <DateRangeSelector showTitle={false} className="border-0 bg-transparent p-0" />
         </div>
@@ -36,11 +36,11 @@ export function UnifiedFilters({
         {staff.length > 0 && (
           <div className="w-full md:w-48 flex-shrink-0">
             <div className="flex items-center gap-2 mb-1.5">
-              <Users className="h-3.5 w-3.5 text-zinc-500" />
-              <span className="text-xs text-zinc-400">Profissional</span>
+              <Users className="h-3.5 w-3.5 text-muted-foreground/50" />
+              <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground/60">Profissional</span>
             </div>
             <Select value={staffFilter} onValueChange={onStaffFilterChange}>
-              <SelectTrigger className="h-10 bg-zinc-800/50 border-zinc-700/50 text-zinc-100">
+              <SelectTrigger className="h-10 bg-muted/30 border-border/50 text-foreground hover:bg-muted/50 transition-colors">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -61,7 +61,7 @@ export function UnifiedFilters({
           size="sm"
           onClick={onExport}
           disabled={!hasData}
-          className="flex-shrink-0 h-10 border-zinc-700/50 text-zinc-300 hover:bg-zinc-800"
+          className="flex-shrink-0 h-10 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all"
         >
           <Download className="h-4 w-4 mr-2" />
           Exportar CSV

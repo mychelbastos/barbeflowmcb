@@ -33,31 +33,42 @@ export function PeriodComparisonChart({
   if (chartData.length === 0) return null;
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-border/50 bg-card/80 backdrop-blur-xl">
       <CardHeader className="pb-2 md:pb-4">
-        <CardTitle className="text-base md:text-lg flex items-center gap-2">
-          <div className="w-7 h-7 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-            <GitCompareArrows className="h-4 w-4 text-emerald-400" />
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+            <GitCompareArrows className="h-4 w-4 text-primary" />
           </div>
-          Comparativo com Período Anterior
-        </CardTitle>
-        <CardDescription className="text-xs md:text-sm">
-          Faturamento diário atual vs período equivalente anterior
-        </CardDescription>
+          <div>
+            <CardTitle className="text-base md:text-lg tracking-tight">
+              Comparativo com Período Anterior
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground/60">
+              Faturamento diário atual vs período equivalente anterior
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="pl-0 pr-2 md:pl-2 md:pr-4">
         <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 4% 16%)" strokeOpacity={0.5} />
             <XAxis
               dataKey="day"
-              tick={{ fontSize: 10, fill: "#71717a" }}
-              label={{ value: "Dia", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "#71717a" }}
+              tick={{ fontSize: 10, fill: "hsl(240 5% 45%)" }}
+              label={{ value: "Dia", position: "insideBottomRight", offset: -5, fontSize: 10, fill: "hsl(240 5% 45%)" }}
+              axisLine={{ stroke: "hsl(240 4% 16%)" }}
             />
-            <YAxis tick={{ fontSize: 10, fill: "#71717a" }} width={50} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(240 5% 45%)" }} width={50} axisLine={{ stroke: "hsl(240 4% 16%)" }} />
             <Tooltip
-              contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: 8 }}
-              labelStyle={{ color: "#a1a1aa" }}
+              contentStyle={{
+                backgroundColor: "hsl(240 5% 10%)",
+                border: "1px solid hsl(240 4% 20%)",
+                borderRadius: 12,
+                boxShadow: "0 8px 32px -8px hsl(0 0% 0% / 0.5)",
+                padding: "10px 14px",
+              }}
+              labelStyle={{ color: "hsl(240 5% 65%)", fontSize: 11 }}
               formatter={(value: number | null, name: string) => {
                 if (value === null) return ["-", name];
                 return [`R$ ${value.toFixed(2)}`, name === "current" ? "Atual" : "Anterior"];
@@ -66,13 +77,13 @@ export function PeriodComparisonChart({
             />
             <Legend
               formatter={(value) => (value === "current" ? "Período Atual" : "Período Anterior")}
-              wrapperStyle={{ fontSize: 12 }}
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
             />
             <Line
               type="monotone"
               dataKey="current"
               stroke="#10b981"
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
               name="current"
               connectNulls
@@ -80,12 +91,13 @@ export function PeriodComparisonChart({
             <Line
               type="monotone"
               dataKey="previous"
-              stroke="#71717a"
+              stroke="hsl(240 5% 45%)"
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}
               name="previous"
               connectNulls
+              strokeOpacity={0.6}
             />
           </LineChart>
         </ResponsiveContainer>
