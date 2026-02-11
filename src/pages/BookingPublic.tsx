@@ -1325,16 +1325,8 @@ END:VCALENDAR`;
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">Observações <span className="text-zinc-600">(opcional)</span></label>
-                <Textarea
-                  placeholder="Alguma observação?"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600 resize-none"
-                />
-              </div>
+
+
               
               <div className="pt-4 space-y-3">
                 <Button 
