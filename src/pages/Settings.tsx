@@ -102,7 +102,6 @@ export default function Settings() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
   
   // Mercado Pago states
   const [mpConnected, setMpConnected] = useState(false);
@@ -291,74 +290,61 @@ export default function Settings() {
     });
   };
 
-  const handleImageUpload = async (
-    file: File,
-    type: 'logo' | 'cover'
-  ) => {
+  const handleLogoUpload = async (file: File) => {
     if (!currentTenant) return;
 
-    const setUploading = type === 'logo' ? setUploadingLogo : setUploadingCover;
-    const setUrl = type === 'logo' ? setLogoUrl : setCoverUrl;
-    const columnName = type === 'logo' ? 'logo_url' : 'cover_url';
-
     try {
-      setUploading(true);
+      setUploadingLogo(true);
 
       // Create unique file name
       const fileExt = file.name.split('.').pop();
-      const fileName = `${currentTenant.id}/${type}-${Date.now()}.${fileExt}`;
+      const fileName = `${currentTenant.id}/logo-${Date.now()}.${fileExt}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('tenant-media')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from('tenant-media')
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData.publicUrl;
 
-      // Update tenant record
       const { error: updateError } = await supabase
         .from('tenants')
-        .update({ [columnName]: publicUrl })
+        .update({ logo_url: publicUrl })
         .eq('id', currentTenant.id);
 
       if (updateError) throw updateError;
 
-      setUrl(publicUrl);
+      setLogoUrl(publicUrl);
 
       toast({
-        title: type === 'logo' ? "Logo atualizado" : "Capa atualizada",
+        title: "Logo atualizado",
         description: "A imagem foi salva com sucesso.",
       });
 
-      // Auto-generate cover when logo is uploaded and no cover exists
-      if (type === 'logo' && !coverUrl) {
-        toast({
-          title: "Gerando capa...",
-          description: "Criando uma capa automaticamente com sua logo.",
+      // Auto-generate cover from logo
+      toast({
+        title: "Gerando capa...",
+        description: "Criando uma capa automaticamente com sua logo.",
+      });
+      try {
+        const { data: coverData, error: coverError } = await supabase.functions.invoke('generate-cover', {
+          body: { tenant_id: currentTenant.id, logo_url: publicUrl }
         });
-        try {
-          const { data: coverData, error: coverError } = await supabase.functions.invoke('generate-cover', {
-            body: { tenant_id: currentTenant.id, logo_url: publicUrl }
+        if (coverError) throw coverError;
+        if (coverData?.cover_url) {
+          setCoverUrl(coverData.cover_url);
+          toast({
+            title: "Capa gerada!",
+            description: "Uma capa foi criada automaticamente com sua logo.",
           });
-          if (coverError) throw coverError;
-          if (coverData?.cover_url) {
-            setCoverUrl(coverData.cover_url);
-            toast({
-              title: "Capa gerada!",
-              description: "Uma capa foi criada automaticamente com sua logo.",
-            });
-          }
-        } catch (coverErr: any) {
-          console.error('Cover generation error:', coverErr);
-          // Non-blocking: just log the error
         }
+      } catch (coverErr: any) {
+        console.error('Cover generation error:', coverErr);
       }
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -368,18 +354,14 @@ export default function Settings() {
         variant: "destructive",
       });
     } finally {
-      setUploading(false);
+      setUploadingLogo(false);
     }
   };
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    type: 'logo' | 'cover'
-  ) => {
+  const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Arquivo inválido",
@@ -389,7 +371,6 @@ export default function Settings() {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Arquivo muito grande",
@@ -399,7 +380,7 @@ export default function Settings() {
       return;
     }
 
-    handleImageUpload(file, type);
+    handleLogoUpload(file);
   };
 
   const handleTenantSubmit = async (values: TenantFormData) => {
@@ -609,10 +590,13 @@ export default function Settings() {
 
                   <div>
                     <h3 className="text-lg font-medium mb-4">Mídia</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
                       {/* Logo Upload */}
                       <div>
                         <Label>Logo</Label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          A capa será gerada automaticamente a partir da logo.
+                        </p>
                         <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 transition-colors hover:border-emerald-500/50">
                           {logoUrl ? (
                             <div className="relative group">
@@ -623,13 +607,21 @@ export default function Settings() {
                                   className="w-full h-full object-cover"
                                 />
                               </div>
+                              {coverUrl && (
+                                <div className="mt-3">
+                                  <Label className="text-xs text-muted-foreground">Capa gerada</Label>
+                                  <div className="w-full h-20 rounded-lg overflow-hidden bg-zinc-800 mt-1">
+                                    <img src={coverUrl} alt="Capa" className="w-full h-full object-cover" />
+                                  </div>
+                                </div>
+                              )}
                               <div className="mt-3 text-center">
                                 <label className="cursor-pointer">
                                   <input
                                     type="file"
                                     accept="image/*"
                                     className="hidden"
-                                    onChange={(e) => handleFileChange(e, 'logo')}
+                                    onChange={(e) => handleLogoFileChange(e)}
                                     disabled={uploadingLogo}
                                   />
                                   <Button 
@@ -665,7 +657,7 @@ export default function Settings() {
                                   type="file"
                                   accept="image/*"
                                   className="hidden"
-                                  onChange={(e) => handleFileChange(e, 'logo')}
+                                  onChange={(e) => handleLogoFileChange(e)}
                                   disabled={uploadingLogo}
                                 />
                                 <Button 
@@ -693,95 +685,6 @@ export default function Settings() {
                               </label>
                               <p className="text-xs text-muted-foreground mt-2">
                                 Recomendado: 200x200px
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Cover Upload */}
-                      <div>
-                        <Label>Capa</Label>
-                        <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 transition-colors hover:border-emerald-500/50">
-                          {coverUrl ? (
-                            <div className="relative group">
-                              <div className="w-full h-24 rounded-lg overflow-hidden bg-zinc-800">
-                                <img 
-                                  src={coverUrl} 
-                                  alt="Capa" 
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="mt-3 text-center">
-                                <label className="cursor-pointer">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => handleFileChange(e, 'cover')}
-                                    disabled={uploadingCover}
-                                  />
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    type="button"
-                                    disabled={uploadingCover}
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      (e.currentTarget.previousElementSibling as HTMLInputElement)?.click();
-                                    }}
-                                  >
-                                    {uploadingCover ? (
-                                      <>
-                                        <span className="animate-spin mr-2">⏳</span>
-                                        Enviando...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Upload className="h-4 w-4 mr-2" />
-                                        Alterar Capa
-                                      </>
-                                    )}
-                                  </Button>
-                                </label>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-4">
-                              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                              <label className="cursor-pointer">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => handleFileChange(e, 'cover')}
-                                  disabled={uploadingCover}
-                                />
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  type="button"
-                                  disabled={uploadingCover}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    (e.currentTarget.previousElementSibling as HTMLInputElement)?.click();
-                                  }}
-                                >
-                                  {uploadingCover ? (
-                                    <>
-                                      <span className="animate-spin mr-2">⏳</span>
-                                      Enviando...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Upload className="h-4 w-4 mr-2" />
-                                      Upload Capa
-                                    </>
-                                  )}
-                                </Button>
-                              </label>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Recomendado: 1200x400px
                               </p>
                             </div>
                           )}

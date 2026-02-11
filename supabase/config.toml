@@ -1,1 +1,4 @@
 project_id = "iagzodcwctvydmgrwjsy"
+
+[functions.generate-cover]
+verify_jwt = false
