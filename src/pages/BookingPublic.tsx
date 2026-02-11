@@ -60,6 +60,7 @@ const BookingPublic = () => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerBirthday, setCustomerBirthday] = useState('');
   const [notes, setNotes] = useState('');
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   const [customerFound, setCustomerFound] = useState(false);
@@ -555,6 +556,7 @@ const BookingPublic = () => {
     setCustomerName('');
     setCustomerPhone('');
     setCustomerEmail('');
+    setCustomerBirthday('');
     setNotes('');
     setCreatedBooking(null);
     setAvailableSlots([]);
@@ -596,6 +598,7 @@ const BookingPublic = () => {
       if (data?.found && data.customer) {
         setCustomerName(data.customer.name);
         setCustomerEmail(data.customer.email || '');
+        setCustomerBirthday(data.customer.birthday || '');
         setCustomerFound(true);
       } else {
         setCustomerFound(false);
@@ -610,7 +613,7 @@ const BookingPublic = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!tenant || !selectedService || !selectedDate || !selectedTime || !customerName || !customerPhone) {
+    if (!tenant || !selectedService || !selectedDate || !selectedTime || !customerName || !customerPhone || !customerEmail) {
       toast({
         title: "Dados incompletos",
         description: "Preencha todos os campos obrigatórios.",
@@ -636,7 +639,8 @@ const BookingPublic = () => {
           staff_id: selectedStaff,
           customer_name: customerName,
           customer_phone: customerPhone,
-          customer_email: customerEmail || undefined,
+          customer_email: customerEmail,
+          customer_birthday: customerBirthday || undefined,
           starts_at: startsAt.toISOString(),
           notes: notes || undefined,
           payment_method: effectivePaymentMethod,
@@ -1410,9 +1414,9 @@ END:VCALENDAR`;
                       const formatted = formatPhoneInput(e.target.value);
                       setCustomerPhone(formatted);
                       setCustomerFound(false);
-                      // Clear previous customer data when phone changes
                       setCustomerName('');
                       setCustomerEmail('');
+                      setCustomerBirthday('');
                       const digits = formatted.replace(/\D/g, '');
                       if (digits.length >= 10) {
                         lookupCustomerByPhone(formatted);
@@ -1514,6 +1518,17 @@ END:VCALENDAR`;
                       className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">Data de Nascimento *</label>
+                    <Input
+                      type="date"
+                      value={customerBirthday}
+                      onChange={(e) => setCustomerBirthday(e.target.value)}
+                      required
+                      className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1523,7 +1538,7 @@ END:VCALENDAR`;
               <div className="pt-4 space-y-3">
                 <Button 
                   type="submit" 
-                  disabled={submitting || !customerName || !customerPhone || (!customerFound && !customerEmail)}
+                  disabled={submitting || !customerName || !customerPhone || !customerEmail || (!customerFound && !customerBirthday)}
                   className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50"
                 >
                   {submitting ? (

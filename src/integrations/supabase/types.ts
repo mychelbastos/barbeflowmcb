@@ -503,6 +503,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          birthday: string | null
           created_at: string
           email: string | null
           id: string
@@ -512,6 +513,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          birthday?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -521,6 +523,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          birthday?: string | null
           created_at?: string
           email?: string | null
           id?: string

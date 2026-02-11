@@ -101,9 +101,11 @@ export default function Customers() {
   // Edit/Delete states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '' });
+  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -232,9 +234,67 @@ export default function Customers() {
     setEditForm({
       name: customer.name,
       phone: customer.phone,
-      email: customer.email || ''
+      email: customer.email || '',
+      birthday: customer.birthday || ''
     });
     setShowEditModal(true);
+  };
+
+  const handleAddCustomer = async () => {
+    if (!currentTenant) return;
+    
+    const trimmedName = addForm.name.trim();
+    const trimmedPhone = addForm.phone.trim();
+    
+    if (!trimmedName || !trimmedPhone || !addForm.email.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome, telefone e e-mail são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { isDuplicate, existingCustomer } = isCustomerDuplicate(
+      trimmedName,
+      trimmedPhone,
+      customers
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: "Cliente duplicado",
+        description: `Já existe um cliente com esse nome e telefone: ${existingCustomer.name}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const normalizedPhone = trimmedPhone.replace(/\D/g, '');
+      const { error } = await supabase
+        .from('customers')
+        .insert({
+          tenant_id: currentTenant.id,
+          name: trimmedName,
+          phone: normalizedPhone,
+          email: addForm.email.trim(),
+          birthday: addForm.birthday || null,
+        });
+
+      if (error) throw error;
+
+      toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso" });
+      setShowAddModal(false);
+      setAddForm({ name: '', phone: '', email: '', birthday: '' });
+      loadCustomers();
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      toast({ title: "Erro", description: "Erro ao cadastrar cliente", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteClick = (customer: any) => {
@@ -282,6 +342,7 @@ export default function Customers() {
           name: trimmedName,
           phone: trimmedPhone,
           email: editForm.email.trim() || null,
+          birthday: editForm.birthday || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', customerToEdit.id);
@@ -393,11 +454,18 @@ export default function Customers() {
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Header */}
       <div className="flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">Clientes</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Gerencie a base de clientes da barbearia
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Clientes</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Gerencie a base de clientes da barbearia
+            </p>
+          </div>
+          <Button onClick={() => setShowAddModal(true)} size="sm" className="shrink-0">
+            <Plus className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Novo Cliente</span>
+            <span className="sm:hidden">Novo</span>
+          </Button>
         </div>
         
         <div className="relative w-full">
@@ -822,13 +890,23 @@ export default function Customers() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email">Email *</Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="email@exemplo.com"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-birthday">Data de Nascimento</Label>
+              <Input
+                id="edit-birthday"
+                type="date"
+                value={editForm.birthday}
+                onChange={(e) => setEditForm(prev => ({ ...prev, birthday: e.target.value }))}
               />
             </div>
           </div>
@@ -866,6 +944,70 @@ export default function Customers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Customer Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Cadastre um novo cliente na barbearia
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-name">Nome *</Label>
+              <Input
+                id="add-name"
+                value={addForm.name}
+                onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome do cliente"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="add-phone">WhatsApp *</Label>
+              <Input
+                id="add-phone"
+                value={addForm.phone}
+                onChange={(e) => setAddForm(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="add-email">Email *</Label>
+              <Input
+                id="add-email"
+                type="email"
+                value={addForm.email}
+                onChange={(e) => setAddForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-birthday">Data de Nascimento</Label>
+              <Input
+                id="add-birthday"
+                type="date"
+                value={addForm.birthday}
+                onChange={(e) => setAddForm(prev => ({ ...prev, birthday: e.target.value }))}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddCustomer} disabled={saving}>
+              {saving ? "Salvando..." : "Cadastrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -31,10 +31,11 @@ interface CreateBookingRequest {
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
+  customer_birthday?: string;
   starts_at: string;
   ends_at?: string;
   notes?: string;
-  payment_method?: 'online' | 'onsite'; // New: indicates if online payment is selected
+  payment_method?: 'online' | 'onsite';
 }
 
 interface ErrorResponse {
@@ -159,7 +160,7 @@ serve(async (req) => {
       );
     }
 
-    const { slug, service_id, staff_id, customer_name, customer_phone, customer_email, starts_at, notes, payment_method } = payload;
+    const { slug, service_id, staff_id, customer_name, customer_phone, customer_email, customer_birthday, starts_at, notes, payment_method } = payload;
 
     // 1. Resolve tenant by slug
     console.log('Resolving tenant by slug:', slug);
@@ -383,7 +384,8 @@ serve(async (req) => {
           tenant_id,
           name: customer_name.trim(),
           phone: normalizedPhone,
-          email: customer_email
+          email: customer_email,
+          birthday: customer_birthday || null,
         })
         .select('id')
         .single();

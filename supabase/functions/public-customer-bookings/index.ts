@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
 
       const { data: customer, error: customerError } = await supabase
         .from("customers")
-        .select("id, name, email, phone")
+        .select("id, name, email, phone, birthday")
         .eq("tenant_id", tenant_id)
         .or(uniqueVariants.map((p) => `phone.eq.${p}`).join(","))
         .order("updated_at", { ascending: false })
@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
           customer: {
             name: customer.name,
             email: customer.email || "",
+            birthday: customer.birthday || "",
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
