@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Finance from "./pages/Finance";
 import CommissionsPage from "./pages/CommissionsPage";
 import PackagesPage from "./pages/PackagesPage";
+import SubscriptionPlansPage from "./pages/SubscriptionPlansPage";
+import SubscriptionCallback from "./pages/SubscriptionCallback";
 import Bookings from "./pages/Bookings";
 import Services from "./pages/Services";
 import Staff from "./pages/Staff";
@@ -52,6 +54,7 @@ const App = () => (
             <Route path="bookings" element={<Bookings />} />
             <Route path="services" element={<Services />} />
             <Route path="packages" element={<PackagesPage />} />
+            <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
             <Route path="staff" element={<Staff />} />
             <Route path="customers" element={<Customers />} />
             <Route path="recurring-clients" element={<RecurringClients />} />
@@ -65,6 +68,7 @@ const App = () => (
           {/* Public booking routes */}
           <Route path="/:slug" element={<BookingPublic />} />
           <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
+          <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

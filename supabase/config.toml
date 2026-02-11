@@ -2,3 +2,12 @@ project_id = "iagzodcwctvydmgrwjsy"
 
 [functions.generate-cover]
 verify_jwt = false
+
+[functions.mp-create-subscription]
+verify_jwt = false
+
+[functions.mp-cancel-subscription]
+verify_jwt = false
+
+[functions.mp-pause-subscription]
+verify_jwt = false

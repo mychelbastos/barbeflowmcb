@@ -422,6 +422,85 @@ export type Database = {
           },
         ]
       }
+      customer_subscriptions: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          checkout_url: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          customer_id: string
+          id: string
+          mp_payer_id: string | null
+          mp_preapproval_id: string | null
+          next_payment_date: string | null
+          plan_id: string
+          started_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          checkout_url?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_id: string
+          id?: string
+          mp_payer_id?: string | null
+          mp_preapproval_id?: string | null
+          next_payment_date?: string | null
+          plan_id: string
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          checkout_url?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_id?: string
+          id?: string
+          mp_payer_id?: string | null
+          mp_preapproval_id?: string | null
+          next_payment_date?: string | null
+          plan_id?: string
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_subscriptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -1128,6 +1207,191 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          mp_payment_id: string | null
+          paid_at: string | null
+          period_end: string | null
+          period_start: string | null
+          status: string
+          subscription_id: string
+          tenant_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          subscription_id: string
+          tenant_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          mp_payment_id?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          subscription_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plan_services: {
+        Row: {
+          id: string
+          plan_id: string
+          service_id: string
+          sessions_per_cycle: number | null
+        }
+        Insert: {
+          id?: string
+          plan_id: string
+          service_id: string
+          sessions_per_cycle?: number | null
+        }
+        Update: {
+          id?: string
+          plan_id?: string
+          service_id?: string
+          sessions_per_cycle?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plan_services_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_plan_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          billing_cycle: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_cents: number
+          sessions_limit: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_cents: number
+          sessions_limit?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_cents?: number
+          sessions_limit?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_usage: {
+        Row: {
+          booking_ids: string[] | null
+          id: string
+          period_end: string
+          period_start: string
+          service_id: string
+          sessions_limit: number | null
+          sessions_used: number
+          subscription_id: string
+        }
+        Insert: {
+          booking_ids?: string[] | null
+          id?: string
+          period_end: string
+          period_start: string
+          service_id: string
+          sessions_limit?: number | null
+          sessions_used?: number
+          subscription_id: string
+        }
+        Update: {
+          booking_ids?: string[] | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          service_id?: string
+          sessions_limit?: number | null
+          sessions_used?: number
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_usage_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_usage_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
             referencedColumns: ["id"]
           },
         ]

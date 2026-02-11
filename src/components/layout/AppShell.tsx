@@ -59,6 +59,7 @@ import {
   CreditCard,
   BarChart3,
   Gift,
+  Repeat,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -103,6 +104,7 @@ const navigationItems: NavItem[] = [
     children: [
       { title: "Visão Geral", url: "/app/finance", icon: BarChart3 },
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
+      { title: "Assinaturas", url: "/app/subscription-plans", icon: Repeat },
     ]
   },
   { title: "WhatsApp", url: "/app/whatsapp/inbox", icon: MessageCircle },
