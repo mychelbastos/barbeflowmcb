@@ -670,7 +670,7 @@ export default function Customers() {
 
       {/* Customer Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Detalhes do Cliente</DialogTitle>
             <DialogDescription>
@@ -679,56 +679,35 @@ export default function Customers() {
           </DialogHeader>
           
           {selectedCustomer && (
-            <div className="space-y-6">
-              {/* Customer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                        <User className="h-8 w-8 text-primary" />
-                      </div>
-                      <h3 className="font-semibold">{selectedCustomer.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Cliente desde {format(parseISO(selectedCustomer.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{selectedCustomer.phone}</span>
-                      </div>
-                      {selectedCustomer.email && (
-                        <div className="flex items-center">
-                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span className="text-sm">{selectedCustomer.email}</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Total Agendamentos</Label>
-                        <p className="text-xl font-bold">{selectedCustomer.totalBookings}</p>
-                      </div>
-                      <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Total Gasto</Label>
-                        <p className="text-xl font-bold text-success">
-                          R$ {(selectedCustomer.totalSpent / 100).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="space-y-4">
+              {/* Customer Info - Compact on mobile */}
+              <div className="flex items-center gap-3 pb-3 border-b border-border">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground">{selectedCustomer.name}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
+                    <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{selectedCustomer.phone}</span>
+                    {selectedCustomer.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{selectedCustomer.email}</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Cliente desde {format(parseISO(selectedCustomer.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
+                  <p className="text-xs text-muted-foreground">Agendamentos</p>
+                  <p className="text-lg font-bold">{selectedCustomer.totalBookings}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
+                  <p className="text-xs text-muted-foreground">Total Gasto</p>
+                  <p className="text-lg font-bold text-success">
+                    R$ {(selectedCustomer.totalSpent / 100).toFixed(2)}
+                  </p>
+                </div>
               </div>
 
               {/* Tabs: Histórico + Saldo */}
@@ -752,41 +731,37 @@ export default function Customers() {
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {customerBookings.map((booking) => (
-                        <Card key={booking.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                <div 
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                                  style={{ 
-                                    backgroundColor: `${booking.service?.color}20`,
-                                    color: booking.service?.color 
-                                  }}
-                                >
-                                  <Calendar className="h-5 w-5" />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium">{booking.service?.name}</h4>
-                                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                    <div className="flex items-center">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      {format(parseISO(booking.starts_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                    </div>
-                                    <span>{booking.staff?.name || 'Qualquer profissional'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <Badge variant={getStatusVariant(booking.status)}>
+                        <div key={booking.id} className="p-3 rounded-lg border border-border bg-card/50">
+                          <div className="flex items-start gap-3">
+                            <div 
+                              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                              style={{ 
+                                backgroundColor: `${booking.service?.color}20`,
+                                color: booking.service?.color 
+                              }}
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-medium text-sm truncate">{booking.service?.name}</h4>
+                                <Badge variant={getStatusVariant(booking.status)} className="text-[10px] flex-shrink-0">
                                   {getStatusLabel(booking.status)}
                                 </Badge>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {format(parseISO(booking.starts_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                </span>
+                                <span>{booking.staff?.name || 'Qualquer'}</span>
                                 <span className="font-medium text-success">
-                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}
+                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
                                 </span>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
