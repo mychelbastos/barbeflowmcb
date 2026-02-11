@@ -163,6 +163,7 @@ export function BookingModal() {
       const body: any = {
         tenant_id: currentTenant.id,
         date: watchedDate,
+        allow_past: true,
       };
       if (watchedServiceId) body.service_id = watchedServiceId;
       if (watchedStaffId && watchedStaffId !== "none") body.staff_id = watchedStaffId;

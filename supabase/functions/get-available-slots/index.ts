@@ -17,6 +17,7 @@ interface GetSlotsRequest {
   date: string; // YYYY-MM-DD format
   service_id?: string;
   staff_id?: string;
+  allow_past?: boolean; // Admin override to allow past time slots
 }
 
 // Timezone offset map (in hours, negative = behind UTC)
@@ -60,7 +61,7 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, date, service_id, staff_id }: GetSlotsRequest = await req.json();
+    const { tenant_id, date, service_id, staff_id, allow_past }: GetSlotsRequest = await req.json();
     
     console.log('Get available slots request:', { tenant_id, date, service_id, staff_id });
 
@@ -278,8 +279,8 @@ serve(async (req) => {
           const slotStartUTC = localTimeToUTC(date, timeString, timezoneOffset);
           const slotEndUTC = new Date(slotStartUTC.getTime() + (serviceDuration * 60 * 1000));
 
-          // Skip if slot is in the past
-          if (slotStartUTC <= nowUTC) {
+          // Skip if slot is in the past (unless admin override)
+          if (!allow_past && slotStartUTC <= nowUTC) {
             currentMin += slotDuration;
             if (currentMin >= 60) {
               currentHour += Math.floor(currentMin / 60);
