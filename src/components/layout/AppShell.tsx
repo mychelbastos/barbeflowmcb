@@ -105,15 +105,7 @@ const navigationItems: NavItem[] = [
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
     ]
   },
-  { 
-    title: "WhatsApp", 
-    url: "/app/whatsapp", 
-    icon: MessageCircle,
-    children: [
-      { title: "Configuração", url: "/app/whatsapp", icon: Settings },
-      { title: "Conversas", url: "/app/whatsapp/inbox", icon: MessageCircle },
-    ]
-  },
+  { title: "WhatsApp", url: "/app/whatsapp/inbox", icon: MessageCircle },
   { title: "Configurações", url: "/app/settings", icon: Settings },
 ];
 

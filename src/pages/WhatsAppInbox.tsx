@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
@@ -7,12 +7,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, 
   Send, 
   MessageSquare, 
-  Phone,
   Search,
   RefreshCw,
   Check,
@@ -22,7 +21,15 @@ import {
   Paperclip,
   Mic,
   Download,
-  Loader2
+  Loader2,
+  Settings,
+  Wifi,
+  WifiOff,
+  QrCode,
+  XCircle,
+  MessageCircle,
+  AlertTriangle,
+  ArrowLeft
 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -33,6 +40,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface Message {
   id: string;
@@ -68,6 +82,95 @@ export default function WhatsAppInbox() {
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // WhatsApp connection state
+  const [connectionStatus, setConnectionStatus] = useState<{
+    connected: boolean;
+    has_instance: boolean;
+    state?: string;
+    instance_name?: string;
+    whatsapp_number?: string;
+    connected_at?: string;
+  } | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [connectionLoading, setConnectionLoading] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const checkConnectionStatus = useCallback(async () => {
+    if (!currentTenant?.id) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-check-status", {
+        body: { tenant_id: currentTenant.id }
+      });
+      if (error) throw error;
+      setConnectionStatus(data);
+      if (data?.connected) setQrCode(null);
+    } catch (error) {
+      console.error("Error checking status:", error);
+    } finally {
+      setConnectionLoading(false);
+    }
+  }, [currentTenant?.id]);
+
+  const handleConnect = async () => {
+    if (!currentTenant?.id || !currentTenant?.slug) return;
+    setConnecting(true);
+    setQrCode(null);
+    try {
+      if (!connectionStatus?.has_instance) {
+        await supabase.functions.invoke("evolution-create-instance", {
+          body: { tenant_id: currentTenant.id, tenant_slug: currentTenant.slug }
+        });
+      }
+      const { data: qrData, error: qrError } = await supabase.functions.invoke("evolution-get-qrcode", {
+        body: { tenant_id: currentTenant.id }
+      });
+      if (qrError) throw qrError;
+      if (qrData?.connected) {
+        toast.success("WhatsApp já está conectado!");
+        await checkConnectionStatus();
+      } else if (qrData?.qrcode) {
+        setQrCode(qrData.qrcode);
+        toast.info("Escaneie o QR Code com seu WhatsApp");
+      } else {
+        toast.error("Não foi possível gerar o QR Code.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao conectar WhatsApp");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!currentTenant?.id) return;
+    setDisconnecting(true);
+    try {
+      await supabase.functions.invoke("evolution-disconnect", {
+        body: { tenant_id: currentTenant.id }
+      });
+      toast.success("WhatsApp desconectado");
+      setQrCode(null);
+      await checkConnectionStatus();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao desconectar");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  // Poll for status while QR code is showing
+  useEffect(() => {
+    if (!qrCode || !currentTenant?.id) return;
+    const interval = setInterval(checkConnectionStatus, 5000);
+    return () => clearInterval(interval);
+  }, [qrCode, currentTenant?.id, checkConnectionStatus]);
+
+  useEffect(() => {
+    if (currentTenant?.id) checkConnectionStatus();
+  }, [currentTenant?.id, checkConnectionStatus]);
 
   const syncMessages = async (remoteJid?: string) => {
     if (!currentTenant?.id) return;
@@ -307,16 +410,22 @@ export default function WhatsAppInbox() {
         <div className="p-4 border-b border-border/50 bg-card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate("/app/whatsapp")}
-                className="hover:bg-primary/10 rounded-full"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
               <div>
-                <h1 className="text-lg font-semibold">Conversas</h1>
+                <h1 className="text-lg font-semibold flex items-center gap-2">
+                  WhatsApp
+                  {!connectionLoading && (
+                    <Badge 
+                      variant="secondary"
+                      className={connectionStatus?.connected 
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0" 
+                        : "bg-destructive/20 text-destructive text-[10px] px-1.5 py-0"
+                      }
+                    >
+                      {connectionStatus?.connected ? <Wifi className="h-2.5 w-2.5 mr-0.5" /> : <WifiOff className="h-2.5 w-2.5 mr-0.5" />}
+                      {connectionStatus?.connected ? "On" : "Off"}
+                    </Badge>
+                  )}
+                </h1>
                 <p className="text-xs text-muted-foreground">{conversations.length} conversas</p>
               </div>
             </div>
@@ -345,6 +454,138 @@ export default function WhatsAppInbox() {
               >
                 <RefreshCw className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`} />
               </Button>
+              <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <SheetTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="hover:bg-primary/10 rounded-full"
+                    title="Configurações WhatsApp"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5 text-primary" />
+                      Configuração WhatsApp
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 space-y-4">
+                    {/* Connection Status */}
+                    {connectionLoading ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    ) : connectionStatus?.connected ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                          <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                            <Wifi className="h-5 w-5 text-emerald-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Conectado</p>
+                            {connectionStatus.whatsapp_number && (
+                              <p className="text-xs text-muted-foreground">
+                                +{connectionStatus.whatsapp_number}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-secondary/50 rounded-xl">
+                          <h4 className="font-medium text-sm mb-2">Automações Ativas</h4>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3 w-3 text-primary" /> Confirmação de agendamento
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3 w-3 text-primary" /> Lembrete de agendamento
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3 w-3 text-primary" /> Notificação de cancelamento
+                            </li>
+                          </ul>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          onClick={handleDisconnect}
+                          disabled={disconnecting}
+                          className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                          size="sm"
+                        >
+                          {disconnecting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <XCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Desconectar WhatsApp
+                        </Button>
+                      </div>
+                    ) : qrCode ? (
+                      <div className="space-y-4">
+                        <div className="flex flex-col items-center p-4 bg-white rounded-xl">
+                          <img 
+                            src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`} 
+                            alt="QR Code" 
+                            className="w-48 h-48"
+                          />
+                        </div>
+                        <p className="text-xs text-center text-muted-foreground">
+                          Abra o WhatsApp → Menu → Aparelhos Conectados → Conectar
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Aguardando conexão...
+                        </div>
+                        <Button variant="outline" onClick={() => setQrCode(null)} size="sm" className="w-full">
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-4 bg-secondary/50 border border-border rounded-xl">
+                          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                            <QrCode className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Não conectado</p>
+                            <p className="text-xs text-muted-foreground">
+                              Conecte para ativar notificações
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                            <p className="text-xs text-muted-foreground">
+                              Sem WhatsApp conectado, clientes não receberão notificações automáticas.
+                            </p>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={handleConnect}
+                          disabled={connecting}
+                          className="w-full"
+                          size="sm"
+                        >
+                          {connecting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Conectar WhatsApp
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
           

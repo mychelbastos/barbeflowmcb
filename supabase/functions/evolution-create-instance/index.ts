@@ -48,8 +48,37 @@ serve(async (req) => {
       .eq("tenant_id", tenant_id)
       .maybeSingle();
 
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+
     if (existingConnection) {
-      console.log(`Connection already exists for tenant ${tenant_id}`);
+      console.log(`Connection already exists for tenant ${tenant_id}, updating webhook...`);
+      
+      // Ensure webhook is configured on existing instance
+      try {
+        await fetch(`${EVOLUTION_API_URL}/webhook/set/${existingConnection.evolution_instance_name}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": EVOLUTION_API_KEY,
+          },
+          body: JSON.stringify({
+            url: webhookUrl,
+            webhook_by_events: false,
+            webhook_base64: false,
+            events: [
+              "MESSAGES_UPSERT",
+              "MESSAGES_UPDATE",
+              "SEND_MESSAGE",
+              "CONNECTION_UPDATE",
+            ],
+          }),
+        });
+        console.log("Webhook updated for existing instance");
+      } catch (e) {
+        console.error("Failed to update webhook:", e);
+      }
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -60,7 +89,9 @@ serve(async (req) => {
       );
     }
 
-    // Create instance in Evolution API
+    // Create instance in Evolution API with webhook configured
+
+    // Create instance in Evolution API with webhook configured
     const evolutionResponse = await fetch(`${EVOLUTION_API_URL}/instance/create`, {
       method: "POST",
       headers: {
@@ -71,6 +102,17 @@ serve(async (req) => {
         instanceName: instanceName,
         qrcode: true,
         integration: "WHATSAPP-BAILEYS",
+        webhook: {
+          url: webhookUrl,
+          byEvents: false,
+          base64: false,
+          events: [
+            "MESSAGES_UPSERT",
+            "MESSAGES_UPDATE",
+            "SEND_MESSAGE",
+            "CONNECTION_UPDATE",
+          ],
+        },
       }),
     });
 
