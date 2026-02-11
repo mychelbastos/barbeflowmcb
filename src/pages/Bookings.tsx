@@ -572,20 +572,7 @@ export default function Bookings() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Telefone</Label>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm">{selectedBooking.customer?.phone}</p>
-                    {selectedBooking.customer?.phone && (
-                      <a
-                        href={`https://wa.me/${selectedBooking.customer.phone.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
-                        title="Abrir WhatsApp"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                  </div>
+                  <p className="text-sm">{selectedBooking.customer?.phone}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
