@@ -25,15 +25,17 @@ import {
   CreditCard,
   Banknote,
   CalendarCheck,
-  Package
+  Package,
+  Repeat
 } from "lucide-react";
+import { PublicSubscriptionPlans } from "@/components/subscriptions/PublicSubscriptionPlans";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import { formatInTimeZone } from "date-fns-tz";
 import { ptBR } from "date-fns/locale";
 import type { DateValue } from "react-aria-components";
 
 type PaymentMethod = 'on_site' | 'online' | null;
-type BookingTab = 'services' | 'packages';
+type BookingTab = 'services' | 'packages' | 'subscriptions';
 
 const BookingPublic = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -83,6 +85,11 @@ const BookingPublic = () => {
   const [activeCustomerPackage, setActiveCustomerPackage] = useState<any>(null);
   const [packageCoveredService, setPackageCoveredService] = useState(false);
   const [createdCustomerPackageId, setCreatedCustomerPackageId] = useState<string | null>(null);
+
+  // Subscriptions
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
+  const [activeSubscription, setActiveSubscription] = useState<any>(null);
+  const [subscriptionCoveredService, setSubscriptionCoveredService] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -197,6 +204,28 @@ const BookingPublic = () => {
         setPackages(pkgsData);
       } else {
         setPackages([]);
+      }
+
+      // Load subscription plans
+      const { data: subPlansData } = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .eq("active", true)
+        .order("name");
+
+      if (subPlansData && subPlansData.length > 0) {
+        const { data: planSvcs } = await supabase
+          .from("subscription_plan_services")
+          .select("*, service:services(name)")
+          .in("plan_id", subPlansData.map(p => p.id));
+
+        for (const plan of subPlansData) {
+          (plan as any).plan_services = (planSvcs || []).filter((ps: any) => ps.plan_id === plan.id);
+        }
+        setSubscriptionPlans(subPlansData);
+      } else {
+        setSubscriptionPlans([]);
       }
     } catch (error) {
       console.error('Error loading tenant data:', error);
@@ -378,6 +407,84 @@ const BookingPublic = () => {
     }
   };
 
+  // Check if customer has an active subscription covering the selected service
+  const checkActiveSubscription = async (phone: string) => {
+    if (!tenant || !selectedService) return;
+    const normalizedPhone = phone.replace(/\D/g, '');
+    if (normalizedPhone.length < 10) return;
+
+    try {
+      const { data: matchingCustomers } = await supabase
+        .from('customers')
+        .select('id, phone')
+        .eq('tenant_id', tenant.id);
+
+      const matchedCustomer = matchingCustomers?.find(c =>
+        c.phone.replace(/\D/g, '') === normalizedPhone
+      );
+
+      if (!matchedCustomer) {
+        setActiveSubscription(null);
+        setSubscriptionCoveredService(false);
+        return;
+      }
+
+      // Check for active subscription
+      const { data: subs } = await supabase
+        .from('customer_subscriptions')
+        .select('*, plan:subscription_plans(name, price_cents)')
+        .eq('customer_id', matchedCustomer.id)
+        .eq('tenant_id', tenant.id)
+        .in('status', ['active', 'authorized']);
+
+      if (!subs || subs.length === 0) {
+        setActiveSubscription(null);
+        setSubscriptionCoveredService(false);
+        return;
+      }
+
+      const activeSub = subs[0];
+
+      // Check if selected service is covered by the plan
+      const { data: planServices } = await supabase
+        .from('subscription_plan_services')
+        .select('service_id, sessions_per_cycle')
+        .eq('plan_id', activeSub.plan_id)
+        .eq('service_id', selectedService);
+
+      if (!planServices || planServices.length === 0) {
+        setActiveSubscription(activeSub);
+        setSubscriptionCoveredService(false);
+        return;
+      }
+
+      const planService = planServices[0];
+
+      // Check usage
+      const { data: usage } = await supabase
+        .from('subscription_usage')
+        .select('sessions_used, sessions_limit')
+        .eq('subscription_id', activeSub.id)
+        .eq('service_id', selectedService)
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const sessionsUsed = usage?.sessions_used || 0;
+      const sessionsLimit = usage?.sessions_limit ?? planService.sessions_per_cycle;
+
+      if (sessionsLimit === null || sessionsUsed < sessionsLimit) {
+        setActiveSubscription({ ...activeSub, usage: { used: sessionsUsed, limit: sessionsLimit } });
+        setSubscriptionCoveredService(true);
+      } else {
+        setActiveSubscription({ ...activeSub, usage: { used: sessionsUsed, limit: sessionsLimit } });
+        setSubscriptionCoveredService(false);
+      }
+    } catch (err) {
+      console.error('Error checking subscription:', err);
+    }
+  };
+
   const handleStaffSelect = (staffId: string) => {
     setSelectedStaff(staffId === "any" ? null : staffId);
     setSelectedTime(null);
@@ -460,6 +567,8 @@ const BookingPublic = () => {
     setBookingTab('services');
     setCreatedCustomerPackageId(null);
     setCustomerFound(false);
+    setActiveSubscription(null);
+    setSubscriptionCoveredService(false);
     setStep(1);
   };
 
@@ -517,8 +626,8 @@ const BookingPublic = () => {
       const [year, month, day] = selectedDate.split('-').map(Number);
       const startsAt = new Date(year, month - 1, day, parseInt(hours), parseInt(minutes), 0, 0);
 
-      // If covered by active package, skip payment entirely
-      const effectivePaymentMethod = packageCoveredService ? 'onsite' : (paymentMethod === 'online' ? 'online' : 'onsite');
+      // If covered by active package or subscription, skip payment entirely
+      const effectivePaymentMethod = (packageCoveredService || subscriptionCoveredService) ? 'onsite' : (paymentMethod === 'online' ? 'online' : 'onsite');
       
       const { data, error } = await supabase.functions.invoke('create-booking', {
         body: {
@@ -567,6 +676,40 @@ const BookingPublic = () => {
 
           setStep(6);
           toast({ title: "Agendamento confirmado!", description: "Sessão do pacote utilizada." });
+          return;
+        }
+
+        // If covered by subscription, decrement usage and skip payment
+        if (subscriptionCoveredService && activeSubscription) {
+          try {
+            const now = new Date();
+            const periodStart = now.toISOString().split('T')[0];
+            
+            // Increment usage
+            const { data: usageRecord } = await supabase
+              .from('subscription_usage')
+              .select('id, sessions_used, booking_ids')
+              .eq('subscription_id', activeSubscription.id)
+              .eq('service_id', selectedService)
+              .order('period_start', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (usageRecord) {
+              await supabase
+                .from('subscription_usage')
+                .update({
+                  sessions_used: usageRecord.sessions_used + 1,
+                  booking_ids: [...(usageRecord.booking_ids || []), booking.id],
+                })
+                .eq('id', usageRecord.id);
+            }
+          } catch (subErr) {
+            console.error('Error updating subscription usage:', subErr);
+          }
+
+          setStep(6);
+          toast({ title: "Agendamento confirmado!", description: "Sessão da assinatura utilizada." });
           return;
         }
 
@@ -795,7 +938,7 @@ END:VCALENDAR`;
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500 text-sm">Valor</span>
                 <span className="font-semibold text-emerald-400">
-                  {packageCoveredService ? 'Incluso no pacote' : `R$ ${((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}`}
+                  {(packageCoveredService || subscriptionCoveredService) ? 'Incluso no plano/pacote' : `R$ ${((createdBooking?.service?.price_cents || 0) / 100).toFixed(2)}`}
                 </span>
               </div>
             </div>
@@ -876,8 +1019,8 @@ END:VCALENDAR`;
               <p className="text-zinc-500 text-sm">Selecione o que você precisa</p>
             </div>
 
-            {/* Tabs - only show when packages exist */}
-            {packages.length > 0 && (
+            {/* Tabs - show when packages or subscription plans exist */}
+            {(packages.length > 0 || subscriptionPlans.length > 0) && (
               <div className="flex bg-zinc-900 rounded-xl p-1 mb-6">
                 <button
                   onClick={() => setBookingTab('services')}
@@ -889,17 +1032,32 @@ END:VCALENDAR`;
                 >
                   Serviços
                 </button>
-                <button
-                  onClick={() => setBookingTab('packages')}
-                  className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    bookingTab === 'packages'
-                      ? 'bg-zinc-800 text-white shadow-sm'
-                      : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  <Package className="h-4 w-4 inline mr-1" />
-                  Pacotes
-                </button>
+                {packages.length > 0 && (
+                  <button
+                    onClick={() => setBookingTab('packages')}
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                      bookingTab === 'packages'
+                        ? 'bg-zinc-800 text-white shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    <Package className="h-4 w-4 inline mr-1" />
+                    Pacotes
+                  </button>
+                )}
+                {subscriptionPlans.length > 0 && (
+                  <button
+                    onClick={() => setBookingTab('subscriptions')}
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                      bookingTab === 'subscriptions'
+                        ? 'bg-zinc-800 text-white shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    <Repeat className="h-4 w-4 inline mr-1" />
+                    Assinaturas
+                  </button>
+                )}
               </div>
             )}
             
@@ -949,7 +1107,13 @@ END:VCALENDAR`;
                   </button>
                 ))}
               </div>
-            ) : (
+            ) : bookingTab === 'subscriptions' ? (
+              /* Subscriptions Tab */
+              <PublicSubscriptionPlans
+                tenant={tenant}
+                plans={subscriptionPlans}
+              />
+            ) : bookingTab === 'packages' ? (
               /* Packages Tab */
               <div className="space-y-3">
                 {packages.map((pkg: any) => (
@@ -981,7 +1145,7 @@ END:VCALENDAR`;
                   </button>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -1253,6 +1417,7 @@ END:VCALENDAR`;
                       if (digits.length >= 10) {
                         lookupCustomerByPhone(formatted);
                         checkActivePackage(formatted);
+                        checkActiveSubscription(formatted);
                       }
                     }}
                     required
@@ -1294,7 +1459,31 @@ END:VCALENDAR`;
                 </div>
               )}
 
-              {/* Show name/email/notes only if customer NOT found */}
+              {/* Active subscription detected banner */}
+              {activeSubscription && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Repeat className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-400">
+                      Assinante — {activeSubscription.plan?.name}
+                    </span>
+                  </div>
+                  {subscriptionCoveredService ? (
+                    <p className="text-xs text-zinc-400">
+                      Incluso no plano{activeSubscription.usage?.limit != null
+                        ? ` (${activeSubscription.usage.used}/${activeSubscription.usage.limit} sessões usadas)`
+                        : ' (ilimitado)'}. Pagamento dispensado.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-zinc-400">
+                      {activeSubscription.usage?.limit != null && activeSubscription.usage.used >= activeSubscription.usage.limit
+                        ? 'Limite de sessões atingido — será cobrado valor avulso.'
+                        : 'Este serviço não está incluso no seu plano.'}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {!customerFound && customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="p-3 bg-zinc-800/30 border border-zinc-700/40 rounded-xl">

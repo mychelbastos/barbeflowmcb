@@ -98,8 +98,32 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
           toast({ title: "Link de assinatura gerado!" });
         }
       } else {
-        // Manual - initialize usage
-        const plan = plans.find(p => p.id === selectedPlan);
+        // Manual - initialize usage records
+        const { data: planServices } = await supabase
+          .from('subscription_plan_services')
+          .select('service_id, sessions_per_cycle')
+          .eq('plan_id', selectedPlan);
+
+        if (planServices?.length) {
+          const now = new Date();
+          const periodEnd = new Date(now);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+          const periodStartStr = now.toISOString().split('T')[0];
+          const periodEndStr = periodEnd.toISOString().split('T')[0];
+
+          for (const ps of planServices) {
+            await supabase.from('subscription_usage').upsert({
+              subscription_id: sub.id,
+              service_id: ps.service_id,
+              period_start: periodStartStr,
+              period_end: periodEndStr,
+              sessions_used: 0,
+              sessions_limit: ps.sessions_per_cycle,
+              booking_ids: [],
+            }, { onConflict: 'subscription_id,service_id,period_start' });
+          }
+        }
+
         toast({ title: "Assinatura ativada manualmente" });
         onAssigned();
         onOpenChange(false);
