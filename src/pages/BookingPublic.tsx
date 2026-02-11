@@ -30,6 +30,7 @@ import {
   Repeat
 } from "lucide-react";
 import { PublicSubscriptionPlans } from "@/components/subscriptions/PublicSubscriptionPlans";
+import { MyPackagesSection } from "@/components/public/MyPackagesSection";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import { formatInTimeZone } from "date-fns-tz";
 import { ptBR } from "date-fns/locale";
@@ -80,6 +81,8 @@ const BookingPublic = () => {
   
   // Customer bookings modal
   const [showCustomerBookings, setShowCustomerBookings] = useState(false);
+  const [showMyPackages, setShowMyPackages] = useState(false);
+  const [purchasingPackage, setPurchasingPackage] = useState<any>(null);
 
   // Packages
   const [packages, setPackages] = useState<any[]>([]);
@@ -640,6 +643,8 @@ const BookingPublic = () => {
           starts_at: startsAt.toISOString(),
           notes: notes || undefined,
           payment_method: effectivePaymentMethod,
+          customer_package_id: (packageCoveredService && activeCustomerPackage) ? activeCustomerPackage.id : undefined,
+          customer_subscription_id: (subscriptionCoveredService && activeSubscription) ? activeSubscription.id : undefined,
         },
       });
 
@@ -649,67 +654,10 @@ const BookingPublic = () => {
         const booking = data.booking;
         setCreatedBooking(booking);
 
-        // If covered by package, decrement session and skip payment
-        if (packageCoveredService && activeCustomerPackage) {
-          try {
-            await supabase
-              .from('customer_package_services')
-              .update({ sessions_used: activeCustomerPackage.serviceUsage.sessions_used + 1 })
-              .eq('id', activeCustomerPackage.serviceUsage.id);
-
-            // Check if all services are fully used
-            const { data: allUsage } = await supabase
-              .from('customer_package_services')
-              .select('sessions_total, sessions_used')
-              .eq('customer_package_id', activeCustomerPackage.id);
-
-            const allUsed = allUsage?.every(u => u.sessions_used >= u.sessions_total);
-            if (allUsed) {
-              await supabase
-                .from('customer_packages')
-                .update({ status: 'completed' })
-                .eq('id', activeCustomerPackage.id);
-            }
-          } catch (pkgErr) {
-            console.error('Error updating package usage:', pkgErr);
-          }
-
+        // If covered by package or subscription, backend already handled session decrement
+        if (packageCoveredService || subscriptionCoveredService) {
           setStep(6);
-          toast({ title: "Agendamento confirmado!", description: "Sessão do pacote utilizada." });
-          return;
-        }
-
-        // If covered by subscription, decrement usage and skip payment
-        if (subscriptionCoveredService && activeSubscription) {
-          try {
-            const now = new Date();
-            const periodStart = now.toISOString().split('T')[0];
-            
-            // Increment usage
-            const { data: usageRecord } = await supabase
-              .from('subscription_usage')
-              .select('id, sessions_used, booking_ids')
-              .eq('subscription_id', activeSubscription.id)
-              .eq('service_id', selectedService)
-              .order('period_start', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (usageRecord) {
-              await supabase
-                .from('subscription_usage')
-                .update({
-                  sessions_used: usageRecord.sessions_used + 1,
-                  booking_ids: [...(usageRecord.booking_ids || []), booking.id],
-                })
-                .eq('id', usageRecord.id);
-            }
-          } catch (subErr) {
-            console.error('Error updating subscription usage:', subErr);
-          }
-
-          setStep(6);
-          toast({ title: "Agendamento confirmado!", description: "Sessão da assinatura utilizada." });
+          toast({ title: "Agendamento confirmado!", description: packageCoveredService ? "Sessão do pacote utilizada." : "Sessão da assinatura utilizada." });
           return;
         }
 
@@ -1047,15 +995,26 @@ END:VCALENDAR`;
               </div>
 
               {/* CTA */}
+              <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMyPackages(true)}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl h-9 px-2.5"
+                title="Meus Pacotes"
+              >
+                <Package className="h-4 w-4" />
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCustomerBookings(true)}
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white flex-shrink-0 rounded-xl h-9 px-3"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl h-9 px-3"
               >
                 <CalendarCheck className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline text-xs">Meus Agendamentos</span>
               </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1688,6 +1647,16 @@ END:VCALENDAR`;
           onOpenChange={setShowCustomerBookings}
           tenantId={tenant.id}
           tenantName={tenant.name}
+        />
+      )}
+
+      {/* My Packages Modal */}
+      {tenant && (
+        <MyPackagesSection
+          open={showMyPackages}
+          onOpenChange={setShowMyPackages}
+          tenant={tenant}
+          slug={slug || ''}
         />
       )}
     </div>
