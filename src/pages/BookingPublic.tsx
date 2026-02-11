@@ -1565,7 +1565,7 @@ END:VCALENDAR`;
               <div className="pt-4 space-y-3">
                 <Button 
                   type="submit" 
-                  disabled={submitting || !customerName || !customerPhone || !customerEmail || (!customerFound && !customerBirthday)}
+                  disabled={submitting || !customerName || !customerPhone || (!customerFound && (!customerEmail || !customerBirthday))}
                   className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50"
                 >
                   {submitting ? (
