@@ -636,10 +636,7 @@ export default function Bookings() {
                     </Button>
                   </a>
                 )}
-                <div className="flex-1" />
-                <Button size="sm" variant="secondary" onClick={() => { setShowDetails(false); setEditMode(false); }}>
-                  Fechar
-                </Button>
+              
               </div>
             </div>
           )}
