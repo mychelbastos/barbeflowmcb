@@ -124,7 +124,7 @@ export default function Customers() {
     try {
       setLoading(true);
       
-      const [customersResult, recurringResult] = await Promise.all([
+      const [customersResult, recurringResult, packageResult] = await Promise.all([
         supabase
           .from('customers')
           .select('*')
@@ -134,13 +134,22 @@ export default function Customers() {
           .from('recurring_clients')
           .select('customer_id')
           .eq('tenant_id', currentTenant.id)
-          .eq('active', true)
+          .eq('active', true),
+        supabase
+          .from('customer_packages')
+          .select('customer_id')
+          .eq('tenant_id', currentTenant.id)
+          .eq('status', 'active')
       ]);
 
       if (customersResult.error) throw customersResult.error;
 
       const recurringCustomerIds = new Set(
         (recurringResult.data || []).map((r: any) => r.customer_id)
+      );
+
+      const packageCustomerIds = new Set(
+        (packageResult.data || []).map((r: any) => r.customer_id)
       );
 
       // Get booking stats for each customer
@@ -168,6 +177,7 @@ export default function Customers() {
           totalSpent,
           lastVisit,
           isRecurring: recurringCustomerIds.has(customer.id),
+          hasPackage: packageCustomerIds.has(customer.id),
         };
       }));
 
@@ -564,6 +574,9 @@ export default function Customers() {
                           {customer.isRecurring && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary flex-shrink-0">Fixo</Badge>
                           )}
+                          {customer.hasPackage && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-emerald-500/50 text-emerald-400 flex-shrink-0">Pacote</Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
@@ -660,6 +673,9 @@ export default function Customers() {
                               <span className="font-medium">{customer.name}</span>
                               {customer.isRecurring && (
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary">Fixo</Badge>
+                              )}
+                              {customer.hasPackage && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-emerald-500/50 text-emerald-400">Pacote</Badge>
                               )}
                             </div>
                             <div className="text-sm text-muted-foreground">

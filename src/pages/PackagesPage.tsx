@@ -1,4 +1,6 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ServicePackagesTab } from "@/components/ServicePackagesTab";
+import { PackageCustomersList } from "@/components/packages/PackageCustomersList";
 
 export default function PackagesPage() {
   return (
@@ -9,7 +11,21 @@ export default function PackagesPage() {
           Gerencie pacotes de sessões para seus clientes
         </p>
       </div>
-      <ServicePackagesTab />
+
+      <Tabs defaultValue="packages">
+        <TabsList>
+          <TabsTrigger value="packages">Pacotes</TabsTrigger>
+          <TabsTrigger value="customers">Clientes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="packages">
+          <ServicePackagesTab />
+        </TabsContent>
+
+        <TabsContent value="customers">
+          <PackageCustomersList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
