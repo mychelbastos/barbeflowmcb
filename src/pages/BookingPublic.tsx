@@ -851,6 +851,21 @@ const BookingPublic = () => {
     }
   };
 
+  const generateGoogleCalendarUrl = (booking: any) => {
+    if (!booking) return '';
+    const startDate = new Date(booking.starts_at);
+    const endDate = new Date(booking.ends_at);
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}`,
+      dates: `${fmt(startDate)}/${fmt(endDate)}`,
+      details: 'Agendamento confirmado',
+      location: tenant?.address || tenant?.name || '',
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
   const generateCalendarFile = (booking: any) => {
     if (!booking) return;
 
@@ -878,13 +893,21 @@ END:VCALENDAR`;
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `agendamento-${booking.id}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // On mobile, try to open directly (iOS/Android will prompt calendar app)
+    // On desktop, download the file
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open(url, '_blank');
+    } else {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `agendamento-${booking.id}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   const selectedServiceData = services.find(s => s.id === selectedService);
@@ -953,13 +976,25 @@ END:VCALENDAR`;
           </div>
           
           <div className="space-y-3">
-            <Button 
-              onClick={() => generateCalendarFile(createdBooking)}
-              className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
-            >
-              <CalendarPlus className="h-4 w-4 mr-2" />
-              Adicionar ao calendário
-            </Button>
+            <p className="text-xs text-zinc-500 text-center mb-2">Adicionar ao calendário</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                onClick={() => window.open(generateGoogleCalendarUrl(createdBooking), '_blank')}
+                variant="outline"
+                className="h-11 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-white rounded-xl text-sm"
+              >
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                Google
+              </Button>
+              <Button 
+                onClick={() => generateCalendarFile(createdBooking)}
+                variant="outline"
+                className="h-11 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-white rounded-xl text-sm"
+              >
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                Apple / Outro
+              </Button>
+            </div>
             <Button 
               variant="ghost"
               onClick={resetBooking}
