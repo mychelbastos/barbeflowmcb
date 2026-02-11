@@ -760,9 +760,8 @@ export type Database = {
       recurring_clients: {
         Row: {
           active: boolean
-          client_name: string
-          client_phone: string
           created_at: string
+          customer_id: string
           duration_minutes: number
           id: string
           notes: string | null
@@ -776,9 +775,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          client_name: string
-          client_phone: string
           created_at?: string
+          customer_id: string
           duration_minutes: number
           id?: string
           notes?: string | null
@@ -792,9 +790,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          client_name?: string
-          client_phone?: string
           created_at?: string
+          customer_id?: string
           duration_minutes?: number
           id?: string
           notes?: string | null
@@ -807,6 +804,13 @@ export type Database = {
           weekday?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "recurring_clients_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recurring_clients_service_id_fkey"
             columns: ["service_id"]

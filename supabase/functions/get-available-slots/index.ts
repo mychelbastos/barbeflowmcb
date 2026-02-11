@@ -210,7 +210,7 @@ serve(async (req) => {
     // Get recurring clients for this weekday (include service for duration)
     const { data: recurringClients, error: recurringError } = await supabase
       .from('recurring_clients')
-      .select('id, staff_id, client_name, start_time, duration_minutes, start_date, service_id, service:services(duration_minutes)')
+      .select('id, staff_id, start_time, duration_minutes, start_date, service_id, service:services(duration_minutes)')
       .eq('tenant_id', tenant_id)
       .eq('weekday', dayOfWeek)
       .eq('active', true)
@@ -377,7 +377,7 @@ serve(async (req) => {
               if (slotStartMins < recEndWithBuffer && slotEndMins > recStartWithBuffer) {
                 isAvailable = false;
                 conflictReason = 'Horário reservado';
-                console.log(`RECURRING CONFLICT: Slot ${timeString} conflicts with recurring client ${recurring.client_name}`);
+                console.log(`RECURRING CONFLICT: Slot ${timeString} conflicts with recurring client ${recurring.id}`);
                 break;
               }
             }

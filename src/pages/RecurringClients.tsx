@@ -32,8 +32,7 @@ interface RecurringClient {
   tenant_id: string;
   staff_id: string;
   service_id: string | null;
-  client_name: string;
-  client_phone: string;
+  customer_id: string;
   weekday: number;
   start_time: string;
   duration_minutes: number;
@@ -42,6 +41,7 @@ interface RecurringClient {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  customer?: { name: string; phone: string } | null;
 }
 
 interface Staff {
@@ -56,6 +56,12 @@ interface Service {
   price_cents: number;
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+}
+
 export default function RecurringClients() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
@@ -63,14 +69,14 @@ export default function RecurringClients() {
   const [records, setRecords] = useState<RecurringClient[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form
-  const [clientName, setClientName] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [weekday, setWeekday] = useState("1");
@@ -83,10 +89,10 @@ export default function RecurringClients() {
     if (!currentTenant) return;
     try {
       setLoading(true);
-      const [recRes, staffRes, svcRes] = await Promise.all([
+      const [recRes, staffRes, svcRes, custRes] = await Promise.all([
         supabase
           .from("recurring_clients")
-          .select("*")
+          .select("*, customer:customers(name, phone)")
           .eq("tenant_id", currentTenant.id)
           .order("weekday")
           .order("start_time"),
@@ -102,13 +108,20 @@ export default function RecurringClients() {
           .eq("tenant_id", currentTenant.id)
           .eq("active", true)
           .order("name"),
+        supabase
+          .from("customers")
+          .select("id, name, phone")
+          .eq("tenant_id", currentTenant.id)
+          .order("name"),
       ]);
       if (recRes.error) throw recRes.error;
       if (staffRes.error) throw staffRes.error;
       if (svcRes.error) throw svcRes.error;
-      setRecords(recRes.data || []);
+      if (custRes.error) throw custRes.error;
+      setRecords((recRes.data as any) || []);
       setStaff(staffRes.data || []);
       setServices(svcRes.data || []);
+      setCustomers(custRes.data || []);
     } catch (err: any) {
       console.error(err);
       toast({ title: "Erro", description: "Erro ao carregar clientes fixos", variant: "destructive" });
@@ -122,8 +135,7 @@ export default function RecurringClients() {
   }, [loadData]);
 
   const resetForm = () => {
-    setClientName("");
-    setClientPhone("");
+    setSelectedCustomer("");
     setSelectedStaff("");
     setSelectedService("");
     setWeekday("1");
@@ -136,8 +148,7 @@ export default function RecurringClients() {
 
   const openEdit = (r: RecurringClient) => {
     setEditingId(r.id);
-    setClientName(r.client_name);
-    setClientPhone(r.client_phone);
+    setSelectedCustomer(r.customer_id);
     setSelectedStaff(r.staff_id);
     setSelectedService(r.service_id || "");
     setWeekday(String(r.weekday));
@@ -154,8 +165,8 @@ export default function RecurringClients() {
 
   const handleSave = async () => {
     if (!currentTenant) return;
-    if (!clientName.trim() || !clientPhone.trim() || !selectedStaff || !selectedService) {
-      toast({ title: "Erro", description: "Preencha nome, telefone, profissional e serviço", variant: "destructive" });
+    if (!selectedCustomer || !selectedStaff || !selectedService) {
+      toast({ title: "Erro", description: "Preencha cliente, profissional e serviço", variant: "destructive" });
       return;
     }
 
@@ -166,8 +177,7 @@ export default function RecurringClients() {
         tenant_id: currentTenant.id,
         staff_id: selectedStaff,
         service_id: selectedService,
-        client_name: clientName.trim(),
-        client_phone: clientPhone.trim(),
+        customer_id: selectedCustomer,
         weekday: Number(weekday),
         start_time: startTime,
         duration_minutes: duration,
@@ -276,15 +286,20 @@ export default function RecurringClients() {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome do cliente</Label>
-                  <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Ex: João Silva" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="(71) 99999-9999" />
-                </div>
+              <div className="space-y-2">
+                <Label>Cliente</Label>
+                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} — {c.phone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -399,7 +414,7 @@ export default function RecurringClients() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-foreground truncate">{r.client_name}</p>
+                      <p className="font-medium text-foreground truncate">{r.customer?.name || "Cliente"}</p>
                       <Badge variant={r.active ? "default" : "secondary"} className="text-xs">
                         {r.active ? "Ativo" : "Inativo"}
                       </Badge>

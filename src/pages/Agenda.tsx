@@ -16,6 +16,7 @@ export default function Agenda() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
+  const [statusFilter, setStatusFilter] = useState<string>('confirmed');
 
   useEffect(() => {
     if (currentTenant) {
@@ -80,10 +81,10 @@ export default function Agenda() {
 
       setBookings(bookingsWithPayments);
 
-      // Load recurring clients with service info
+      // Load recurring clients with service and customer info
       const { data: recurring } = await supabase
         .from('recurring_clients')
-        .select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents)')
+        .select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents), customer:customers(name, phone)')
         .eq('tenant_id', currentTenant.id)
         .eq('active', true);
       
@@ -102,7 +103,10 @@ export default function Agenda() {
     
     const realBookings = bookings.filter(booking => {
       const bookingDate = new Date(booking.starts_at);
-      return bookingDate >= dayStart && bookingDate < dayEnd;
+      const inDay = bookingDate >= dayStart && bookingDate < dayEnd;
+      if (!inDay) return false;
+      if (statusFilter === 'all') return true;
+      return booking.status === statusFilter;
     });
 
     // Add recurring clients as pseudo-bookings for this day
@@ -122,7 +126,7 @@ export default function Agenda() {
           starts_at: startsAt.toISOString(),
           ends_at: endsAt.toISOString(),
           status: 'recurring',
-          customer: { name: r.client_name, phone: r.client_phone },
+          customer: r.customer || { name: 'Cliente Fixo', phone: '' },
           service: { name: serviceName, color: serviceColor, duration_minutes: duration, price_cents: priceCents },
           staff: r.staff,
           payment: null,
@@ -412,12 +416,11 @@ export default function Agenda() {
         </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant={viewMode === 'day' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setViewMode('day')}
-              className="flex-1 sm:flex-none"
             >
               Dia
             </Button>
@@ -425,10 +428,26 @@ export default function Agenda() {
               variant={viewMode === 'week' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setViewMode('week')}
-              className="flex-1 sm:flex-none"
             >
               Semana
             </Button>
+            <span className="w-px h-6 bg-border mx-1" />
+            {[
+              { value: 'confirmed', label: 'Confirmados' },
+              { value: 'pending', label: 'Pendentes' },
+              { value: 'completed', label: 'Concluídos' },
+              { value: 'cancelled', label: 'Cancelados' },
+              { value: 'all', label: 'Todos' },
+            ].map(f => (
+              <Button
+                key={f.value}
+                variant={statusFilter === f.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter(f.value)}
+              >
+                {f.label}
+              </Button>
+            ))}
           </div>
           
           <div className="flex items-center gap-2 justify-center sm:justify-start">

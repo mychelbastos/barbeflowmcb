@@ -20,15 +20,14 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const nowUTC = new Date();
     const nowLocal = new Date(nowUTC.getTime() + TZ_OFFSET * 60 * 60 * 1000);
-    const todayLocal = nowLocal.toISOString().slice(0, 10); // YYYY-MM-DD
-    const currentDayOfWeek = nowLocal.getDay(); // 0=Sun
+    const todayLocal = nowLocal.toISOString().slice(0, 10);
+    const currentDayOfWeek = nowLocal.getDay();
 
     console.log(`Processing recurring bookings. Local now: ${nowLocal.toISOString()}, weekday: ${currentDayOfWeek}, date: ${todayLocal}`);
 
-    // Get all active recurring clients for today's weekday
     const { data: recurringClients, error: rcError } = await supabase
       .from("recurring_clients")
-      .select("*, service:services(id, name, duration_minutes, price_cents)")
+      .select("*, service:services(id, name, duration_minutes, price_cents), customer:customers(id, name, phone)")
       .eq("weekday", currentDayOfWeek)
       .eq("active", true)
       .lte("start_date", todayLocal)
@@ -53,91 +52,55 @@ Deno.serve(async (req) => {
     let skipped = 0;
 
     for (const rc of recurringClients) {
-      // Parse start_time
-      const [h, m] = rc.start_time.split(":").map(Number);
+      const customerName = rc.customer?.name || "Cliente Fixo";
       const duration = rc.service?.duration_minutes || rc.duration_minutes;
 
-      // Calculate slot start/end in UTC
       const slotStartLocal = new Date(`${todayLocal}T${rc.start_time}:00`);
       const slotStartUTC = new Date(slotStartLocal.getTime() - TZ_OFFSET * 60 * 60 * 1000);
       const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60 * 1000);
 
-      // Only process if the slot end time has passed
       if (slotEndUTC > nowUTC) {
-        console.log(`Slot ${rc.start_time} for ${rc.client_name} hasn't ended yet, skipping`);
+        console.log(`Slot ${rc.start_time} for ${customerName} hasn't ended yet, skipping`);
         skipped++;
         continue;
       }
 
-      // Check if a booking already exists for this recurring client on this date
-      // We use a notes marker to identify recurring bookings
-      const recurringMarker = `recurring:${rc.id}`;
-      
       const { data: existing } = await supabase
         .from("bookings")
         .select("id")
         .eq("tenant_id", rc.tenant_id)
         .eq("staff_id", rc.staff_id)
         .gte("starts_at", slotStartUTC.toISOString())
-        .lt("starts_at", new Date(slotStartUTC.getTime() + 60000).toISOString()) // within 1 min
+        .lt("starts_at", new Date(slotStartUTC.getTime() + 60000).toISOString())
         .limit(1);
 
       if (existing && existing.length > 0) {
-        console.log(`Booking already exists for ${rc.client_name} at ${rc.start_time}, skipping`);
+        console.log(`Booking already exists for ${customerName} at ${rc.start_time}, skipping`);
         skipped++;
         continue;
       }
 
-      // Find or create customer
-      let customerId: string;
-      const { data: existingCustomer } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("tenant_id", rc.tenant_id)
-        .eq("phone", rc.client_phone)
-        .limit(1);
-
-      if (existingCustomer && existingCustomer.length > 0) {
-        customerId = existingCustomer[0].id;
-      } else {
-        const { data: newCustomer, error: custErr } = await supabase
-          .from("customers")
-          .insert({
-            tenant_id: rc.tenant_id,
-            name: rc.client_name,
-            phone: rc.client_phone,
-          })
-          .select("id")
-          .single();
-        
-        if (custErr) {
-          console.error(`Error creating customer for ${rc.client_name}:`, custErr);
-          continue;
-        }
-        customerId = newCustomer.id;
-      }
-
-      // Create booking as completed
+      // Use the customer_id directly from recurring_clients
       const { error: bookingErr } = await supabase
         .from("bookings")
         .insert({
           tenant_id: rc.tenant_id,
-          customer_id: customerId,
+          customer_id: rc.customer_id,
           service_id: rc.service_id,
           staff_id: rc.staff_id,
           starts_at: slotStartUTC.toISOString(),
           ends_at: slotEndUTC.toISOString(),
           status: "completed",
           created_via: "recurring",
-          notes: `Cliente Fixo — ${rc.client_name}${rc.notes ? ` | ${rc.notes}` : ""}`,
+          notes: `Cliente Fixo — ${customerName}${rc.notes ? ` | ${rc.notes}` : ""}`,
         });
 
       if (bookingErr) {
-        console.error(`Error creating booking for ${rc.client_name}:`, bookingErr);
+        console.error(`Error creating booking for ${customerName}:`, bookingErr);
         continue;
       }
 
-      console.log(`Created completed booking for ${rc.client_name} at ${rc.start_time}`);
+      console.log(`Created completed booking for ${customerName} at ${rc.start_time}`);
       created++;
     }
 

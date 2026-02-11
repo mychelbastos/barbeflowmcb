@@ -131,7 +131,7 @@ const Dashboard = () => {
 
         supabase
           .from('recurring_clients')
-          .select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents)')
+          .select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents), customer:customers(name, phone)')
           .eq('tenant_id', currentTenant.id)
           .eq('active', true)
       ]);
@@ -360,7 +360,7 @@ const Dashboard = () => {
                       starts_at: startsAt.toISOString(),
                       ends_at: endsAt.toISOString(),
                       status: 'recurring',
-                      customer: { name: r.client_name, phone: r.client_phone },
+                      customer: r.customer || { name: 'Cliente Fixo', phone: '' },
                       service: r.service || { name: 'Cliente Fixo', color: '#8B5CF6', price_cents: 0 },
                       staff: r.staff,
                       is_recurring: true,
