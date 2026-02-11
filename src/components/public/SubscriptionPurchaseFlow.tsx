@@ -72,18 +72,13 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
 
       // Call MP create subscription
       const { data: mpData, error: mpErr } = await supabase.functions.invoke('mp-create-subscription', {
-        body: {
-          tenant_id: tenant.id,
-          plan_id: selectedPlan.id,
-          customer_subscription_id: sub.id,
-          payer_email: email,
-        },
+        body: { subscription_id: sub.id },
       });
 
       if (mpErr) throw mpErr;
 
-      if (mpData?.init_point) {
-        window.location.href = mpData.init_point;
+      if (mpData?.checkout_url) {
+        window.location.href = mpData.checkout_url;
       } else {
         toast({ title: "Assinatura criada!", description: "Aguardando confirmação de pagamento." });
         setSelectedPlan(null);
