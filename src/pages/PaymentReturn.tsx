@@ -132,40 +132,19 @@ const PaymentReturn = () => {
     });
   };
 
-  const generateCalendarFile = () => {
-    if (!booking) return;
-
+  const generateGoogleCalendarUrl = () => {
+    if (!booking) return '';
     const startDate = new Date(booking.starts_at);
     const endDate = new Date(booking.ends_at);
-    
-    const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-    
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Booking//Booking Event//EN
-BEGIN:VEVENT
-UID:booking-${booking.id}@${tenant?.slug || 'barbearia'}
-DTSTAMP:${formatICSDate(new Date())}
-DTSTART:${formatICSDate(startDate)}
-DTEND:${formatICSDate(endDate)}
-SUMMARY:${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}
-DESCRIPTION:Agendamento confirmado
-LOCATION:${tenant?.address || tenant?.name || 'Barbearia'}
-END:VEVENT
-END:VCALENDAR`;
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `agendamento-${booking.id}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const formatGCal = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}`,
+      dates: `${formatGCal(startDate)}/${formatGCal(endDate)}`,
+      details: 'Agendamento confirmado',
+      location: tenant?.address || tenant?.name || '',
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
   if (loading) {
@@ -290,11 +269,11 @@ END:VCALENDAR`;
         <div className="space-y-3">
           {payment?.status === 'paid' && (
             <Button 
-              onClick={generateCalendarFile}
+              onClick={() => window.open(generateGoogleCalendarUrl(), '_blank')}
               className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
             >
               <CalendarPlus className="h-4 w-4 mr-2" />
-              Adicionar ao calendário
+              Adicionar ao Google Calendar
             </Button>
           )}
 

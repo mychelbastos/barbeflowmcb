@@ -977,24 +977,14 @@ END:VCALENDAR`;
           
           <div className="space-y-3">
             <p className="text-xs text-zinc-500 text-center mb-2">Adicionar ao calendário</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                onClick={() => window.open(generateGoogleCalendarUrl(createdBooking), '_blank')}
-                variant="outline"
-                className="h-11 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-white rounded-xl text-sm"
-              >
-                <CalendarPlus className="h-4 w-4 mr-2" />
-                Google
-              </Button>
-              <Button 
-                onClick={() => generateCalendarFile(createdBooking)}
-                variant="outline"
-                className="h-11 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-white rounded-xl text-sm"
-              >
-                <CalendarPlus className="h-4 w-4 mr-2" />
-                Apple / Outro
-              </Button>
-            </div>
+            <Button 
+              onClick={() => window.open(generateGoogleCalendarUrl(createdBooking), '_blank')}
+              variant="outline"
+              className="w-full h-11 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-white rounded-xl text-sm"
+            >
+              <CalendarPlus className="h-4 w-4 mr-2" />
+              Adicionar ao Google Calendar
+            </Button>
             <Button 
               variant="ghost"
               onClick={resetBooking}
