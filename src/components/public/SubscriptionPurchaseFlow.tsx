@@ -4,18 +4,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Repeat, Loader2, Check, ChevronLeft, ExternalLink } from "lucide-react";
+import { Repeat, Loader2, ChevronLeft, ExternalLink } from "lucide-react";
 
 interface SubscriptionPurchaseFlowProps {
   tenant: any;
   plans: any[];
-}
-
-function canonicalPhone(phone: string): string {
-  let digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('55') && digits.length >= 12) digits = digits.slice(2);
-  if (digits.length === 10) digits = digits.slice(0, 2) + '9' + digits.slice(2);
-  return digits;
 }
 
 export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchaseFlowProps) {
@@ -40,45 +33,20 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
     }
     setSubmitting(true);
     try {
-      const canonical = canonicalPhone(phone);
-
-      // Find or create customer
-      const { data: allCusts } = await supabase
-        .from('customers').select('id, phone').eq('tenant_id', tenant.id);
-      let customerId: string;
-      const matched = allCusts?.find(c => canonicalPhone(c.phone) === canonical);
-
-      if (matched) {
-        customerId = matched.id;
-        await supabase.from('customers').update({ name: name.trim(), email }).eq('id', customerId);
-      } else {
-        const { data: newCust, error } = await supabase
-          .from('customers')
-          .insert({ tenant_id: tenant.id, name: name.trim(), phone: canonical, email })
-          .select('id').single();
-        if (error) throw error;
-        customerId = newCust.id;
-      }
-
-      // Create pending subscription
-      const { data: sub, error: subErr } = await supabase
-        .from('customer_subscriptions')
-        .insert({
-          customer_id: customerId, plan_id: selectedPlan.id, tenant_id: tenant.id, status: 'pending',
-        })
-        .select().single();
-
-      if (subErr) throw subErr;
-
-      // Call MP create subscription
-      const { data: mpData, error: mpErr } = await supabase.functions.invoke('mp-create-subscription', {
-        body: { subscription_id: sub.id },
+      const { data, error } = await supabase.functions.invoke('mp-create-subscription', {
+        body: {
+          tenant_id: tenant.id,
+          plan_id: selectedPlan.id,
+          customer_name: name.trim(),
+          customer_phone: phone,
+          customer_email: email.trim(),
+        },
       });
 
-      if (mpErr) throw mpErr;
+      if (error) throw error;
 
-      if (mpData?.checkout_url) {
-        window.location.href = mpData.checkout_url;
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
       } else {
         toast({ title: "Assinatura criada!", description: "Aguardando confirmação de pagamento." });
         setSelectedPlan(null);
