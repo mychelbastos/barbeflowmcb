@@ -341,7 +341,43 @@ serve(async (req) => {
     const endsAtDate = new Date(startsAtDate.getTime() + (totalDuration * 60 * 1000));
     const ends_at = endsAtDate.toISOString();
 
-    // 6-9. Atomic booking creation with advisory lock (prevents race conditions / double-bookings)
+    // 6. Find or create customer
+    const normalizedPhone = normalizePhone(customer_phone);
+    let { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('tenant_id', tenant_id)
+      .eq('phone', normalizedPhone)
+      .maybeSingle();
+
+    let customerId: string;
+    if (existingCustomer) {
+      customerId = existingCustomer.id;
+      // Update name/email if provided
+      const updateData: Record<string, any> = { name: customer_name };
+      if (customer_email) updateData.email = customer_email;
+      if (customer_birthday) updateData.birthday = customer_birthday;
+      await supabase.from('customers').update(updateData).eq('id', customerId);
+    } else {
+      const insertData: Record<string, any> = {
+        tenant_id,
+        name: customer_name,
+        phone: normalizedPhone,
+      };
+      if (customer_email) insertData.email = customer_email;
+      if (customer_birthday) insertData.birthday = customer_birthday;
+      const { data: newCustomer, error: custError } = await supabase
+        .from('customers')
+        .insert(insertData)
+        .select('id')
+        .single();
+      if (custError || !newCustomer) {
+        return createErrorResponse(ErrorType.CUSTOMER_CREATE_FAILED, 'Failed to create customer', 500, { custError });
+      }
+      customerId = newCustomer.id;
+    }
+
+    // 7. Atomic booking creation with advisory lock (prevents race conditions / double-bookings)
     const bufferTime = tenantSettings.buffer_time ?? 10;
     const isBenefitBooking = !!(customer_package_id || customer_subscription_id);
     const bookingStatus = isBenefitBooking ? 'confirmed' : (payment_method === 'online' ? 'pending_payment' : 'confirmed');
@@ -350,7 +386,7 @@ serve(async (req) => {
       p_tenant_id: tenant_id,
       p_service_id: service_id,
       p_staff_id: finalStaffId,
-      p_customer_id: customer_id,
+      p_customer_id: customerId,
       p_starts_at: starts_at,
       p_ends_at: ends_at,
       p_status: bookingStatus,
