@@ -38,6 +38,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
   const [name, setName] = useState(plan?.name || '');
   const [description, setDescription] = useState(plan?.description || '');
   const [price, setPrice] = useState(plan ? (plan.price_cents / 100).toFixed(2) : '');
+  const [isPublic, setIsPublic] = useState(plan?.public !== false);
   const [sessionsUnlimited, setSessionsUnlimited] = useState(plan?.sessions_limit == null);
   const [sessionsLimit, setSessionsLimit] = useState(plan?.sessions_limit?.toString() || '');
   const [planServices, setPlanServices] = useState<PlanServiceItem[]>(() => {
@@ -56,6 +57,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
     setName(plan?.name || '');
     setDescription(plan?.description || '');
     setPrice(plan ? (plan.price_cents / 100).toFixed(2) : '');
+    setIsPublic(plan?.public !== false);
     setSessionsUnlimited(plan?.sessions_limit == null);
     setSessionsLimit(plan?.sessions_limit?.toString() || '');
     if (plan?.plan_services?.length) {
@@ -93,6 +95,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
           description: description || null,
           price_cents: priceCents,
           sessions_limit: sessionsUnlimited ? null : parseInt(sessionsLimit) || null,
+          public: isPublic,
         }).eq('id', plan.id);
         if (error) throw error;
 
@@ -114,6 +117,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
           description: description || null,
           price_cents: priceCents,
           sessions_limit: sessionsUnlimited ? null : parseInt(sessionsLimit) || null,
+          public: isPublic,
         }).select().single();
         if (error) throw error;
 
@@ -213,8 +217,16 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
             <Button variant="outline" size="sm" onClick={() => setPlanServices(prev => [...prev, { service_id: '', sessions_per_cycle: '', unlimited: true }])} className="w-full">
               <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar serviço
             </Button>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border px-4 py-3">
+              <div>
+                <Label className="text-sm">Visível para clientes</Label>
+                <p className="text-xs text-muted-foreground">Exibir na página pública de agendamento</p>
+              </div>
+              <Switch checked={isPublic} onCheckedChange={setIsPublic} />
+            </div>
           </div>
-        </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving}>

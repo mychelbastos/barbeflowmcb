@@ -15,7 +15,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Package, Loader2, Trash2, Pencil, X } from "lucide-react";
+import { Plus, Package, Loader2, Trash2, Pencil, X, Eye, EyeOff } from "lucide-react";
 
 interface PackageServiceItem {
   service_id: string;
@@ -34,6 +34,7 @@ export function ServicePackagesTab() {
   const [formData, setFormData] = useState({
     name: "",
     price: "",
+    isPublic: true,
   });
   const [packageServices, setPackageServices] = useState<PackageServiceItem[]>([
     { service_id: "", sessions_count: "" },
@@ -87,7 +88,7 @@ export function ServicePackagesTab() {
 
   const openCreateForm = () => {
     setEditingId(null);
-    setFormData({ name: "", price: "" });
+    setFormData({ name: "", price: "", isPublic: true });
     setPackageServices([{ service_id: "", sessions_count: "" }]);
     setShowForm(true);
   };
@@ -97,6 +98,7 @@ export function ServicePackagesTab() {
     setFormData({
       name: pkg.name,
       price: (pkg.price_cents / 100).toFixed(2),
+      isPublic: pkg.public !== false,
     });
     const svcs = (pkg.package_services || []).map((ps: any) => ({
       service_id: ps.service_id,
@@ -137,6 +139,7 @@ export function ServicePackagesTab() {
           name: formData.name,
           price_cents: priceCents,
           total_sessions: totalSessions,
+          public: formData.isPublic,
         }).eq("id", editingId);
         if (error) throw error;
 
@@ -156,9 +159,10 @@ export function ServicePackagesTab() {
         const { data: newPkg, error } = await supabase.from("service_packages").insert({
           tenant_id: currentTenant.id,
           name: formData.name,
-          service_id: validServices[0].service_id, // legacy field
+          service_id: validServices[0].service_id,
           total_sessions: totalSessions,
           price_cents: priceCents,
+          public: formData.isPublic,
         }).select().single();
         if (error) throw error;
 
@@ -223,7 +227,14 @@ export function ServicePackagesTab() {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">{pkg.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-foreground truncate">{pkg.name}</h3>
+                      {pkg.public === false && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          <EyeOff className="h-3 w-3 mr-0.5" /> Privado
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-sm font-semibold text-emerald-400">
                       R$ {(pkg.price_cents / 100).toFixed(2)}
                     </span>
@@ -322,6 +333,17 @@ export function ServicePackagesTab() {
               <CurrencyInput
                 value={formData.price}
                 onChange={(v) => setFormData(p => ({ ...p, price: v }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border px-4 py-3">
+              <div>
+                <Label className="text-sm">Visível para clientes</Label>
+                <p className="text-xs text-muted-foreground">Exibir na página pública de agendamento</p>
+              </div>
+              <Switch
+                checked={formData.isPublic}
+                onCheckedChange={(v) => setFormData(p => ({ ...p, isPublic: v }))}
               />
             </div>
           </div>

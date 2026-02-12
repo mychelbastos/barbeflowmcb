@@ -198,6 +198,7 @@ const BookingPublic = () => {
         .select("*")
         .eq("tenant_id", tenantData.id)
         .eq("active", true)
+        .eq("public", true)
         .order("name");
 
       if (pkgsData && pkgsData.length > 0) {
@@ -220,6 +221,7 @@ const BookingPublic = () => {
         .select("*")
         .eq("tenant_id", tenantData.id)
         .eq("active", true)
+        .eq("public", true)
         .order("name");
 
       if (subPlansData && subPlansData.length > 0) {

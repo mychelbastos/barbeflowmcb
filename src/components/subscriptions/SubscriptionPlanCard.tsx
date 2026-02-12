@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Pencil, Trash2, Users } from "lucide-react";
+import { Pencil, Trash2, Users, EyeOff } from "lucide-react";
 
 interface SubscriptionPlanCardProps {
   plan: any;
@@ -17,7 +17,14 @@ export function SubscriptionPlanCard({ plan, onEdit, onDelete, onToggleActive }:
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-foreground truncate">{plan.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium text-foreground truncate">{plan.name}</h3>
+              {plan.public === false && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  <EyeOff className="h-3 w-3 mr-0.5" /> Privado
+                </Badge>
+              )}
+            </div>
             <span className="text-sm font-semibold text-emerald-400">
               R$ {(plan.price_cents / 100).toFixed(2)}/mês
             </span>

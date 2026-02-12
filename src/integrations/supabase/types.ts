@@ -1000,6 +1000,7 @@ export type Database = {
           id: string
           name: string
           price_cents: number
+          public: boolean
           service_id: string | null
           tenant_id: string
           total_sessions: number
@@ -1011,6 +1012,7 @@ export type Database = {
           id?: string
           name: string
           price_cents: number
+          public?: boolean
           service_id?: string | null
           tenant_id: string
           total_sessions?: number
@@ -1022,6 +1024,7 @@ export type Database = {
           id?: string
           name?: string
           price_cents?: number
+          public?: boolean
           service_id?: string | null
           tenant_id?: string
           total_sessions?: number
@@ -1336,6 +1339,7 @@ export type Database = {
           id: string
           name: string
           price_cents: number
+          public: boolean
           sessions_limit: number | null
           tenant_id: string
           updated_at: string
@@ -1348,6 +1352,7 @@ export type Database = {
           id?: string
           name: string
           price_cents: number
+          public?: boolean
           sessions_limit?: number | null
           tenant_id: string
           updated_at?: string
@@ -1360,6 +1365,7 @@ export type Database = {
           id?: string
           name?: string
           price_cents?: number
+          public?: boolean
           sessions_limit?: number | null
           tenant_id?: string
           updated_at?: string
