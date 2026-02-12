@@ -161,30 +161,6 @@ const Login = () => {
           </div>
         </motion.div>
 
-        {/* Demo card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-6 bg-zinc-900/30 border border-zinc-800/30 rounded-xl p-5"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary" />
-            </div>
-            <p className="text-sm text-zinc-400">
-              Quer testar antes?
-            </p>
-          </div>
-          <Button 
-            variant="ghost"
-            size="sm" 
-            className="w-full bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-zinc-100"
-            onClick={() => window.location.href = '/booking/demo'}
-          >
-            Ver Demonstração
-          </Button>
-        </motion.div>
       </motion.div>
     </div>
   );
