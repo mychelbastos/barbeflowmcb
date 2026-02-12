@@ -123,8 +123,8 @@ export function SubscriptionCardPayment({
           visual: {
             style: {
               theme: 'dark',
-              customVariables: {
-                baseColor: '#18181b',
+                customVariables: {
+                  baseColor: '#f97316',
                 fontSizeExtraSmall: '12px',
                 fontSizeSmall: '14px',
                 fontSizeMedium: '16px',
