@@ -37,7 +37,9 @@ import {
   Palette,
   Upload,
   X,
-  ImageIcon
+  ImageIcon,
+  Sparkles,
+  Loader2 as Loader2Icon
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -73,6 +75,7 @@ export default function Services() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [enhancingServiceId, setEnhancingServiceId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -404,6 +407,39 @@ export default function Services() {
                   </div>
                   
                   <div className="flex items-center space-x-1">
+                    {service.photo_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            setEnhancingServiceId(service.id);
+                            toast({ title: "✨ Melhorando imagem com IA...", description: "Isso pode levar alguns segundos" });
+                            const { data, error } = await supabase.functions.invoke('enhance-product-image', {
+                              body: { item_id: service.id, image_url: service.photo_url, table: 'services' },
+                            });
+                            if (error) throw error;
+                            if (data?.error) { toast({ title: data.error, variant: "destructive" }); return; }
+                            toast({ title: "Imagem melhorada com sucesso! ✨" });
+                            loadServices();
+                          } catch (err) {
+                            console.error('Enhance error:', err);
+                            toast({ title: "Erro ao melhorar imagem", variant: "destructive" });
+                          } finally {
+                            setEnhancingServiceId(null);
+                          }
+                        }}
+                        disabled={enhancingServiceId === service.id}
+                        className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+                        title="Melhorar imagem com IA"
+                      >
+                        {enhancingServiceId === service.id ? (
+                          <Loader2Icon className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

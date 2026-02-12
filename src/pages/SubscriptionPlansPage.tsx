@@ -150,6 +150,7 @@ export default function SubscriptionPlansPage() {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onToggleActive={handleToggleActive}
+                    onReload={loadData}
                   />
                 ))}
               </div>

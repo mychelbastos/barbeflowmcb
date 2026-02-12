@@ -999,6 +999,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          photo_url: string | null
           price_cents: number
           public: boolean
           service_id: string | null
@@ -1011,6 +1012,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          photo_url?: string | null
           price_cents: number
           public?: boolean
           service_id?: string | null
@@ -1023,6 +1025,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          photo_url?: string | null
           price_cents?: number
           public?: boolean
           service_id?: string | null
@@ -1338,6 +1341,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          photo_url: string | null
           price_cents: number
           public: boolean
           sessions_limit: number | null
@@ -1351,6 +1355,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          photo_url?: string | null
           price_cents: number
           public?: boolean
           sessions_limit?: number | null
@@ -1364,6 +1369,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          photo_url?: string | null
           price_cents?: number
           public?: boolean
           sessions_limit?: number | null

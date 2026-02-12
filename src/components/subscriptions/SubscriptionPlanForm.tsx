@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Upload, Loader2 } from "lucide-react";
 
 interface PlanServiceItem {
   service_id: string;
@@ -34,11 +34,13 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
   const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(plan?.name || '');
   const [description, setDescription] = useState(plan?.description || '');
   const [price, setPrice] = useState(plan ? (plan.price_cents / 100).toFixed(2) : '');
   const [isPublic, setIsPublic] = useState(plan?.public !== false);
+  const [photoUrl, setPhotoUrl] = useState(plan?.photo_url || '');
   const [sessionsUnlimited, setSessionsUnlimited] = useState(plan?.sessions_limit == null);
   const [sessionsLimit, setSessionsLimit] = useState(plan?.sessions_limit?.toString() || '');
   const [planServices, setPlanServices] = useState<PlanServiceItem[]>(() => {
@@ -58,6 +60,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
     setDescription(plan?.description || '');
     setPrice(plan ? (plan.price_cents / 100).toFixed(2) : '');
     setIsPublic(plan?.public !== false);
+    setPhotoUrl(plan?.photo_url || '');
     setSessionsUnlimited(plan?.sessions_limit == null);
     setSessionsLimit(plan?.sessions_limit?.toString() || '');
     if (plan?.plan_services?.length) {
@@ -75,6 +78,26 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
   useEffect(() => {
     if (open) resetForm();
   }, [open, plan]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentTenant) return;
+    try {
+      setUploadingImage(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentTenant.id}/plans/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('tenant-media').upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('tenant-media').getPublicUrl(fileName);
+      setPhotoUrl(publicUrl);
+      toast({ title: "Imagem enviada com sucesso" });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: "Erro ao enviar imagem", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!currentTenant || !name || !price) return;
@@ -96,6 +119,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
           price_cents: priceCents,
           sessions_limit: sessionsUnlimited ? null : parseInt(sessionsLimit) || null,
           public: isPublic,
+          photo_url: photoUrl || null,
         }).eq('id', plan.id);
         if (error) throw error;
 
@@ -118,6 +142,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
           price_cents: priceCents,
           sessions_limit: sessionsUnlimited ? null : parseInt(sessionsLimit) || null,
           public: isPublic,
+          photo_url: photoUrl || null,
         }).select().single();
         if (error) throw error;
 
@@ -217,6 +242,29 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
             <Button variant="outline" size="sm" onClick={() => setPlanServices(prev => [...prev, { service_id: '', sessions_per_cycle: '', unlimited: true }])} className="w-full">
               <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar serviço
             </Button>
+            </div>
+
+            {/* Photo Upload */}
+            <div className="space-y-2">
+              <Label>Imagem do plano</Label>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              {photoUrl ? (
+                <div className="relative w-full h-28 rounded-lg overflow-hidden border border-border">
+                  <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                  <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-6 w-6"
+                    onClick={() => setPhotoUrl('')}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" className="w-full h-20 border-dashed"
+                  onClick={() => fileInputRef.current?.click()} disabled={uploadingImage}>
+                  <div className="flex flex-col items-center gap-1">
+                    {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5 text-muted-foreground" />}
+                    <span className="text-xs text-muted-foreground">{uploadingImage ? "Enviando..." : "Clique para enviar foto"}</span>
+                  </div>
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border px-4 py-3">

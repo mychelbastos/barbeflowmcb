@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Package, Loader2, Trash2, Pencil, X, Eye, EyeOff } from "lucide-react";
+import { Plus, Package, Loader2, Trash2, Pencil, X, Eye, EyeOff, Upload, Sparkles, ImageIcon } from "lucide-react";
 
 interface PackageServiceItem {
   service_id: string;
@@ -31,14 +31,18 @@ export function ServicePackagesTab() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [enhancingId, setEnhancingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
     isPublic: true,
+    photo_url: "",
   });
   const [packageServices, setPackageServices] = useState<PackageServiceItem[]>([
     { service_id: "", sessions_count: "" },
   ]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (currentTenant) loadData();
@@ -86,9 +90,49 @@ export function ServicePackagesTab() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentTenant) return;
+    try {
+      setUploadingImage(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentTenant.id}/packages/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('tenant-media').upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('tenant-media').getPublicUrl(fileName);
+      setFormData(prev => ({ ...prev, photo_url: publicUrl }));
+      toast({ title: "Imagem enviada com sucesso" });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: "Erro ao enviar imagem", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleEnhanceImage = async (pkg: any) => {
+    if (!pkg.photo_url) { toast({ title: "Adicione uma foto primeiro", variant: "destructive" }); return; }
+    try {
+      setEnhancingId(pkg.id);
+      toast({ title: "✨ Melhorando imagem com IA...", description: "Isso pode levar alguns segundos" });
+      const { data, error } = await supabase.functions.invoke('enhance-product-image', {
+        body: { item_id: pkg.id, image_url: pkg.photo_url, table: 'service_packages' },
+      });
+      if (error) throw error;
+      if (data?.error) { toast({ title: data.error, variant: "destructive" }); return; }
+      toast({ title: "Imagem melhorada com sucesso! ✨" });
+      loadData();
+    } catch (err) {
+      console.error('Enhance error:', err);
+      toast({ title: "Erro ao melhorar imagem", variant: "destructive" });
+    } finally {
+      setEnhancingId(null);
+    }
+  };
+
   const openCreateForm = () => {
     setEditingId(null);
-    setFormData({ name: "", price: "", isPublic: true });
+    setFormData({ name: "", price: "", isPublic: true, photo_url: "" });
     setPackageServices([{ service_id: "", sessions_count: "" }]);
     setShowForm(true);
   };
@@ -99,6 +143,7 @@ export function ServicePackagesTab() {
       name: pkg.name,
       price: (pkg.price_cents / 100).toFixed(2),
       isPublic: pkg.public !== false,
+      photo_url: pkg.photo_url || "",
     });
     const svcs = (pkg.package_services || []).map((ps: any) => ({
       service_id: ps.service_id,
@@ -140,6 +185,7 @@ export function ServicePackagesTab() {
           price_cents: priceCents,
           total_sessions: totalSessions,
           public: formData.isPublic,
+          photo_url: formData.photo_url || null,
         }).eq("id", editingId);
         if (error) throw error;
 
@@ -163,6 +209,7 @@ export function ServicePackagesTab() {
           total_sessions: totalSessions,
           price_cents: priceCents,
           public: formData.isPublic,
+          photo_url: formData.photo_url || null,
         }).select().single();
         if (error) throw error;
 
@@ -224,6 +271,11 @@ export function ServicePackagesTab() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
             <Card key={pkg.id} className={!pkg.active ? "opacity-50" : ""}>
+              {pkg.photo_url && (
+                <div className="h-28 w-full overflow-hidden rounded-t-lg">
+                  <img src={pkg.photo_url} alt={pkg.name} className="w-full h-full object-cover" />
+                </div>
+              )}
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
@@ -263,6 +315,22 @@ export function ServicePackagesTab() {
                 </div>
 
                 <div className="flex items-center gap-1 pt-2 border-t border-border">
+                  {pkg.photo_url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEnhanceImage(pkg)}
+                      disabled={enhancingId === pkg.id}
+                      className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+                      title="Melhorar imagem com IA"
+                    >
+                      {enhancingId === pkg.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" onClick={() => openEditForm(pkg)}>
                     <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
                   </Button>
@@ -334,6 +402,29 @@ export function ServicePackagesTab() {
                 value={formData.price}
                 onChange={(v) => setFormData(p => ({ ...p, price: v }))}
               />
+            </div>
+
+            {/* Photo Upload */}
+            <div className="space-y-2">
+              <Label>Imagem do pacote</Label>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              {formData.photo_url ? (
+                <div className="relative w-full h-28 rounded-lg overflow-hidden border border-border">
+                  <img src={formData.photo_url} alt="Preview" className="w-full h-full object-cover" />
+                  <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-6 w-6"
+                    onClick={() => setFormData(p => ({ ...p, photo_url: "" }))}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" className="w-full h-20 border-dashed"
+                  onClick={() => fileInputRef.current?.click()} disabled={uploadingImage}>
+                  <div className="flex flex-col items-center gap-1">
+                    {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5 text-muted-foreground" />}
+                    <span className="text-xs text-muted-foreground">{uploadingImage ? "Enviando..." : "Clique para enviar foto"}</span>
+                  </div>
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border px-4 py-3">
