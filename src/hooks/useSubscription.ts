@@ -17,6 +17,7 @@ export const PLANS = {
     product_id: "prod_Ty1Jvoc0qpDOUu",
     name: "Essencial",
     commission: "2,5%",
+    commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
     month: {
       price_monthly: 5990,
       display: "R$ 59,90/mês",
@@ -38,6 +39,7 @@ export const PLANS = {
     product_id: "prod_Ty1KYrBniQmXyi",
     name: "Profissional",
     commission: "1,0%",
+    commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
     month: {
       price_monthly: 8990,
       display: "R$ 89,90/mês",
