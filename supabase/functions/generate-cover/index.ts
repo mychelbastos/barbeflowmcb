@@ -45,7 +45,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Create a professional barbershop cover banner (landscape 16:9 aspect ratio). Place the provided logo centered on a dark elegant gradient background going from dark charcoal (#1a1a1a) to dark emerald (#064e3b). Add subtle decorative elements like thin lines or geometric patterns around the logo. Keep it minimal, modern and professional. The logo should be prominent and centered."
+                text: "Create a professional service business cover banner (landscape 16:9 aspect ratio). Place the provided logo centered on a dark elegant gradient background going from dark charcoal (#1a1a1a) to dark gold (#8B6914). Add subtle decorative elements like thin lines or geometric patterns around the logo. Keep it minimal, modern and professional. The logo should be prominent and centered."
               },
               {
                 type: "image_url",

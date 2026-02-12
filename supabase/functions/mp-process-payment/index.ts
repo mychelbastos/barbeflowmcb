@@ -130,7 +130,7 @@ serve(async (req) => {
 
     // Build payment body based on type
     let mpPaymentBody: any;
-    const description = `${booking.service?.name || 'Serviço'} - ${booking.tenant?.name || 'Barbearia'}`;
+    const description = `${booking.service?.name || 'Serviço'} - ${booking.tenant?.name || 'Estabelecimento'}`;
 
     if (payment_type === 'pix') {
       // PIX payment

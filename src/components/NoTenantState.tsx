@@ -9,10 +9,10 @@ export function NoTenantState() {
           <Building2 className="h-8 w-8 text-muted-foreground" />
         </div>
         <h3 className="text-lg font-semibold text-foreground mb-2">
-          Nenhuma barbearia encontrada
+          Nenhum estabelecimento encontrado
         </h3>
         <p className="text-muted-foreground text-sm">
-          Você ainda não está associado a nenhuma barbearia. Entre em contato com o administrador para solicitar acesso.
+          Você ainda não está associado a nenhum estabelecimento. Entre em contato com o administrador para solicitar acesso.
         </p>
       </CardContent>
     </Card>

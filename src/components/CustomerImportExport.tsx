@@ -415,7 +415,7 @@ export function CustomerImportExport() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Baixe todos os clientes da sua barbearia em formato CSV.
+            Baixe todos os clientes do seu estabelecimento em formato CSV.
           </p>
           <Button onClick={handleExport} disabled={exporting} variant="outline">
             {exporting ? (

@@ -57,7 +57,7 @@ serve(async (req) => {
 
     if (membershipError || !membership) {
       return new Response(
-        JSON.stringify({ error: 'Você não tem acesso a esta barbearia' }),
+        JSON.stringify({ error: 'Você não tem acesso a este estabelecimento' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

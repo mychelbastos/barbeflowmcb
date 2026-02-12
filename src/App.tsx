@@ -56,7 +56,7 @@ const App = () => (
           <ScrollToTop />
           <AuthWatcher />
           <Routes>
-            {/* Public routes - barberflow.store */}
+            {/* Public routes - modogestor.com.br */}
             {showPublic && (
               <>
                 <Route path="/" element={<Landing />} />

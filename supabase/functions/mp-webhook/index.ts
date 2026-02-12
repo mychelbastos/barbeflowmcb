@@ -544,7 +544,7 @@ async function sendSubscriptionWhatsApp(
   try {
     const customer = subscription.customer;
     const plan = subscription.plan;
-    const tenantName = plan?.tenant?.name || 'BarberFlow';
+    const tenantName = plan?.tenant?.name || 'modoGESTOR';
     const tenantSlug = plan?.tenant?.slug || '';
 
     if (!customer?.phone || !plan) {

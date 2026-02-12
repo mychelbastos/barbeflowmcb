@@ -139,7 +139,7 @@ const PaymentReturn = () => {
     const formatGCal = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const params = new URLSearchParams({
       action: 'TEMPLATE',
-      text: `${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}`,
+      text: `${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Estabelecimento'}`,
       dates: `${formatGCal(startDate)}/${formatGCal(endDate)}`,
       details: 'Agendamento confirmado',
       location: tenant?.address || tenant?.name || '',
@@ -209,7 +209,7 @@ const PaymentReturn = () => {
               <Scissors className="h-6 w-6 text-white/80" />
             </div>
             <div>
-              <h1 className="font-semibold text-lg">{tenant?.name || "Barbearia"}</h1>
+              <h1 className="font-semibold text-lg">{tenant?.name || "Estabelecimento"}</h1>
               <p className="text-zinc-500 text-sm">Status do pagamento</p>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-// Lista de emails que têm acesso ao sistema de multi-barbearia
+// Lista de emails que têm acesso ao sistema multi-empresa
 const SUPER_ADMIN_EMAILS = [
   "mycheldesigner@gmail.com", // Email do administrador principal
 ];

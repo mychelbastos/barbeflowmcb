@@ -35,7 +35,7 @@ export function TenantSelector() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
           <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-            Barbearias
+            Estabelecimentos
           </div>
           {tenants.map((tenant) => (
             <DropdownMenuItem
@@ -58,7 +58,7 @@ export function TenantSelector() {
             className="flex items-center gap-2 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            Nova Barbearia
+            Novo Estabelecimento
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
