@@ -43,7 +43,14 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const errorMessage = data?.error || error.message || 'Erro ao criar assinatura';
+        throw new Error(errorMessage);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       if (data?.checkout_url) {
         window.location.href = data.checkout_url;
@@ -52,7 +59,8 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
         setSelectedPlan(null);
       }
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      console.error('Subscription error:', err);
+      toast({ title: "Erro ao criar assinatura", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }

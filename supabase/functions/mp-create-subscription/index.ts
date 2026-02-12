@@ -21,8 +21,19 @@ serve(async (req) => {
   try {
     const { tenant_id, plan_id, customer_name, customer_phone, customer_email } = await req.json();
 
-    if (!tenant_id || !plan_id || !customer_name || !customer_phone || !customer_email) {
-      return new Response(JSON.stringify({ error: 'tenant_id, plan_id, customer_name, customer_phone and customer_email are required' }), {
+    // Validação campo a campo
+    const missingFields = [];
+    if (!tenant_id) missingFields.push('tenant_id');
+    if (!plan_id) missingFields.push('plan_id');
+    if (!customer_name) missingFields.push('customer_name');
+    if (!customer_phone) missingFields.push('customer_phone');
+    if (!customer_email) missingFields.push('customer_email');
+
+    if (missingFields.length > 0) {
+      console.error('Missing fields:', missingFields);
+      return new Response(JSON.stringify({ 
+        error: `Campos obrigatórios faltando: ${missingFields.join(', ')}` 
+      }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -102,19 +113,41 @@ serve(async (req) => {
     console.log('Created pending subscription:', subscription.id);
 
     // --- Get MP connection ---
+    console.log('Looking for MP connection for tenant:', tenant_id);
     const { data: mpConn, error: mpError } = await supabase
       .from('mercadopago_connections')
-      .select('access_token')
+      .select('access_token, token_expires_at')
       .eq('tenant_id', tenant_id)
       .single();
 
     if (mpError || !mpConn) {
-      return new Response(JSON.stringify({ error: 'Mercado Pago not connected' }), {
+      console.error('MP connection error:', mpError, 'tenant_id:', tenant_id);
+      return new Response(JSON.stringify({ 
+        error: 'Mercado Pago não está conectado. Conecte nas configurações.' 
+      }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://barbeflowmcb.lovable.app';
+    if (!mpConn.access_token) {
+      console.error('MP access_token is empty for tenant:', tenant_id);
+      return new Response(JSON.stringify({ 
+        error: 'Token do Mercado Pago inválido. Reconecte nas configurações.' 
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (mpConn.token_expires_at && new Date(mpConn.token_expires_at) < new Date()) {
+      console.error('MP access_token expired for tenant:', tenant_id, 'expires_at:', mpConn.token_expires_at);
+      return new Response(JSON.stringify({ 
+        error: 'Token do Mercado Pago expirado. Reconecte nas configurações.' 
+      }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.barberflow.store';
     const tenantSlug = plan.tenant?.slug || '';
 
     const mpBody = {
@@ -143,6 +176,15 @@ serve(async (req) => {
     });
 
     const mpData = await mpResponse.json();
+
+    if (mpResponse.status === 401) {
+      console.error('MP returned 401 - token expired or invalid:', JSON.stringify(mpData));
+      return new Response(JSON.stringify({ 
+        error: 'Token do Mercado Pago expirado. Reconecte nas configurações.' 
+      }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!mpResponse.ok) {
       console.error('MP preapproval error:', JSON.stringify(mpData));

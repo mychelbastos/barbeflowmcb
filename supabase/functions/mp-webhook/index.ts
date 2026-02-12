@@ -400,7 +400,8 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
   }
 
   // Find subscription by preapproval_id from the payment metadata
-  const preapprovalId = mpPaymentData.metadata?.preapproval_id || mpPaymentData.point_of_interaction?.subscription_id;
+  const preapprovalId = mpPaymentData.metadata?.preapproval_id || mpPaymentData.point_of_interaction?.subscription_id || mpPaymentData.preapproval_id;
+  console.log('Looking for subscription with preapproval_id:', preapprovalId);
   
   let subscription: any = null;
   if (preapprovalId) {
