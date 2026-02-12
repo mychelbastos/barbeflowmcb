@@ -125,6 +125,8 @@ export type Database = {
           created_at: string
           created_via: string | null
           customer_id: string
+          customer_package_id: string | null
+          customer_subscription_id: string | null
           ends_at: string
           id: string
           notes: string | null
@@ -140,6 +142,8 @@ export type Database = {
           created_at?: string
           created_via?: string | null
           customer_id: string
+          customer_package_id?: string | null
+          customer_subscription_id?: string | null
           ends_at: string
           id?: string
           notes?: string | null
@@ -155,6 +159,8 @@ export type Database = {
           created_at?: string
           created_via?: string | null
           customer_id?: string
+          customer_package_id?: string | null
+          customer_subscription_id?: string | null
           ends_at?: string
           id?: string
           notes?: string | null
@@ -172,6 +178,20 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_customer_package_id_fkey"
+            columns: ["customer_package_id"]
+            isOneToOne: false
+            referencedRelation: "customer_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_customer_subscription_id_fkey"
+            columns: ["customer_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
             referencedColumns: ["id"]
           },
           {

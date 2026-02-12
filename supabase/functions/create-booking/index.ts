@@ -24,7 +24,8 @@ enum ErrorType {
 }
 
 interface CreateBookingRequest {
-  slug: string;
+  slug?: string;
+  tenant_id?: string;
   service_id: string;
   staff_id?: string;
   customer_name: string;
@@ -37,6 +38,8 @@ interface CreateBookingRequest {
   payment_method?: 'online' | 'onsite';
   customer_package_id?: string;
   customer_subscription_id?: string;
+  extra_slots?: number;
+  created_via?: string;
 }
 
 interface ErrorResponse {
@@ -67,7 +70,9 @@ function normalizePhone(phone: string): string {
 
 function validatePayload(payload: any): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
-  if (!payload.slug || typeof payload.slug !== 'string') errors.push('slug is required');
+  if ((!payload.slug || typeof payload.slug !== 'string') && (!payload.tenant_id || typeof payload.tenant_id !== 'string')) {
+    errors.push('slug or tenant_id is required');
+  }
   if (!payload.service_id || typeof payload.service_id !== 'string') errors.push('service_id is required');
   if (!payload.customer_name || typeof payload.customer_name !== 'string') errors.push('customer_name is required');
   if (!payload.customer_phone || typeof payload.customer_phone !== 'string') errors.push('customer_phone is required');
@@ -253,8 +258,13 @@ serve(async (req) => {
     const { slug, service_id, staff_id, customer_name, customer_phone, customer_email, customer_birthday, starts_at, notes, payment_method, customer_package_id, customer_subscription_id } = payload;
 
     // 1. Resolve tenant
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants').select('id, name, settings').eq('slug', slug).single();
+    let tenantQuery = supabase.from('tenants').select('id, name, slug, settings');
+    if (payload.tenant_id) {
+      tenantQuery = tenantQuery.eq('id', payload.tenant_id);
+    } else {
+      tenantQuery = tenantQuery.eq('slug', slug);
+    }
+    const { data: tenant, error: tenantError } = await tenantQuery.single();
     if (tenantError || !tenant) {
       return createErrorResponse(ErrorType.TENANT_NOT_FOUND, `Tenant not found: ${slug}`, 404);
     }
@@ -324,12 +334,15 @@ serve(async (req) => {
 
     // 5. Calculate times
     const startsAtDate = new Date(starts_at);
-    const endsAtDate = new Date(startsAtDate.getTime() + (service.duration_minutes * 60 * 1000));
+    const tenantSettings = tenant.settings || {};
+    const extraSlotDuration = tenantSettings.extra_slot_duration || 5;
+    const extraMinutes = (payload.extra_slots || 0) * extraSlotDuration;
+    const totalDuration = service.duration_minutes + extraMinutes;
+    const endsAtDate = new Date(startsAtDate.getTime() + (totalDuration * 60 * 1000));
     const ends_at = endsAtDate.toISOString();
 
     // 6. Check conflicts
-    const settings = tenant.settings || {};
-    const bufferTime = settings.buffer_time ?? 10;
+    const bufferTime = tenantSettings.buffer_time ?? 10;
     const bufferedStart = new Date(startsAtDate.getTime() - (bufferTime * 60 * 1000));
     const bufferedEnd = new Date(endsAtDate.getTime() + (bufferTime * 60 * 1000));
 
@@ -393,7 +406,10 @@ serve(async (req) => {
       .from('bookings')
       .insert({
         tenant_id, service_id, staff_id: finalStaffId, customer_id,
-        starts_at, ends_at, status: bookingStatus, notes: notes || null, created_via: 'public'
+        starts_at, ends_at, status: bookingStatus, notes: notes || null,
+        created_via: payload.created_via || 'public',
+        customer_package_id: customer_package_id || null,
+        customer_subscription_id: customer_subscription_id || null
       })
       .select(`*, service:services(name, price_cents, duration_minutes), staff:staff(name), customer:customers(name, phone, email)`)
       .single();
