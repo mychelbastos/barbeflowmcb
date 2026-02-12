@@ -20,9 +20,8 @@ import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { 
   Calendar, Plus, Clock, Users, TrendingUp, Scissors, Phone,
-  ArrowUpRight, Sparkles, UserCheck, User, ChevronRight, Zap,
+  ArrowUpRight, Sparkles, UserCheck, User,
 } from "lucide-react";
-import { NewServiceModal, NewStaffModal, BlockTimeModal } from "@/components/modals/QuickActions";
 import { WeeklyScheduleGrid } from "@/components/dashboard/WeeklyScheduleGrid";
 import { WeeklyBarChart } from "@/components/dashboard/WeeklyBarChart";
 import { RevenueLineChart } from "@/components/dashboard/RevenueLineChart";
@@ -50,10 +49,8 @@ const Dashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [showNewService, setShowNewService] = useState(false);
-  const [showNewStaff, setShowNewStaff] = useState(false);
-  const [showBlockTime, setShowBlockTime] = useState(false);
-  
+
+
   const { user, signOut, loading: authLoading } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { dateRange } = useDateRange();
@@ -235,11 +232,7 @@ const Dashboard = () => {
     },
   ];
 
-  const quickActions = [
-    { label: "Novo Serviço", desc: "Adicionar ao catálogo", icon: Scissors, onClick: () => setShowNewService(true) },
-    { label: "Profissional", desc: "Adicionar à equipe", icon: Users, onClick: () => setShowNewStaff(true) },
-    { label: "Bloquear Horário", desc: "Reservar intervalo", icon: Calendar, onClick: () => setShowBlockTime(true) },
-  ];
+
 
   const statusConfig: Record<string, { label: string; className: string }> = {
     confirmed: { label: 'Confirmado', className: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
@@ -318,40 +311,8 @@ const Dashboard = () => {
             <WeeklyBarChart bookings={allBookings} dateRange={dateRange} />
           )}
 
-          {/* Quick Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.6, delay: 0.35, ease }}
-            className="rounded-2xl glass-panel overflow-hidden"
-          >
-            <div className="px-5 py-4 border-b border-zinc-800/30 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center">
-                <Zap className="h-3.5 w-3.5 text-emerald-400" />
-              </div>
-              <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Ações Rápidas</h3>
-            </div>
-            <div className="p-3 space-y-1">
-              {quickActions.map((action) => (
-                <motion.button
-                  key={action.label}
-                  onClick={action.onClick}
-                  whileHover={{ x: 6, transition: gentleSpring }}
-                  whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/30 transition-all duration-300 group"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-zinc-800/40 group-hover:bg-zinc-700/40 flex items-center justify-center transition-all duration-300">
-                    <action.icon className="h-4 w-4" />
-                  </div>
-                  <div className="text-left flex-1">
-                    <span className="text-sm font-semibold block">{action.label}</span>
-                    <span className="text-[11px] text-zinc-600 block">{action.desc}</span>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-zinc-500" />
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
+
+
         </div>
       </div>
 
@@ -359,10 +320,7 @@ const Dashboard = () => {
       {!loading && (
         <RevenueLineChart bookings={allBookings} dateRange={dateRange} />
       )}
-      {/* Modals */}
-      <NewServiceModal open={showNewService} onOpenChange={setShowNewService} onSuccess={loadDashboardData} />
-      <NewStaffModal open={showNewStaff} onOpenChange={setShowNewStaff} onSuccess={loadDashboardData} />
-      <BlockTimeModal open={showBlockTime} onOpenChange={setShowBlockTime} onSuccess={loadDashboardData} />
+
 
       {/* Booking Detail Modal */}
       <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
