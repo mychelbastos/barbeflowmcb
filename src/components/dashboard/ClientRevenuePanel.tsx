@@ -35,21 +35,6 @@ export function ClientRevenuePanel({ bookings, totalRevenue }: ClientRevenuePane
       transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
       className="rounded-2xl glass-panel overflow-hidden"
     >
-      {/* Header with total */}
-      <div className="px-4 md:px-5 py-3 md:py-4 border-b border-zinc-800/30">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center">
-            <TrendingUp className="h-5 w-5 text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-zinc-100 tracking-tight tabular-nums">
-              R$ {(totalRevenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
-            </p>
-            <p className="text-[11px] text-zinc-600 font-medium">Receita no período</p>
-          </div>
-        </div>
-      </div>
-
       {/* Client list */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-3">
