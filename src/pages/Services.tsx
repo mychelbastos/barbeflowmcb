@@ -268,17 +268,35 @@ export default function Services() {
     }
 
     try {
+      // Try to delete first
       const { error } = await supabase
         .from('services')
         .delete()
         .eq('id', service.id);
 
-      if (error) throw error;
+      if (error) {
+        // If foreign key constraint, deactivate instead
+        if (error.message?.includes('foreign key constraint')) {
+          const { error: updateError } = await supabase
+            .from('services')
+            .update({ active: false })
+            .eq('id', service.id);
 
-      toast({
-        title: "Serviço excluído",
-        description: `${service.name} foi removido.`,
-      });
+          if (updateError) throw updateError;
+
+          toast({
+            title: "Serviço desativado",
+            description: `${service.name} possui agendamentos vinculados e foi desativado ao invés de excluído.`,
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Serviço excluído",
+          description: `${service.name} foi removido.`,
+        });
+      }
 
       loadServices();
     } catch (error: any) {
