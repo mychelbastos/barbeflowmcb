@@ -294,9 +294,8 @@ const Dashboard = () => {
 
       {/* Main Grid: Schedule + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 md:gap-5">
-        {/* Left Column: Schedule + Charts */}
+        {/* Left Column: Schedule */}
         <div className="space-y-4">
-          {/* Weekly Schedule Grid */}
           {!loading && (
             <WeeklyScheduleGrid
               bookings={allBookings}
@@ -306,11 +305,6 @@ const Dashboard = () => {
           )}
           {loading && (
             <div className="rounded-2xl glass-panel h-80 animate-pulse" />
-          )}
-
-          {/* Revenue Line Chart */}
-          {!loading && (
-            <RevenueLineChart bookings={allBookings} dateRange={dateRange} />
           )}
         </div>
 
@@ -361,6 +355,10 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Revenue Line Chart — full width */}
+      {!loading && (
+        <RevenueLineChart bookings={allBookings} dateRange={dateRange} />
+      )}
       {/* Modals */}
       <NewServiceModal open={showNewService} onOpenChange={setShowNewService} onSuccess={loadDashboardData} />
       <NewStaffModal open={showNewStaff} onOpenChange={setShowNewStaff} onSuccess={loadDashboardData} />
