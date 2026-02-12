@@ -77,7 +77,7 @@ interface NavItem {
   url: string;
   icon: any;
   statusDot?: boolean; // show a connected/disconnected dot
-  children?: { title: string; url: string; icon: any }[];
+  children?: { title: string; url: string; icon: any; statusDot?: boolean }[];
 }
 
 const baseNavigationItems: NavItem[] = [
@@ -113,8 +113,18 @@ const baseNavigationItems: NavItem[] = [
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
     ]
   },
-  { title: "WhatsApp", url: "/app/whatsapp", icon: MessageCircle, statusDot: true },
-  { title: "Configurações", url: "/app/settings", icon: Settings },
+  { 
+    title: "Configurações", 
+    url: "/app/settings", 
+    icon: Settings,
+    children: [
+      { title: "Geral", url: "/app/settings?tab=general", icon: Settings },
+      { title: "Agendamento", url: "/app/settings?tab=scheduling", icon: CalendarCheck },
+      { title: "Notificações", url: "/app/settings?tab=notifications", icon: MessageCircle },
+      { title: "Pagamentos", url: "/app/settings?tab=payments", icon: CreditCard },
+      { title: "WhatsApp", url: "/app/settings?tab=whatsapp", icon: MessageCircle, statusDot: true },
+    ]
+  },
 ];
 
 const baseBottomTabItems = [
@@ -174,8 +184,12 @@ function NavItemLink({ item, isActive, onClick, statusDot }: { item: { title: st
   );
 }
 
-function CollapsibleNavItem({ item, location }: { item: NavItem; location: any }) {
-  const isAnyChildActive = item.children?.some(child => location.pathname === child.url) || false;
+function CollapsibleNavItem({ item, location, waConnected }: { item: NavItem; location: any; waConnected?: boolean | null }) {
+  const fullUrl = location.pathname + location.search;
+  const isAnyChildActive = item.children?.some(child => {
+    if (child.url.includes('?')) return fullUrl === child.url;
+    return location.pathname === child.url;
+  }) || false;
   const [open, setOpen] = useState(isAnyChildActive);
 
   return (
@@ -191,11 +205,17 @@ function CollapsibleNavItem({ item, location }: { item: NavItem; location: any }
       </CollapsibleTrigger>
       <CollapsibleContent className="pl-4 mt-1 space-y-0.5">
         {item.children?.map((child) => {
-          const isActive = location.pathname === child.url;
+          const isActive = child.url.includes('?') 
+            ? fullUrl === child.url 
+            : location.pathname === child.url;
           return (
             <SidebarMenuItem key={child.url}>
               <SidebarMenuButton asChild>
-                <NavItemLink item={child} isActive={isActive} />
+                <NavItemLink 
+                  item={child} 
+                  isActive={isActive} 
+                  statusDot={child.statusDot ? (waConnected ? 'connected' : 'disconnected') : null}
+                />
               </SidebarMenuButton>
             </SidebarMenuItem>
           );
@@ -247,7 +267,7 @@ function AppSidebar() {
                 if (item.children) {
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <CollapsibleNavItem item={item} location={location} />
+                      <CollapsibleNavItem item={item} location={location} waConnected={waConnected} />
                     </SidebarMenuItem>
                   );
                 }
@@ -344,7 +364,11 @@ function MobileDrawer() {
           <div className="space-y-0.5">
             {navigationItems.map((item) => {
               if (item.children) {
-                const isAnyChildActive = item.children.some(c => location.pathname === c.url);
+                const fullUrl = location.pathname + location.search;
+                const isAnyChildActive = item.children.some(c => {
+                  if (c.url.includes('?')) return fullUrl === c.url;
+                  return location.pathname === c.url;
+                });
                 return (
                   <div key={item.title} className="mt-4 first:mt-0">
                     <div className={`flex items-center gap-2.5 px-3 py-2 ${isAnyChildActive ? 'text-emerald-400' : 'text-zinc-600'}`}>
@@ -353,7 +377,9 @@ function MobileDrawer() {
                     </div>
                     <div className="ml-2 border-l border-zinc-800/40 pl-2 space-y-0.5">
                       {item.children.map((child) => {
-                        const isActive = location.pathname === child.url;
+                        const isActive = child.url.includes('?')
+                          ? fullUrl === child.url
+                          : location.pathname === child.url;
                         return (
                           <NavLink
                             key={child.url}
@@ -367,7 +393,10 @@ function MobileDrawer() {
                           >
                             <child.icon className="h-4 w-4" />
                             <span className="text-sm font-medium">{child.title}</span>
-                            {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                            {child.statusDot && (
+                              <span className={`ml-auto w-2 h-2 rounded-full ${waConnected ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                            )}
+                            {!child.statusDot && isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                           </NavLink>
                         );
                       })}
