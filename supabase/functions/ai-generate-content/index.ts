@@ -139,7 +139,7 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
 
       console.log(`Generating image for ${finalTable}: ${item.name}`);
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
 
       const aiResponse = await fetch(geminiUrl, {
         method: 'POST',
