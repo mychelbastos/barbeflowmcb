@@ -150,6 +150,8 @@ serve(async (req) => {
     const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.barberflow.store';
     const tenantSlug = plan.tenant?.slug || '';
 
+    const backUrl = `${frontBaseUrl}/${tenantSlug}/subscription/callback`;
+
     const mpBody: any = {
       reason: `${plan.name} - ${plan.tenant?.name || 'BarberFlow'}`,
       auto_recurring: {
@@ -160,16 +162,15 @@ serve(async (req) => {
       },
       payer_email: customer_email,
       external_reference: subscription.id,
+      back_url: backUrl,
     };
 
     // If card_token_id is provided, authorize immediately (in-site payment)
-    // Otherwise, use redirect flow with back_url
     if (card_token_id) {
       mpBody.card_token_id = card_token_id;
       mpBody.status = "authorized";
       console.log('Using in-site card payment with token');
     } else {
-      mpBody.back_url = `${frontBaseUrl}/${tenantSlug}/subscription/callback`;
       mpBody.status = "pending";
     }
 
