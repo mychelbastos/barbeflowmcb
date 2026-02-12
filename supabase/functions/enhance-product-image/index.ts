@@ -69,7 +69,13 @@ serve(async (req) => {
     }
 
     const imgBuffer = await imgResponse.arrayBuffer();
-    const imgBase64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+    const bytes = new Uint8Array(imgBuffer);
+    let imgBase64 = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      imgBase64 += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    imgBase64 = btoa(imgBase64);
     const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
 
     // Build prompt based on table type
