@@ -1,5 +1,6 @@
 import mpIcon from "@/assets/mercadopago-icon.jpg";
 import { useState, useEffect } from "react";
+import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { CustomerImportExport } from "@/components/CustomerImportExport";
 import { useSearchParams } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
@@ -93,6 +94,28 @@ const timezones = [
   { value: "America/Manaus", label: "Manaus (UTC-4)" },
   { value: "America/Rio_Branco", label: "Rio Branco (UTC-5)" },
 ];
+
+function WhatsAppNotificationStatus() {
+  const waConnected = useWhatsAppStatus();
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-4">
+      <div className="space-y-0.5">
+        <div className="flex items-center gap-2">
+          <p className="text-base font-medium">WhatsApp</p>
+          <Badge variant="secondary" className={waConnected ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-zinc-700/50 text-zinc-400"}>
+            {waConnected ? "Ativo" : "Inativo"}
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {waConnected
+            ? "Confirmações e lembretes são enviados automaticamente via WhatsApp."
+            : "Conecte o WhatsApp na página de WhatsApp para ativar notificações automáticas."}
+        </p>
+      </div>
+      <div className={`w-3 h-3 rounded-full ${waConnected ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+    </div>
+  );
+}
 
 export default function Settings() {
   const { currentTenant, tenants, loading: tenantLoading } = useTenant();
@@ -944,32 +967,7 @@ export default function Settings() {
                     )}
                   />
 
-                  <FormField
-                    control={settingsForm.control}
-                    name="whatsapp_enabled"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center">
-                            <FormLabel className="text-base mr-2">
-                              WhatsApp
-                            </FormLabel>
-                            <Badge variant="secondary">Em breve</Badge>
-                          </div>
-                          <FormDescription>
-                            Enviar confirmações e lembretes via WhatsApp
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  <WhatsAppNotificationStatus />
 
                   <div className="flex justify-end">
                     <Button type="submit" disabled={loading}>
