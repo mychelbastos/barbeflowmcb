@@ -258,6 +258,8 @@ export default function Bookings() {
       }
 
       toast({ title: "Status atualizado", description: `Agendamento marcado como ${getStatusLabel(newStatus)}` });
+      setShowDetails(false);
+      setSelectedBooking(null);
       refetch();
       if (viewMode === "list") loadListData();
     } catch (err) {

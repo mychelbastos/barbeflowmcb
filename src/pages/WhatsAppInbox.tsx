@@ -178,12 +178,19 @@ export default function WhatsAppInbox() {
     }
   };
 
-  // Poll for status while QR code is showing
+  // Poll for status while QR code is showing (faster polling)
   useEffect(() => {
     if (!qrCode || !currentTenant?.id) return;
-    const interval = setInterval(checkConnectionStatus, 5000);
+    const interval = setInterval(async () => {
+      await checkConnectionStatus();
+      // If connected, auto-close settings and load conversations
+      if (connectionStatus?.connected) {
+        setSettingsOpen(false);
+        loadConversations();
+      }
+    }, 3000);
     return () => clearInterval(interval);
-  }, [qrCode, currentTenant?.id, checkConnectionStatus]);
+  }, [qrCode, currentTenant?.id, checkConnectionStatus, connectionStatus?.connected]);
 
   useEffect(() => {
     if (currentTenant?.id) checkConnectionStatus();
@@ -370,6 +377,18 @@ export default function WhatsAppInbox() {
       loadConversations();
     }
   }, [currentTenant?.id]);
+
+  // Periodic polling: reload conversations every 15 seconds to catch new messages
+  useEffect(() => {
+    if (!currentTenant?.id || !connectionStatus?.connected) return;
+    const interval = setInterval(() => {
+      loadConversations();
+      if (selectedConversation) {
+        loadMessages(selectedConversation);
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [currentTenant?.id, connectionStatus?.connected, selectedConversation]);
 
   // Auto-select contact from query param (e.g. from WhatsApp buttons)
   useEffect(() => {
