@@ -98,6 +98,13 @@ export default function WhatsAppInbox() {
   const [connectionLoading, setConnectionLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const checkConnectionStatus = useCallback(async () => {
     if (!currentTenant?.id) return;
     try {
@@ -328,40 +335,158 @@ export default function WhatsAppInbox() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !currentTenant?.id) return;
 
-    setSending(true);
+    const messageText = newMessage;
+    const tempId = crypto.randomUUID();
+    const tempMessageId = `temp_${Date.now()}`;
+
+    // Optimistic: show message instantly
+    const optimisticMsg: Message = {
+      id: tempId,
+      remote_jid: selectedConversation,
+      message_id: tempMessageId,
+      from_me: true,
+      message_type: "text",
+      content: messageText,
+      timestamp: new Date().toISOString(),
+      status: "sending",
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setNewMessage("");
+
     try {
+      const phone = selectedConversation.replace("@s.whatsapp.net", "");
+      const { data, error } = await supabase.functions.invoke("whatsapp-send-message", {
+        body: { tenant_id: currentTenant.id, phone, message: messageText },
+      });
+
+      if (error) throw error;
+
+      // Update optimistic message with real ID
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, message_id: data.message_id, status: "sent" } : m
+        )
+      );
+      loadConversations();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Mark as failed
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m))
+      );
+      toast.error("Erro ao enviar mensagem");
+    }
+  };
+
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setRecordingDuration(0);
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm;codecs=opus" });
+        if (audioBlob.size < 1000) return; // Too short, ignore
+
+        await sendAudioMessage(audioBlob);
+      };
+
+      mediaRecorder.start(250);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((d) => d + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.error("Mic access error:", err);
+      if (err.name === "NotAllowedError") {
+        toast.error("Permissão do microfone negada. Habilite nas configurações do navegador.");
+      } else {
+        toast.error("Erro ao acessar microfone");
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      setRecordingDuration(0);
+    }
+  };
+
+  const sendAudioMessage = async (audioBlob: Blob) => {
+    if (!selectedConversation || !currentTenant?.id) return;
+
+    const tempId = crypto.randomUUID();
+    const optimisticMsg: Message = {
+      id: tempId,
+      remote_jid: selectedConversation,
+      message_id: `temp_audio_${Date.now()}`,
+      from_me: true,
+      message_type: "audio",
+      content: "[Áudio]",
+      timestamp: new Date().toISOString(),
+      status: "sending",
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      // Convert to base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       const phone = selectedConversation.replace("@s.whatsapp.net", "");
 
       const { data, error } = await supabase.functions.invoke("whatsapp-send-message", {
         body: {
           tenant_id: currentTenant.id,
-          phone: phone,
-          message: newMessage,
+          phone,
+          audio_base64: base64,
+          media_type: "audio/ogg; codecs=opus",
         },
       });
 
       if (error) throw error;
 
-      const newMsg: Message = {
-        id: crypto.randomUUID(),
-        remote_jid: selectedConversation,
-        message_id: data.message_id,
-        from_me: true,
-        message_type: "text",
-        content: newMessage,
-        timestamp: new Date().toISOString(),
-        status: "sent",
-      };
-
-      setMessages((prev) => [...prev, newMsg]);
-      setNewMessage("");
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, message_id: data.message_id, status: "sent" } : m
+        )
+      );
       loadConversations();
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Erro ao enviar mensagem");
-    } finally {
-      setSending(false);
+      console.error("Error sending audio:", error);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m))
+      );
+      toast.error("Erro ao enviar áudio");
     }
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   useEffect(() => {
@@ -869,51 +994,75 @@ export default function WhatsAppInbox() {
             {/* Message Input */}
             <div className="p-3 border-t border-border/50 bg-card">
               <div className="flex items-center gap-2 max-w-4xl mx-auto">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="hover:bg-primary/10 rounded-full shrink-0 hidden sm:flex"
-                >
-                  <Smile className="h-5 w-5 text-muted-foreground" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="hover:bg-primary/10 rounded-full shrink-0 hidden sm:flex"
-                >
-                  <Paperclip className="h-5 w-5 text-muted-foreground" />
-                </Button>
-                <div className="flex-1 relative">
-                  <Input
-                    placeholder="Digite uma mensagem..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                    disabled={sending}
-                    className="bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-full h-11 pr-12"
-                  />
-                </div>
-                {newMessage.trim() ? (
-                  <Button 
-                    onClick={sendMessage} 
-                    disabled={sending || !newMessage.trim()}
-                    size="icon"
-                    className="rounded-full h-11 w-11 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
-                  >
-                    {sending ? (
-                      <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    ) : (
+                {isRecording ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={cancelRecording}
+                      className="rounded-full shrink-0 text-destructive hover:bg-destructive/10"
+                    >
+                      <XCircle className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 flex items-center justify-center gap-3">
+                      <div className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                      <span className="text-sm font-medium text-foreground">
+                        {formatRecordingTime(recordingDuration)}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={stopRecording}
+                      size="icon"
+                      className="rounded-full h-11 w-11 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+                    >
                       <Send className="h-5 w-5" />
-                    )}
-                  </Button>
+                    </Button>
+                  </>
                 ) : (
-                  <Button 
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full h-11 w-11 hover:bg-primary/10"
-                  >
-                    <Mic className="h-5 w-5 text-muted-foreground" />
-                  </Button>
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="hover:bg-primary/10 rounded-full shrink-0 hidden sm:flex"
+                    >
+                      <Smile className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="hover:bg-primary/10 rounded-full shrink-0 hidden sm:flex"
+                    >
+                      <Paperclip className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                    <div className="flex-1 relative">
+                      <Input
+                        placeholder="Digite uma mensagem..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                        className="bg-secondary/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/50 rounded-full h-11 pr-12"
+                      />
+                    </div>
+                    {newMessage.trim() ? (
+                      <Button 
+                        onClick={sendMessage} 
+                        disabled={!newMessage.trim()}
+                        size="icon"
+                        className="rounded-full h-11 w-11 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+                      >
+                        <Send className="h-5 w-5" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full h-11 w-11 hover:bg-primary/10"
+                        onClick={startRecording}
+                      >
+                        <Mic className="h-5 w-5 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
