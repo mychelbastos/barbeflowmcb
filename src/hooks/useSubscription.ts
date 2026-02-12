@@ -28,7 +28,7 @@ const SHARED_FEATURES = [
 
 const EXCLUSIVE_FEATURES = [
   "Agendamento direto pelo WhatsApp (chatbot)",
-  "Domínio personalizado para página pública",
+  "Domínio personalizado (ex: seudominio.com.br)",
 ];
 
 export const PLANS = {
