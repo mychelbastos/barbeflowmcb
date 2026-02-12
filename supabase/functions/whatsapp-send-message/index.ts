@@ -20,12 +20,12 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, phone, message } = await req.json();
-    console.log("Send message request:", { tenant_id, phone, messageLength: message?.length });
+    const { tenant_id, phone, message, audio_base64, media_type } = await req.json();
+    console.log("Send message request:", { tenant_id, phone, hasMessage: !!message, hasAudio: !!audio_base64 });
 
-    if (!tenant_id || !phone || !message) {
+    if (!tenant_id || !phone || (!message && !audio_base64)) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: tenant_id, phone, message" }),
+        JSON.stringify({ error: "Missing required fields: tenant_id, phone, and message or audio_base64" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -53,31 +53,64 @@ serve(async (req) => {
     }
 
     const remoteJid = `${formattedPhone}@s.whatsapp.net`;
+    let evolutionResult: any;
+    let messageType = "text";
+    let content = message || "[Áudio]";
 
-    // Send message via Evolution API
-    const evolutionUrl = `${EVOLUTION_API_URL}/message/sendText/${connection.evolution_instance_name}`;
-    console.log("Sending to Evolution:", evolutionUrl);
+    if (audio_base64) {
+      // Send audio message
+      messageType = "audio";
+      content = "[Áudio]";
+      const evolutionUrl = `${EVOLUTION_API_URL}/message/sendWhatsAppAudio/${connection.evolution_instance_name}`;
+      console.log("Sending audio to Evolution:", evolutionUrl);
 
-    const evolutionResponse = await fetch(evolutionUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": EVOLUTION_API_KEY!,
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message,
-      }),
-    });
+      const evolutionResponse = await fetch(evolutionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": EVOLUTION_API_KEY!,
+        },
+        body: JSON.stringify({
+          number: formattedPhone,
+          audio: `data:${media_type || "audio/ogg; codecs=opus"};base64,${audio_base64}`,
+        }),
+      });
 
-    const evolutionResult = await evolutionResponse.json();
-    console.log("Evolution response:", evolutionResponse.status, JSON.stringify(evolutionResult));
+      evolutionResult = await evolutionResponse.json();
+      console.log("Evolution audio response:", evolutionResponse.status);
 
-    if (!evolutionResponse.ok) {
-      return new Response(
-        JSON.stringify({ error: "Failed to send message", details: evolutionResult }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (!evolutionResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to send audio", details: evolutionResult }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // Send text message
+      const evolutionUrl = `${EVOLUTION_API_URL}/message/sendText/${connection.evolution_instance_name}`;
+      console.log("Sending to Evolution:", evolutionUrl);
+
+      const evolutionResponse = await fetch(evolutionUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": EVOLUTION_API_KEY!,
+        },
+        body: JSON.stringify({
+          number: formattedPhone,
+          text: message,
+        }),
+      });
+
+      evolutionResult = await evolutionResponse.json();
+      console.log("Evolution response:", evolutionResponse.status);
+
+      if (!evolutionResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to send message", details: evolutionResult }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Extract message ID from response
@@ -91,8 +124,8 @@ serve(async (req) => {
         remote_jid: remoteJid,
         message_id: messageId,
         from_me: true,
-        message_type: "text",
-        content: message,
+        message_type: messageType,
+        content: content,
         status: "sent",
         timestamp: new Date().toISOString(),
       });
