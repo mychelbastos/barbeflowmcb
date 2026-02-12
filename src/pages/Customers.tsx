@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -91,13 +91,20 @@ const isCustomerDuplicate = (
   };
 };
 
+const PAGE_SIZE = 50;
+
 export default function Customers() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
   const [customers, setCustomers] = useState<any[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerBookings, setCustomerBookings] = useState<any[]>([]);
   const [showDetails, setShowDetails] = useState(false);
@@ -113,28 +120,45 @@ export default function Customers() {
   const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '' });
   const [saving, setSaving] = useState(false);
 
+  // Debounce search
+  useEffect(() => {
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(debounceTimer.current);
+  }, [searchTerm]);
+
   useEffect(() => {
     if (currentTenant) {
-      loadCustomers();
+      loadCustomers(0, true);
     }
-  }, [currentTenant]);
+  }, [currentTenant, debouncedSearch]);
 
-  useEffect(() => {
-    filterCustomers();
-  }, [customers, searchTerm]);
-
-  const loadCustomers = async () => {
+  const loadCustomers = async (pageNum: number = 0, reset: boolean = false) => {
     if (!currentTenant) return;
 
     try {
-      setLoading(true);
-      
+      if (reset) setLoading(true);
+      else setLoadingMore(true);
+
+      const from = pageNum * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      // Build query with server-side search
+      let query = supabase
+        .from('customers')
+        .select('*', { count: 'exact' })
+        .eq('tenant_id', currentTenant.id)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (debouncedSearch) {
+        query = query.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
+      }
+
       const [customersResult, recurringResult, packageResult] = await Promise.all([
-        supabase
-          .from('customers')
-          .select('*')
-          .eq('tenant_id', currentTenant.id)
-          .order('created_at', { ascending: false }),
+        query,
         supabase
           .from('recurring_clients')
           .select('customer_id')
@@ -149,44 +173,44 @@ export default function Customers() {
 
       if (customersResult.error) throw customersResult.error;
 
+      setTotalCount(customersResult.count || 0);
+
       const recurringCustomerIds = new Set(
         (recurringResult.data || []).map((r: any) => r.customer_id)
       );
-
       const packageCustomerIds = new Set(
         (packageResult.data || []).map((r: any) => r.customer_id)
       );
 
-      // Get booking stats for each customer
-      const customersWithStats = await Promise.all((customersResult.data || []).map(async (customer) => {
-        const { data: bookings } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            starts_at,
-            service:services(price_cents)
-          `)
-          .eq('customer_id', customer.id);
+      // Get stats in bulk with a single RPC call
+      const { data: statsData } = await supabase.rpc('get_customer_stats', {
+        p_tenant_id: currentTenant.id,
+      });
 
-        const totalBookings = bookings?.length || 0;
-        const totalSpent = bookings?.reduce((sum: number, booking: any) => 
-          sum + (booking.service?.price_cents || 0), 0
-        ) || 0;
-        const lastVisit = bookings && bookings.length > 0 
-          ? new Date(Math.max(...bookings.map((b: any) => new Date(b.starts_at).getTime())))
-          : null;
+      const statsMap = new Map<string, any>();
+      (statsData || []).forEach((s: any) => {
+        statsMap.set(s.customer_id, s);
+      });
 
+      const customersWithStats = (customersResult.data || []).map((customer) => {
+        const stats = statsMap.get(customer.id);
         return {
           ...customer,
-          totalBookings,
-          totalSpent,
-          lastVisit,
+          totalBookings: stats?.total_bookings || 0,
+          totalSpent: stats?.total_spent || 0,
+          lastVisit: stats?.last_visit ? new Date(stats.last_visit) : null,
           isRecurring: recurringCustomerIds.has(customer.id),
           hasPackage: packageCustomerIds.has(customer.id),
         };
-      }));
+      });
 
-      setCustomers(customersWithStats);
+      if (reset) {
+        setCustomers(customersWithStats);
+      } else {
+        setCustomers(prev => [...prev, ...customersWithStats]);
+      }
+      setHasMore(customersResult.data?.length === PAGE_SIZE);
+      setPage(pageNum);
     } catch (error) {
       console.error('Error loading customers:', error);
       toast({
@@ -196,21 +220,14 @@ export default function Customers() {
       });
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const filterCustomers = () => {
-    let filtered = [...customers];
-
-    if (searchTerm) {
-      filtered = filtered.filter(customer =>
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm) ||
-        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+  const loadMore = () => {
+    if (!loadingMore && hasMore) {
+      loadCustomers(page + 1, false);
     }
-
-    setFilteredCustomers(filtered);
   };
 
   const loadCustomerDetails = async (customer: any) => {
@@ -305,7 +322,7 @@ export default function Customers() {
       toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso" });
       setShowAddModal(false);
       setAddForm({ name: '', phone: '', email: '', birthday: '', notes: '' });
-      loadCustomers();
+      loadCustomers(0, true);
     } catch (error) {
       console.error('Error creating customer:', error);
       toast({ title: "Erro", description: "Erro ao cadastrar cliente", variant: "destructive" });
@@ -373,7 +390,7 @@ export default function Customers() {
       });
 
       setShowEditModal(false);
-      loadCustomers();
+      loadCustomers(0, true);
     } catch (error) {
       console.error('Error updating customer:', error);
       toast({
@@ -422,7 +439,7 @@ export default function Customers() {
       });
 
       setShowDeleteDialog(false);
-      loadCustomers();
+      loadCustomers(0, true);
     } catch (error) {
       console.error('Error deleting customer:', error);
       toast({
@@ -505,7 +522,7 @@ export default function Customers() {
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Total Clientes</p>
                 <p className="text-lg md:text-2xl font-bold text-foreground">
-                  {customers.length}
+                  {totalCount}
                 </p>
               </div>
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center">
@@ -558,18 +575,18 @@ export default function Customers() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base md:text-lg">
-            Clientes ({filteredCustomers.length})
+            Clientes ({totalCount})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {/* Mobile: Card Layout */}
           <div className="md:hidden space-y-3">
-            {filteredCustomers.length === 0 ? (
+            {customers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
               </div>
             ) : (
-              filteredCustomers.map((customer) => (
+              customers.map((customer) => (
                 <div key={customer.id} className="p-4 rounded-lg border border-border bg-card space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -662,14 +679,14 @@ export default function Customers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.length === 0 ? (
+                {customers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  customers.map((customer) => (
                     <TableRow key={customer.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -760,6 +777,15 @@ export default function Customers() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Load More */}
+          {hasMore && customers.length > 0 && (
+            <div className="flex justify-center pt-4">
+              <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Carregando..." : `Carregar mais (${customers.length} de ${totalCount})`}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

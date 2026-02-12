@@ -1703,6 +1703,15 @@ export type Database = {
         Args: { customer_phone: string; tenant_uuid: string }
         Returns: boolean
       }
+      get_customer_stats: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          customer_id: string
+          last_visit: string
+          total_bookings: number
+          total_spent: number
+        }[]
+      }
       is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }
       user_belongs_to_tenant: {
         Args: { tenant_uuid: string }
