@@ -225,6 +225,63 @@ serve(async (req) => {
       .update(updateData)
       .eq('id', subscription.id);
 
+    // Send WhatsApp notification if subscription was activated
+    if (card_token_id && mpData.status === 'authorized') {
+      try {
+        const { data: whatsappConn } = await supabase
+          .from('whatsapp_connections')
+          .select('evolution_instance_name, whatsapp_connected')
+          .eq('tenant_id', tenant_id)
+          .eq('whatsapp_connected', true)
+          .maybeSingle();
+
+        if (whatsappConn) {
+          const validityEnd = new Date();
+          validityEnd.setDate(validityEnd.getDate() + 30);
+          const formattedEnd = validityEnd.toLocaleDateString('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          });
+          const formattedPrice = `R$ ${(plan.price_cents / 100).toFixed(2)}`;
+
+          const message = `✅ *Assinatura Ativada!*\n\nOlá ${customer_name}!\n\nSua assinatura foi ativada com sucesso.\n\n📋 *Plano:* ${plan.name}\n💰 *Valor:* ${formattedPrice}/mês\n📅 *Válida até:* ${formattedEnd}\n\nSua assinatura será renovada automaticamente a cada 30 dias.\n\n${plan.tenant?.name || 'BarberFlow'} agradece! 🙏`;
+
+          let phone = canonical;
+          if (!phone.startsWith('55')) phone = '55' + phone;
+
+          const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
+          if (n8nWebhookUrl) {
+            const n8nPayload = {
+              type: 'subscription_activated',
+              phone,
+              message,
+              evolution_instance: whatsappConn.evolution_instance_name,
+              tenant_id,
+              tenant_slug: tenantSlug,
+              customer: { name: customer_name, phone: customer_phone },
+              tenant: { name: plan.tenant?.name || 'BarberFlow', slug: tenantSlug },
+            };
+
+            const n8nResp = await fetch(n8nWebhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(n8nPayload),
+            });
+            console.log('WhatsApp subscription notification sent, status:', n8nResp.status);
+          } else {
+            console.log('N8N_WEBHOOK_URL not configured, skipping WhatsApp notification');
+          }
+        } else {
+          console.log('No WhatsApp connection for tenant, skipping notification');
+        }
+      } catch (notifErr) {
+        console.error('Error sending subscription WhatsApp notification:', notifErr);
+        // Don't fail the subscription creation if notification fails
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       checkout_url: card_token_id ? null : mpData.init_point,
