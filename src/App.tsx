@@ -29,6 +29,7 @@ import AuthWatcher from "./components/AuthWatcher";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
 import InstallPWA from "./components/InstallPWA";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
         <Sonner />
         <InstallPWA />
         <BrowserRouter>
+          <ScrollToTop />
           <AuthWatcher />
           <Routes>
             {/* Public routes - barberflow.store */}
