@@ -127,7 +127,7 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || Deno.env.get("FRONT_BASE_URL") || "https://barbeflowmcb.lovable.app";
 
     // On dashboard domains (app.*), routes don't use /app prefix
-    const dashboardHosts = ["app.modogestor.com.br", "app.barberflow.store"];
+    const dashboardHosts = ["app.barberflow.store"];
     const isDashDomain = dashboardHosts.some((h) => origin.includes(h));
     const settingsPath = isDashDomain ? "/settings" : "/app/settings";
 

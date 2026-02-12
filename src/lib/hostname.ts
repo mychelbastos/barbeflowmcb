@@ -1,8 +1,8 @@
 /**
  * Hostname-based routing configuration
  * 
- * modogestor.com.br → public pages (landing, booking, payment)
- * app.modogestor.com.br → dashboard (login, register, dashboard, etc.)
+ * barberflow.store → public pages (landing, booking, payment)
+ * app.barberflow.store → dashboard (login, register, dashboard, etc.)
  * 
  * On the dashboard domain, routes drop the /app prefix:
  *   /app/login → /login
@@ -11,8 +11,8 @@
  * In development/preview, all routes use the /app prefix.
  */
 
-const DASHBOARD_HOSTS = ['app.modogestor.com.br', 'app.barberflow.store'];
-const PUBLIC_HOSTS = ['modogestor.com.br', 'barberflow.store'];
+const DASHBOARD_HOSTS = ['app.barberflow.store'];
+const PUBLIC_HOSTS = ['barberflow.store'];
 
 export function isDashboardDomain(): boolean {
   const host = window.location.hostname;
@@ -31,7 +31,7 @@ export function isPreviewOrLocal(): boolean {
 
 /**
  * Resolves a dashboard path based on the current hostname.
- * On app.modogestor.com.br: /app/dashboard → /dashboard
+ * On app.barberflow.store: /app/dashboard → /dashboard
  * On preview/local: /app/dashboard → /app/dashboard (unchanged)
  */
 export function dashPath(path: string): string {

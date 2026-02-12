@@ -595,7 +595,7 @@ export default function Settings() {
                           <FormControl>
                             <div className="flex">
                               <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                                modogestor.com.br/
+                                barberflow.store/
                               </span>
                               <Input 
                                 placeholder="meu-estabelecimento" 

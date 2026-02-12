@@ -70,7 +70,7 @@ export default function Privacy() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">8. Contato do Responsável</h2>
-            <p>Para exercer seus direitos ou esclarecer dúvidas sobre esta política, entre em contato: <a href="mailto:privacidade@modogestor.com.br" className="text-primary hover:underline">privacidade@modogestor.com.br</a></p>
+            <p>Para exercer seus direitos ou esclarecer dúvidas sobre esta política, entre em contato: <a href="mailto:privacidade@barberflow.store" className="text-primary hover:underline">privacidade@barberflow.store</a></p>
           </section>
         </div>
       </main>
