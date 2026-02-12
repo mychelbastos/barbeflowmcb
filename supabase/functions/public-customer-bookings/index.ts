@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           found: true,
           customer: {
+            id: customer.id,
             name: customer.name,
             email: customer.email || "",
             birthday: customer.birthday || "",

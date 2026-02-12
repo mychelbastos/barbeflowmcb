@@ -69,17 +69,21 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
     setLoading(true);
     setSearched(true);
     try {
-      // Find customer
-      const { data: allCustomers } = await supabase
-        .from('customers').select('id, phone, name').eq('tenant_id', tenant.id);
-      const matched = allCustomers?.find(c => canonicalPhone(c.phone) === canonical);
+      // Find customer via edge function (bypasses RLS for anonymous users)
+      const { data: lookupData, error: lookupError } = await supabase.functions.invoke('public-customer-bookings', {
+        body: { phone: canonical, tenant_id: tenant.id, action: 'lookup' },
+      });
 
-      if (!matched) {
+      if (lookupError) throw lookupError;
+
+      if (!lookupData?.found || !lookupData?.customer?.id) {
         setBenefits([]);
         setCustomerName('');
         setLoading(false);
         return;
       }
+
+      const matched = { id: lookupData.customer.id, name: lookupData.customer.name };
       setCustomerName(matched.name || '');
 
       const items: BenefitItem[] = [];
