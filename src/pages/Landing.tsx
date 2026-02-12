@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Scissors, Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe } from "lucide-react";
+import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe } from "lucide-react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { getDashboardUrl } from "@/lib/hostname";
 import { useRef, useState } from "react";
@@ -21,8 +21,8 @@ const Landing = () => {
     <div className="min-h-screen bg-[hsl(240,6%,4%)] text-zinc-100 overflow-x-hidden">
       {/* Ambient background effects */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-emerald-500/[0.03] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-emerald-500/[0.02] rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-primary/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-primary/[0.02] rounded-full blur-[100px]" />
       </div>
 
       {/* Navigation */}
@@ -36,10 +36,7 @@ const Landing = () => {
           <div className="max-w-6xl mx-auto bg-zinc-900/60 backdrop-blur-2xl border border-zinc-800/40 rounded-2xl px-6">
             <div className="flex justify-between items-center h-14">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <Scissors className="h-4 w-4 text-zinc-950" />
-                </div>
-                <span className="text-lg font-bold tracking-tight">modoGESTOR</span>
+                <img src={logoBranca} alt="modoGESTOR" className="h-7" />
               </div>
               <div className="hidden md:flex items-center gap-8">
                 {["Recursos", "Preços", "Depoimentos"].map((item) => (
@@ -51,7 +48,7 @@ const Landing = () => {
               <div className="flex items-center gap-2">
                 {isLoggedIn ? (
                   <a href={getDashboardUrl('/app/dashboard')}>
-                    <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
+                    <Button size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20">
                       <LayoutDashboard className="h-4 w-4 mr-1.5" />
                       Meu Painel
                     </Button>
@@ -64,7 +61,7 @@ const Landing = () => {
                       </Button>
                     </a>
                     <a href={getDashboardUrl('/app/register')}>
-                      <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
+                      <Button size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20">
                         Começar Grátis
                       </Button>
                     </a>
@@ -83,7 +80,7 @@ const Landing = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-8 backdrop-blur-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/[0.08] border border-primary/20 text-primary text-sm font-medium mb-8 backdrop-blur-sm"
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span>A plataforma #1 para gestão de serviços</span>
@@ -99,14 +96,14 @@ const Landing = () => {
             Seu negócio no
             <br />
             <span className="relative">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-500">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-primary to-amber-500">
                 próximo nível
               </span>
               <motion.span
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ duration: 0.8, delay: 1, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-400/60 to-transparent origin-left rounded-full"
+                className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/60 to-transparent origin-left rounded-full"
               />
             </span>
           </motion.h1>
@@ -129,7 +126,7 @@ const Landing = () => {
           >
             {isLoggedIn ? (
               <a href={getDashboardUrl('/app/dashboard')}>
-                <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
+                <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
                   <LayoutDashboard className="mr-2 h-5 w-5" />
                   Ir ao Dashboard
                 </Button>
@@ -137,7 +134,7 @@ const Landing = () => {
             ) : (
               <>
                 <a href={getDashboardUrl('/app/register')}>
-                  <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
+                  <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
                     <Zap className="mr-2 h-5 w-5" />
                     Começar Agora — Grátis
                   </Button>
@@ -159,13 +156,13 @@ const Landing = () => {
             className="flex items-center justify-center gap-6 text-sm text-zinc-500"
           >
             <span className="flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-emerald-400" /> 14 dias grátis
+              <Check className="h-4 w-4 text-primary" /> 14 dias grátis
             </span>
             <span className="flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-emerald-400" /> Todos os recursos
+              <Check className="h-4 w-4 text-primary" /> Todos os recursos
             </span>
             <span className="hidden sm:flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-emerald-400" /> Setup em 5 min
+              <Check className="h-4 w-4 text-primary" /> Setup em 5 min
             </span>
           </motion.div>
         </motion.div>
@@ -179,7 +176,7 @@ const Landing = () => {
           transition={{ duration: 1, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-5xl mx-auto relative"
         >
-          <div className="absolute -inset-4 bg-gradient-to-b from-emerald-500/10 via-emerald-500/5 to-transparent rounded-3xl blur-2xl" />
+          <div className="absolute -inset-4 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent rounded-3xl blur-2xl" />
           <div className="relative rounded-2xl border border-zinc-800/60 overflow-hidden shadow-2xl shadow-black/50">
             <div className="bg-zinc-900/80 backdrop-blur-xl px-4 py-3 border-b border-zinc-800/50 flex items-center gap-2">
               <div className="flex gap-1.5">
@@ -269,7 +266,7 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: Calendar, title: "Agendamento Online 24/7", description: "Seus clientes agendam a qualquer hora, sem criar conta. Link exclusivo do seu negócio.", accent: "emerald" },
+              { icon: Calendar, title: "Agendamento Online 24/7", description: "Seus clientes agendam a qualquer hora, sem criar conta. Link exclusivo do seu negócio.", accent: "primary" },
               { icon: Users, title: "Gestão de Equipe", description: "Cadastre profissionais, defina horários individuais e acompanhe a performance de cada um.", accent: "blue" },
               { icon: MessageCircle, title: "WhatsApp Automático", description: "Confirmações, lembretes e notificações enviadas automaticamente via WhatsApp.", accent: "green" },
               { icon: CreditCard, title: "Pagamento Antecipado", description: "Integração com Mercado Pago. Reduza faltas com cobrança no agendamento.", accent: "violet" },
@@ -285,10 +282,10 @@ const Landing = () => {
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 className="group relative p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 hover:border-zinc-700/60 transition-all duration-300 hover:bg-zinc-900/60"
               >
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative">
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${
-                    feature.accent === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' :
+                    feature.accent === 'primary' ? 'bg-primary/10 text-primary' :
                     feature.accent === 'blue' ? 'bg-blue-500/10 text-blue-400' :
                     feature.accent === 'green' ? 'bg-green-500/10 text-green-400' :
                     feature.accent === 'violet' ? 'bg-violet-500/10 text-violet-400' :
@@ -308,7 +305,7 @@ const Landing = () => {
 
       {/* Showcase Section - Dashboard + Mobile */}
       <section id="demo" className="py-28 px-6 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.02] to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent" />
         <div className="max-w-6xl mx-auto relative">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
@@ -322,7 +319,7 @@ const Landing = () => {
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6 leading-tight">
                 Aumente sua receita em até{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-300">40%</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-300">40%</span>
               </h2>
               <p className="text-zinc-400 mb-10 leading-relaxed">
                 Reduza faltas, automatize sua operação e ofereça a melhor experiência aos seus clientes.
@@ -343,7 +340,7 @@ const Landing = () => {
                     className="flex gap-4 items-start"
                   >
                     <div className="w-10 h-10 rounded-xl bg-zinc-800/80 border border-zinc-700/30 flex items-center justify-center flex-shrink-0">
-                      <item.icon className="h-5 w-5 text-emerald-400" />
+                      <item.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-zinc-100 mb-0.5">{item.title}</h3>
@@ -361,7 +358,7 @@ const Landing = () => {
               transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className="relative flex justify-center"
             >
-              <div className="absolute -inset-8 bg-gradient-to-br from-emerald-500/10 via-transparent to-blue-500/10 rounded-3xl blur-3xl opacity-50" />
+              <div className="absolute -inset-8 bg-gradient-to-br from-primary/10 via-transparent to-blue-500/10 rounded-3xl blur-3xl opacity-50" />
               <div className="relative">
                 <img src={mobileMockup} alt="modoGESTOR Mobile" className="w-64 rounded-[2rem] shadow-2xl shadow-black/60 border border-zinc-800/50" />
                 <motion.div
@@ -372,8 +369,8 @@ const Landing = () => {
                   className="absolute -left-16 top-1/4 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-emerald-400" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs text-zinc-400">Novo agendamento</p>
@@ -389,12 +386,12 @@ const Landing = () => {
                   className="absolute -right-12 bottom-1/3 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <Check className="h-4 w-4 text-emerald-400" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-xs text-zinc-400">Confirmado</p>
-                      <p className="text-sm font-semibold text-emerald-400">R$ 45,00</p>
+                      <p className="text-sm font-semibold text-primary">R$ 45,00</p>
                     </div>
                   </div>
                 </motion.div>
@@ -417,7 +414,7 @@ const Landing = () => {
               Depoimentos
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-              Quem usa, <span className="text-emerald-400">recomenda</span>
+              Quem usa, <span className="text-primary">recomenda</span>
             </h2>
           </motion.div>
 
@@ -443,7 +440,7 @@ const Landing = () => {
                 </div>
                 <p className="text-zinc-300 text-sm leading-relaxed mb-6">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500/30 to-emerald-700/30 flex items-center justify-center text-xs font-bold text-emerald-400 border border-emerald-500/20">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-amber-700/30 flex items-center justify-center text-xs font-bold text-primary border border-primary/20">
                     {testimonial.name.charAt(0)}
                   </div>
                   <div>
@@ -495,7 +492,7 @@ const Landing = () => {
                 }`}
               >
                 Anual
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20">
                   -20%
                 </span>
               </button>
@@ -520,7 +517,7 @@ const Landing = () => {
                 <span className="text-zinc-500 text-sm">/mês</span>
               </div>
               {billingCycle === 'annual' && (
-                <p className="text-emerald-400 text-xs mb-4">
+                <p className="text-primary text-xs mb-4">
                   R$ 574,80/ano — economia de R$ 143,40
                 </p>
               )}
@@ -543,7 +540,7 @@ const Landing = () => {
                   "1 profissional incluso",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-300">
-                    <Check className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                     {item}
                   </li>
                 ))}
@@ -561,14 +558,14 @@ const Landing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="relative p-8 rounded-2xl bg-zinc-900/60 border border-emerald-500/30 shadow-xl shadow-emerald-500/5 flex flex-col"
+              className="relative p-8 rounded-2xl bg-zinc-900/60 border border-primary/30 shadow-xl shadow-primary/5 flex flex-col"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="px-4 py-1 rounded-full bg-emerald-500 text-zinc-950 text-xs font-bold shadow-lg shadow-emerald-500/25">
+                <span className="px-4 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/25">
                   Mais popular
                 </span>
               </div>
-              <p className="text-sm font-semibold text-emerald-400 mb-1">Profissional</p>
+              <p className="text-sm font-semibold text-primary mb-1">Profissional</p>
               <p className="text-zinc-500 text-xs mb-5">Para quem quer escalar e pagar menos por transação</p>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-4xl font-bold text-zinc-100">
@@ -577,12 +574,12 @@ const Landing = () => {
                 <span className="text-zinc-500 text-sm">/mês</span>
               </div>
               {billingCycle === 'annual' && (
-                <p className="text-emerald-400 text-xs mb-4">
+                <p className="text-primary text-xs mb-4">
                   R$ 862,80/ano — economia de R$ 215,40
                 </p>
               )}
-              <div className="flex items-center gap-2 mt-2 mb-6 px-3 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15">
-                <span className="text-emerald-400 text-sm font-semibold">1,0%</span>
+              <div className="flex items-center gap-2 mt-2 mb-6 px-3 py-2 rounded-lg bg-primary/[0.06] border border-primary/15">
+                <span className="text-primary text-sm font-semibold">1,0%</span>
                 <span className="text-zinc-400 text-xs">por transação processada</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -594,22 +591,22 @@ const Landing = () => {
                   "1 profissional incluso",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-300">
-                    <Check className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                     {item}
                   </li>
                 ))}
                 {/* Exclusive features highlighted */}
-                <li className="flex items-start gap-2.5 text-sm text-emerald-300/90 pt-2 border-t border-zinc-800/40">
-                  <MessageCircle className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2.5 text-sm text-yellow-200/90 pt-2 border-t border-zinc-800/40">
+                  <MessageCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                   Chatbot de agendamento via WhatsApp
                 </li>
-                <li className="flex items-start gap-2.5 text-sm text-emerald-300/90">
-                  <Globe className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2.5 text-sm text-yellow-200/90">
+                  <Globe className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                   meunegocio.modogestor.com.br
                 </li>
               </ul>
               <a href={getDashboardUrl('/app/register')}>
-                <Button className="w-full rounded-xl h-12 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold shadow-lg shadow-emerald-500/20">
+                <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-lg shadow-primary/20">
                   Começar 14 dias grátis
                 </Button>
               </a>
@@ -637,16 +634,16 @@ const Landing = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
-            className="max-w-3xl mx-auto mt-8 p-5 rounded-2xl bg-gradient-to-r from-emerald-500/[0.04] to-transparent border border-emerald-500/10"
+            className="max-w-3xl mx-auto mt-8 p-5 rounded-2xl bg-gradient-to-r from-primary/[0.04] to-transparent border border-primary/10"
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="h-5 w-5 text-emerald-400" />
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-zinc-200 mb-1">Quando o upgrade se paga sozinho?</p>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Acima de <span className="text-emerald-400 font-semibold">R$ 2.000/mês</span> em transações, o Profissional fica mais barato que o Essencial — e ainda inclui agendamento pelo WhatsApp e domínio próprio.
+                  Acima de <span className="text-primary font-semibold">R$ 2.000/mês</span> em transações, o Profissional fica mais barato que o Essencial — e ainda inclui agendamento pelo WhatsApp e domínio próprio.
                 </p>
               </div>
             </div>
@@ -656,7 +653,7 @@ const Landing = () => {
 
       {/* Final CTA */}
       <section className="py-28 px-6 relative">
-        <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/[0.04] to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.04] to-transparent" />
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -664,7 +661,7 @@ const Landing = () => {
           transition={{ duration: 0.7 }}
           className="max-w-3xl mx-auto text-center relative"
         >
-          <div className="absolute -inset-20 bg-emerald-500/[0.03] rounded-full blur-3xl" />
+          <div className="absolute -inset-20 bg-primary/[0.03] rounded-full blur-3xl" />
           <div className="relative">
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5 leading-tight">
               Pronto para transformar
@@ -677,8 +674,8 @@ const Landing = () => {
             <p className="text-zinc-500 text-sm mb-10">A partir de R$ 59,90/mês após o trial</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a href={getDashboardUrl('/app/register')}>
-                <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-10 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
-                  <Scissors className="mr-2 h-5 w-5" />
+                <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-10 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
+                  <Zap className="mr-2 h-5 w-5" />
                   Criar Meu Negócio
                 </Button>
               </a>

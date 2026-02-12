@@ -35,35 +35,18 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
     try {
       const { data, error } = await supabase.functions.invoke('mp-create-subscription', {
         body: {
-          tenant_id: tenant.id,
-          plan_id: selectedPlan.id,
-          customer_name: name.trim(),
-          customer_phone: phone,
-          customer_email: email.trim(),
+          tenant_id: tenant.id, plan_id: selectedPlan.id,
+          customer_name: name.trim(), customer_phone: phone, customer_email: email.trim(),
         },
       });
-
-      if (error) {
-        const errorMessage = data?.error || error.message || 'Erro ao criar assinatura';
-        throw new Error(errorMessage);
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        toast({ title: "Assinatura criada!", description: "Aguardando confirmação de pagamento." });
-        setSelectedPlan(null);
-      }
+      if (error) { const errorMessage = data?.error || error.message || 'Erro ao criar assinatura'; throw new Error(errorMessage); }
+      if (data?.error) throw new Error(data.error);
+      if (data?.checkout_url) { window.location.href = data.checkout_url; }
+      else { toast({ title: "Assinatura criada!", description: "Aguardando confirmação de pagamento." }); setSelectedPlan(null); }
     } catch (err: any) {
       console.error('Subscription error:', err);
       toast({ title: "Erro ao criar assinatura", description: err.message, variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   if (selectedPlan) {
@@ -72,10 +55,10 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
         <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Repeat className="h-4 w-4 text-emerald-400" />
+              <Repeat className="h-4 w-4 text-primary" />
               <span className="font-medium">{selectedPlan.name}</span>
             </div>
-            <span className="text-lg font-semibold text-emerald-400">
+            <span className="text-lg font-semibold text-primary">
               R$ {(selectedPlan.price_cents / 100).toFixed(0)}/mês
             </span>
           </div>
@@ -83,7 +66,7 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
           <div className="space-y-1">
             {(selectedPlan.plan_services || []).map((ps: any) => (
               <div key={ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
                 <span className="truncate">{ps.service?.name}</span>
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                   {ps.sessions_per_cycle === null ? '∞' : `${ps.sessions_per_cycle}x/mês`}
@@ -122,7 +105,6 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
     );
   }
 
-  // Plans listing
   return (
     <div className="space-y-3">
       {plans.length === 0 ? (
@@ -136,14 +118,14 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <Repeat className="h-4 w-4 text-emerald-400 shrink-0" />
+                <Repeat className="h-4 w-4 text-primary shrink-0" />
                 <h3 className="font-medium group-hover:text-white transition-colors">{plan.name}</h3>
               </div>
               {plan.description && <p className="text-xs text-zinc-500 mb-2">{plan.description}</p>}
               <div className="space-y-1">
                 {(plan.plan_services || []).map((ps: any) => (
                   <div key={ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" />
                     <span className="truncate">{ps.service?.name}</span>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
                       {ps.sessions_per_cycle === null ? '∞' : `${ps.sessions_per_cycle}x/mês`}
@@ -153,7 +135,7 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
               </div>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-lg font-semibold text-emerald-400">R$ {(plan.price_cents / 100).toFixed(0)}</span>
+              <span className="text-lg font-semibold text-primary">R$ {(plan.price_cents / 100).toFixed(0)}</span>
               <span className="text-xs text-zinc-500 block">/mês</span>
             </div>
           </div>

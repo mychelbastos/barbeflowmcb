@@ -16,10 +16,10 @@ export function PackageBanner({ benefits, onUseBenefits }: PackageBannerProps) {
   if (benefits.length === 0) return null;
 
   return (
-    <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl mb-6">
+    <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl mb-6">
       <div className="flex items-center gap-2 mb-2">
-        <Package className="h-4 w-4 text-emerald-400" />
-        <span className="text-sm font-medium text-emerald-400">Você tem sessões disponíveis!</span>
+        <Package className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-primary">Você tem sessões disponíveis!</span>
       </div>
       <div className="space-y-1 mb-3">
         {benefits.map((b, i) => (
@@ -27,7 +27,7 @@ export function PackageBanner({ benefits, onUseBenefits }: PackageBannerProps) {
             {b.type === 'package' ? (
               <Package className="h-3 w-3 text-amber-400 shrink-0" />
             ) : (
-              <Repeat className="h-3 w-3 text-emerald-400 shrink-0" />
+              <Repeat className="h-3 w-3 text-primary shrink-0" />
             )}
             <span>{b.name} — {b.remainingSessions} sessões restantes</span>
           </div>
@@ -37,7 +37,7 @@ export function PackageBanner({ benefits, onUseBenefits }: PackageBannerProps) {
         size="sm"
         variant="outline"
         onClick={onUseBenefits}
-        className="w-full border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+        className="w-full border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
       >
         Usar meus benefícios
         <ArrowRight className="h-3.5 w-3.5 ml-1" />

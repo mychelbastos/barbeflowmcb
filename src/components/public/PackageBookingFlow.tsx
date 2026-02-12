@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
-import { Loader2, User, Sparkles, Clock, ChevronLeft, Check, Scissors } from "lucide-react";
+import { Loader2, User, Sparkles, Clock, ChevronLeft, Check, Briefcase } from "lucide-react";
 import { getLocalTimeZone, today, parseDate } from "@internationalized/date";
 import type { DateValue } from "react-aria-components";
 
@@ -134,10 +134,10 @@ export function PackageBookingFlow({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+      <div className="p-3 bg-primary/10 border border-primary/30 rounded-xl">
         <div className="flex items-center gap-2">
-          <Scissors className="h-4 w-4 text-emerald-400" />
-          <span className="text-sm font-medium text-emerald-400">{serviceName}</span>
+          <Briefcase className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium text-primary">{serviceName}</span>
         </div>
         <p className="text-xs text-zinc-400 mt-1">Sessão do {benefitLabel} — sem cobrança adicional</p>
       </div>
@@ -148,8 +148,8 @@ export function PackageBookingFlow({
           <button onClick={() => handleStaffSelect('any')}
             className="w-full p-3 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
+              <div className="w-10 h-10 bg-primary/10 border border-primary/30 rounded-lg flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
               <span className="text-sm font-medium">Qualquer disponível</span>
             </div>
@@ -218,7 +218,7 @@ export function PackageBookingFlow({
             <div className="h-px bg-zinc-800" />
             <div className="flex justify-between text-sm">
               <span className="text-zinc-500">Valor</span>
-              <span className="font-medium text-emerald-400">Incluso no {benefitLabel}</span>
+              <span className="font-medium text-primary">Incluso no {benefitLabel}</span>
             </div>
           </div>
           <Button onClick={handleConfirm} disabled={submitting} className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">

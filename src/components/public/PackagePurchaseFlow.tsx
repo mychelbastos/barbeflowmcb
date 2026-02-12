@@ -44,23 +44,14 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
     setSubmitting(true);
     try {
       const canonical = canonicalPhone(phone);
-
-      // Find or create customer via edge function (bypasses RLS for anonymous users)
       const { data: custResult, error: custErr } = await supabase.functions.invoke('public-customer-bookings', {
         body: { action: 'find-or-create', phone: canonical, tenant_id: tenant.id, name: name.trim(), email: email || null },
       });
-      if (custErr || !custResult?.customer_id) {
-        throw new Error('Erro ao identificar cliente');
-      }
+      if (custErr || !custResult?.customer_id) throw new Error('Erro ao identificar cliente');
       const customerId = custResult.customer_id;
-
-      // Load package services
       const { data: pkgSvcs } = await supabase
         .from('package_services').select('service_id, sessions_count').eq('package_id', pkg.id);
-
       const totalSessions = (pkgSvcs || []).reduce((sum: number, s: any) => sum + s.sessions_count, 0);
-
-      // Create customer_packages
       const { data: newCp, error: cpErr } = await supabase
         .from('customer_packages')
         .insert({
@@ -69,21 +60,15 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           status: 'active', payment_status: 'pending',
         })
         .select().single();
-
       if (cpErr) throw cpErr;
-
-      // Create per-service tracking
       if (newCp && pkgSvcs && pkgSvcs.length > 0) {
         await supabase.from('customer_package_services').insert(
           pkgSvcs.map((ps: any) => ({
-            customer_package_id: newCp.id,
-            service_id: ps.service_id,
-            sessions_total: ps.sessions_count,
-            sessions_used: 0,
+            customer_package_id: newCp.id, service_id: ps.service_id,
+            sessions_total: ps.sessions_count, sessions_used: 0,
           }))
         );
       }
-
       toast({ title: "Pacote adquirido!" });
       setStep('success');
     } catch (err: any) {
@@ -96,8 +81,8 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   if (step === 'success') {
     return (
       <div className="text-center py-6 space-y-4">
-        <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto">
-          <Check className="h-8 w-8 text-emerald-400" />
+        <div className="w-16 h-16 bg-primary/10 border border-primary/30 rounded-full flex items-center justify-center mx-auto">
+          <Check className="h-8 w-8 text-primary" />
         </div>
         <h3 className="text-lg font-semibold">Pacote adquirido!</h3>
         <p className="text-sm text-zinc-400">Você tem {pkg.total_sessions || 0} sessões disponíveis.</p>
@@ -115,19 +100,18 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
 
   return (
     <div className="space-y-4">
-      {/* Package summary */}
       <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-emerald-400" />
+            <Package className="h-4 w-4 text-primary" />
             <span className="font-medium">{pkg.name}</span>
           </div>
-          <span className="text-lg font-semibold text-emerald-400">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
+          <span className="text-lg font-semibold text-primary">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
         </div>
         <div className="space-y-1">
           {(pkg.package_services || []).map((ps: any) => (
             <div key={ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
               <span className="truncate">{ps.service?.name}</span>
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{ps.sessions_count}x</Badge>
             </div>
@@ -135,7 +119,6 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
         </div>
       </div>
 
-      {/* Customer data */}
       <div className="space-y-3">
         <div>
           <label className="block text-sm text-zinc-400 mb-1.5">Nome *</label>

@@ -19,7 +19,7 @@ interface ServiceUsage {
   serviceId: string;
   serviceName: string;
   sessionsUsed: number;
-  sessionsTotal: number | null; // null = unlimited
+  sessionsTotal: number | null;
 }
 
 interface BenefitItem {
@@ -69,7 +69,6 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
     setLoading(true);
     setSearched(true);
     try {
-      // Find customer via edge function (bypasses RLS for anonymous users)
       const { data: lookupData, error: lookupError } = await supabase.functions.invoke('public-customer-bookings', {
         body: { phone: canonical, tenant_id: tenant.id, action: 'lookup' },
       });
@@ -88,7 +87,6 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
 
       const items: BenefitItem[] = [];
 
-      // --- Packages ---
       const { data: custPkgs } = await supabase
         .from('customer_packages')
         .select('*, package:service_packages(name)')
@@ -103,21 +101,17 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
             .eq('customer_package_id', cp.id);
 
           items.push({
-            id: cp.id,
-            type: 'package',
+            id: cp.id, type: 'package',
             name: cp.package?.name || 'Pacote',
             customerPackageId: cp.id,
             services: (svcUsage || []).map((s: any) => ({
-              serviceId: s.service_id,
-              serviceName: s.service?.name || 'Serviço',
-              sessionsUsed: s.sessions_used,
-              sessionsTotal: s.sessions_total,
+              serviceId: s.service_id, serviceName: s.service?.name || 'Serviço',
+              sessionsUsed: s.sessions_used, sessionsTotal: s.sessions_total,
             })),
           });
         }
       }
 
-      // --- Subscriptions ---
       const { data: subs } = await supabase
         .from('customer_subscriptions')
         .select('*, plan:subscription_plans(name, price_cents)')
@@ -142,16 +136,14 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
               .maybeSingle();
 
             services.push({
-              serviceId: ps.service_id,
-              serviceName: ps.service?.name || 'Serviço',
+              serviceId: ps.service_id, serviceName: ps.service?.name || 'Serviço',
               sessionsUsed: usage?.sessions_used || 0,
               sessionsTotal: usage?.sessions_limit ?? ps.sessions_per_cycle,
             });
           }
 
           items.push({
-            id: sub.id,
-            type: 'subscription',
+            id: sub.id, type: 'subscription',
             name: sub.plan?.name || 'Assinatura',
             customerSubscriptionId: sub.id,
             nextRenewal: sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('pt-BR') : undefined,
@@ -175,8 +167,7 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
 
   const handleBookService = (item: BenefitItem, svc: ServiceUsage) => {
     setBookingService({
-      serviceId: svc.serviceId,
-      serviceName: svc.serviceName,
+      serviceId: svc.serviceId, serviceName: svc.serviceName,
       customerPackageId: item.customerPackageId,
       customerSubscriptionId: item.customerSubscriptionId,
       benefitLabel: item.type === 'package' ? 'pacote' : 'assinatura',
@@ -213,7 +204,7 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800 text-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-emerald-400" />
+            <Package className="h-5 w-5 text-primary" />
             Meus Pacotes & Assinaturas
           </DialogTitle>
         </DialogHeader>
@@ -253,18 +244,17 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
                     {item.type === 'package' ? (
                       <Package className="h-4 w-4 text-amber-400" />
                     ) : (
-                      <Repeat className="h-4 w-4 text-emerald-400" />
+                      <Repeat className="h-4 w-4 text-primary" />
                     )}
                     <span className="font-medium text-sm">{item.name}</span>
                   </div>
                   <Badge variant="secondary" className={`text-[10px] ${
-                    item.type === 'package' ? 'bg-zinc-800 text-zinc-400' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    item.type === 'package' ? 'bg-zinc-800 text-zinc-400' : 'bg-primary/10 text-primary border-primary/20'
                   }`}>
                     {item.type === 'package' ? 'PACOTE' : 'ASSINATURA'}
                   </Badge>
                 </div>
 
-                {/* Services usage */}
                 <div className="space-y-2">
                   {item.services.map((svc) => {
                     const isUnlimited = svc.sessionsTotal === null;
@@ -282,13 +272,13 @@ export function MyPackagesSection({ open, onOpenChange, tenant, slug }: MyPackag
                         </div>
                         {!isUnlimited && (
                           <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${100 - pct}%` }} />
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${100 - pct}%` }} />
                           </div>
                         )}
                         {hasRemaining && (
                           <button
                             onClick={() => handleBookService(item, svc)}
-                            className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 mt-1"
+                            className="text-[11px] text-primary hover:text-yellow-300 flex items-center gap-1 mt-1"
                           >
                             <Calendar className="h-3 w-3" /> Agendar
                           </button>
