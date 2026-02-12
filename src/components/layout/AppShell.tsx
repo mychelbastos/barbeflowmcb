@@ -63,6 +63,7 @@ import {
   Gift,
   Repeat,
   Sparkles,
+  Crown,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -123,6 +124,7 @@ const baseNavigationItems: NavItem[] = [
       { title: "Agendamento", url: "/app/settings?tab=scheduling", icon: CalendarCheck },
       { title: "Notificações", url: "/app/settings?tab=notifications", icon: MessageCircle },
       { title: "Pagamentos", url: "/app/settings?tab=payments", icon: CreditCard },
+      { title: "Assinatura", url: "/app/settings?tab=billing", icon: Crown },
       { title: "WhatsApp", url: "/app/settings?tab=whatsapp", icon: MessageCircle, statusDot: true },
     ]
   },

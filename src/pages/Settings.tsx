@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { CustomerImportExport } from "@/components/CustomerImportExport";
 import WhatsAppConfigEmbed from "@/pages/WhatsAppConfig";
+import { BillingTab } from "@/components/billing/BillingTab";
 import { useSearchParams } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -1184,6 +1185,11 @@ export default function Settings() {
               </Form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Billing */}
+        <TabsContent value="billing">
+          <BillingTab />
         </TabsContent>
 
         {/* Data Import/Export */}
