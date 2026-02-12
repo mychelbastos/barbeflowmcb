@@ -139,18 +139,54 @@ export default function Bookings() {
     return filtered.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
   }, [gridBookings, searchTerm, statusFilter]);
 
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
-    if (isVirtualBooking(bookingId)) {
-      toast({ title: "Ação indisponível", description: "Este é um horário fixo virtual. Crie um agendamento real primeiro.", variant: "destructive" });
-      return;
+  // Materialize a virtual recurring booking into a real one in the database
+  const materializeVirtualBooking = async (booking: BookingData): Promise<string | null> => {
+    if (!currentTenant) return null;
+    try {
+      const { data, error } = await supabase
+        .from("bookings")
+        .insert({
+          tenant_id: currentTenant.id,
+          customer_id: booking.customer_id,
+          service_id: booking.service_id,
+          staff_id: booking.staff_id,
+          starts_at: booking.starts_at,
+          ends_at: booking.ends_at,
+          status: "confirmed",
+          notes: booking.notes,
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Erro ao criar agendamento real", variant: "destructive" });
+      return null;
     }
+  };
+
+  const updateBookingStatus = async (bookingId: string, newStatus: string, booking?: BookingData) => {
+    let realId = bookingId;
+
+    // If it's a virtual booking, materialize it first
+    if (isVirtualBooking(bookingId)) {
+      if (!booking) {
+        toast({ title: "Erro", description: "Dados do agendamento não encontrados", variant: "destructive" });
+        return;
+      }
+      const id = await materializeVirtualBooking(booking);
+      if (!id) return;
+      realId = id;
+    }
+
     try {
       // If cancelling, check for benefit-linked booking and refund session
       if (newStatus === "cancelled") {
         const { data: bookingData } = await supabase
           .from("bookings")
           .select("customer_package_id, customer_subscription_id, service_id")
-          .eq("id", bookingId)
+          .eq("id", realId)
           .single();
 
         if (bookingData?.customer_package_id) {
@@ -191,7 +227,7 @@ export default function Bookings() {
             .gte("period_end", todayStr)
             .maybeSingle();
           if (usage && usage.sessions_used > 0) {
-            const newBookingIds = (usage.booking_ids || []).filter((id: string) => id !== bookingId);
+            const newBookingIds = (usage.booking_ids || []).filter((id: string) => id !== realId);
             await supabase.from("subscription_usage")
               .update({ sessions_used: usage.sessions_used - 1, booking_ids: newBookingIds })
               .eq("id", usage.id);
@@ -199,7 +235,7 @@ export default function Bookings() {
         }
       }
 
-      const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", bookingId);
+      const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", realId);
       if (error) throw error;
 
       const notificationTypeMap: Record<string, string | null> = {
@@ -212,7 +248,7 @@ export default function Bookings() {
       if (notificationType && currentTenant) {
         try {
           await supabase.functions.invoke("send-whatsapp-notification", {
-            body: { type: notificationType, booking_id: bookingId, tenant_id: currentTenant.id },
+            body: { type: notificationType, booking_id: realId, tenant_id: currentTenant.id },
           });
         } catch (e) { console.error(e); }
       }
@@ -263,6 +299,12 @@ export default function Bookings() {
 
   const startEditMode = async () => {
     if (!selectedBooking || !currentTenant) return;
+    // Materialize virtual booking if needed
+    if (isVirtualBooking(selectedBooking.id)) {
+      const realId = await materializeVirtualBooking(selectedBooking);
+      if (!realId) return;
+      setSelectedBooking({ ...selectedBooking, id: realId });
+    }
     setEditForm({
       service_id: selectedBooking.service_id,
       staff_id: selectedBooking.staff_id || "none",
@@ -501,8 +543,8 @@ export default function Bookings() {
                           <span className="font-medium text-sm">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</span>
                           <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(booking); setShowDetails(true); }} className="h-8 w-8 p-0"><Edit className="h-4 w-4" /></Button>
-                            {booking.status === "confirmed" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "completed")} className="h-8 w-8 p-0"><CheckCircle className="h-4 w-4 text-emerald-500" /></Button>}
-                            {booking.status !== "cancelled" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "cancelled")} className="h-8 w-8 p-0"><XCircle className="h-4 w-4 text-destructive" /></Button>}
+                            {booking.status === "confirmed" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "completed", booking)} className="h-8 w-8 p-0"><CheckCircle className="h-4 w-4 text-emerald-500" /></Button>}
+                            {booking.status !== "cancelled" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "cancelled", booking)} className="h-8 w-8 p-0"><XCircle className="h-4 w-4 text-destructive" /></Button>}
                           </div>
                         </div>
                       </div>
@@ -563,8 +605,8 @@ export default function Bookings() {
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Button variant="ghost" size="sm" onClick={() => { setSelectedBooking(booking); setShowDetails(true); }}><Edit className="h-4 w-4" /></Button>
-                                {booking.status === "confirmed" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "completed")}><CheckCircle className="h-4 w-4 text-emerald-500" /></Button>}
-                                {booking.status !== "cancelled" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "cancelled")}><XCircle className="h-4 w-4 text-destructive" /></Button>}
+                                {booking.status === "confirmed" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "completed", booking)}><CheckCircle className="h-4 w-4 text-emerald-500" /></Button>}
+                                {booking.status !== "cancelled" && <Button variant="ghost" size="sm" onClick={() => updateBookingStatus(booking.id, "cancelled", booking)}><XCircle className="h-4 w-4 text-destructive" /></Button>}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -660,12 +702,12 @@ export default function Bookings() {
                   </Button>
                 )}
                 {selectedBooking.status === "confirmed" && (
-                  <Button size="sm" variant="outline" onClick={() => { updateBookingStatus(selectedBooking.id, "completed"); setShowDetails(false); }}>
+                  <Button size="sm" variant="outline" onClick={() => { updateBookingStatus(selectedBooking.id, "completed", selectedBooking); setShowDetails(false); }}>
                     <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
                   </Button>
                 )}
                 {selectedBooking.status !== "cancelled" && (
-                  <Button size="sm" variant="destructive" onClick={() => { updateBookingStatus(selectedBooking.id, "cancelled"); setShowDetails(false); }}>
+                  <Button size="sm" variant="destructive" onClick={() => { updateBookingStatus(selectedBooking.id, "cancelled", selectedBooking); setShowDetails(false); }}>
                     <XCircle className="h-4 w-4 mr-1" /> Cancelar
                   </Button>
                 )}
