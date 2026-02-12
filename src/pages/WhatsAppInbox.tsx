@@ -107,6 +107,25 @@ export default function WhatsAppInbox() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Notification sound
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      // Audio context not available
+    }
+  }, []);
+
   const checkConnectionStatus = useCallback(async () => {
     if (!currentTenant?.id) return;
     try {
@@ -287,10 +306,11 @@ export default function WhatsAppInbox() {
       });
 
       const conversationMap = new Map<string, Conversation>();
+      // Track last_message_id per jid to detect truly new unread messages
+      const unreadCounts = new Map<string, number>();
       
       messagesRes.data?.forEach((msg: Message) => {
         if (!conversationMap.has(msg.remote_jid)) {
-          // Extract phone from remote_jid and normalize to match customer DB
           const rawPhone = msg.remote_jid.replace("@s.whatsapp.net", "");
           const normalized = normalizePhone(rawPhone);
           const customerName = phoneToName.get(normalized) || null;
@@ -304,10 +324,16 @@ export default function WhatsAppInbox() {
             unread_count: 0,
           });
         }
-        // Count unread: incoming messages in conversations not yet "read"
+        // Count unread: incoming messages not yet read by clicking the conversation
         if (!msg.from_me && !readConversationsRef.current.has(msg.remote_jid) && msg.remote_jid !== selectedConversation) {
-          const conv = conversationMap.get(msg.remote_jid)!;
-          conv.unread_count = (conv.unread_count || 0) + 1;
+          unreadCounts.set(msg.remote_jid, (unreadCounts.get(msg.remote_jid) || 0) + 1);
+        }
+      });
+
+      // Apply unread counts - but only show for conversations where last msg is NOT from us
+      conversationMap.forEach((conv, jid) => {
+        if (!conv.last_message_from_me && unreadCounts.has(jid)) {
+          conv.unread_count = unreadCounts.get(jid)!;
         }
       });
 
@@ -514,6 +540,11 @@ export default function WhatsAppInbox() {
           console.log("New message received:", payload);
           const newMsg = payload.new as Message;
           
+          // Play notification sound for incoming messages
+          if (!newMsg.from_me) {
+            playNotificationSound();
+          }
+
           if (newMsg.remote_jid === selectedConversation) {
             setMessages((prev) => {
               if (prev.some((m) => m.message_id === newMsg.message_id)) {
@@ -845,23 +876,34 @@ export default function WhatsAppInbox() {
                   className={`flex items-center gap-3 p-3 cursor-pointer rounded-xl transition-all duration-200 mb-1 ${
                     selectedConversation === conv.remote_jid 
                       ? "bg-primary/15 border border-primary/20" 
-                      : "hover:bg-secondary/50"
+                      : conv.unread_count > 0
+                        ? "bg-primary/5 border border-primary/10 hover:bg-primary/10"
+                        : "hover:bg-secondary/50"
                   }`}
                 >
-                  <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-medium">
-                      {getInitials(conv.remote_jid)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-medium">
+                        {getInitials(conv.remote_jid)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {conv.unread_count > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1 shadow-md">
+                        {conv.unread_count > 99 ? "99+" : conv.unread_count}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <p className="font-medium text-sm truncate">
+                      <p className={`font-medium text-sm truncate ${conv.unread_count > 0 ? "text-foreground" : ""}`}>
                         {conv.contact_name || formatPhoneDisplay(conv.remote_jid)}
                       </p>
                       <span className={`text-xs ${
-                        selectedConversation === conv.remote_jid 
-                          ? "text-primary" 
-                          : "text-muted-foreground"
+                        conv.unread_count > 0
+                          ? "text-primary font-semibold"
+                          : selectedConversation === conv.remote_jid 
+                            ? "text-primary" 
+                            : "text-muted-foreground"
                       }`}>
                         {formatTimestamp(conv.last_message_at)}
                       </span>
@@ -870,14 +912,9 @@ export default function WhatsAppInbox() {
                       {conv.last_message_from_me && (
                         <CheckCheck className="h-4 w-4 text-primary shrink-0" />
                       )}
-                      <p className="text-xs text-muted-foreground truncate flex-1">
+                      <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                         {conv.last_message}
                       </p>
-                      {conv.unread_count > 0 && (
-                        <span className="ml-1 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5 shrink-0">
-                          {conv.unread_count > 99 ? "99+" : conv.unread_count}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </motion.div>
