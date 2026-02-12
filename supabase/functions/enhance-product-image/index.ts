@@ -21,9 +21,9 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get('GOOGLE_GEMINI_API_KEY');
+    if (!GOOGLE_GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: 'GOOGLE_GEMINI_API_KEY not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -37,7 +37,7 @@ serve(async (req) => {
     // Get product info for context
     const { data: product, error: prodError } = await supabase
       .from('products')
-      .select('name')
+      .select('name, tenant_id')
       .eq('id', product_id)
       .single();
 
@@ -50,21 +50,30 @@ serve(async (req) => {
 
     console.log(`Enhancing image for product: ${product.name}`);
 
-    // Call Lovable AI Gateway to enhance the image
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Download the source image and convert to base64
+    const imgResponse = await fetch(image_url);
+    if (!imgResponse.ok) {
+      return new Response(JSON.stringify({ error: 'Failed to download source image' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const imgBuffer = await imgResponse.arrayBuffer();
+    const imgBase64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+    const contentType = imgResponse.headers.get('content-type') || 'image/jpeg';
+
+    // Call Google Gemini API directly
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
+
+    const aiResponse = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image',
-        messages: [
+        contents: [
           {
-            role: 'user',
-            content: [
+            parts: [
               {
-                type: 'text',
                 text: `Transform this product photo into a professional barbershop/grooming product image. Make it look like a premium e-commerce product shot with:
 - Dark moody barbershop-themed background with warm amber/gold lighting
 - Professional studio-quality lighting on the product
@@ -74,29 +83,27 @@ serve(async (req) => {
 Keep the actual product exactly as it is, only enhance the presentation and background.`,
               },
               {
-                type: 'image_url',
-                image_url: { url: image_url },
+                inlineData: {
+                  mimeType: contentType,
+                  data: imgBase64,
+                },
               },
             ],
           },
         ],
-        modalities: ['image', 'text'],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
       }),
     });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error('AI Gateway error:', aiResponse.status, errText);
+      console.error('Gemini API error:', aiResponse.status, errText);
 
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: 'Limite de requisições excedido. Tente novamente em alguns segundos.' }), {
           status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: 'Créditos de IA insuficientes.' }), {
-          status: 402,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -108,42 +115,41 @@ Keep the actual product exactly as it is, only enhance the presentation and back
     }
 
     const aiData = await aiResponse.json();
-    const generatedImage = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    if (!generatedImage) {
-      console.error('No image in AI response:', JSON.stringify(aiData).substring(0, 500));
+    // Extract generated image from Gemini response
+    let generatedImageData: string | null = null;
+    let generatedMimeType = 'image/png';
+
+    const candidates = aiData.candidates || [];
+    for (const candidate of candidates) {
+      const parts = candidate.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData) {
+          generatedImageData = part.inlineData.data;
+          generatedMimeType = part.inlineData.mimeType || 'image/png';
+          break;
+        }
+      }
+      if (generatedImageData) break;
+    }
+
+    if (!generatedImageData) {
+      console.error('No image in Gemini response:', JSON.stringify(aiData).substring(0, 500));
       return new Response(JSON.stringify({ error: 'IA não retornou imagem' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Extract base64 data and upload to storage
-    const base64Match = generatedImage.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/);
-    if (!base64Match) {
-      return new Response(JSON.stringify({ error: 'Formato de imagem inválido' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const imageFormat = base64Match[1];
-    const base64Data = base64Match[2];
-    const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-
-    // Get tenant_id from product
-    const { data: fullProduct } = await supabase
-      .from('products')
-      .select('tenant_id')
-      .eq('id', product_id)
-      .single();
-
-    const fileName = `${fullProduct!.tenant_id}/products/enhanced-${product_id}-${Date.now()}.${imageFormat}`;
+    // Convert base64 to binary and upload
+    const binaryData = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));
+    const ext = generatedMimeType.includes('png') ? 'png' : 'jpeg';
+    const fileName = `${product.tenant_id}/products/enhanced-${product_id}-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('tenant-media')
       .upload(fileName, binaryData, {
-        contentType: `image/${imageFormat}`,
+        contentType: generatedMimeType,
         upsert: true,
       });
 
