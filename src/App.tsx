@@ -24,6 +24,8 @@ import RecurringClients from "./pages/RecurringClients";
 import BookingPublic from "./pages/BookingPublic";
 import PaymentReturn from "./pages/PaymentReturn";
 import NotFound from "./pages/NotFound";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import AuthWatcher from "./components/AuthWatcher";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
@@ -60,6 +62,8 @@ const App = () => (
             {showPublic && (
               <>
                 <Route path="/" element={<Landing />} />
+                <Route path="/termos" element={<Terms />} />
+                <Route path="/privacidade" element={<Privacy />} />
                 <Route path="/:slug" element={<BookingPublic />} />
                 <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
                 <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />

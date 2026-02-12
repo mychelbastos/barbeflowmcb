@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe } from "lucide-react";
+import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe, UserPlus, Settings, CalendarCheck } from "lucide-react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
-import { getDashboardUrl } from "@/lib/hostname";
+import { getDashboardUrl, getPublicUrl } from "@/lib/hostname";
 import { useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import dashboardMockup from "@/assets/dashboard-mockup.png";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
 import mobileMockup from "@/assets/mobile-mockup.png";
@@ -641,6 +642,106 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* How it Works */}
+      <section className="py-28 px-6 border-t border-zinc-800/30">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider">
+              Como Funciona
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+              3 passos para <span className="text-primary">começar</span>
+            </h2>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              { icon: UserPlus, step: "1", title: "Cadastre-se", description: "Crie sua conta em 2 minutos. Sem burocracia, sem compromisso." },
+              { icon: Settings, step: "2", title: "Configure", description: "Adicione seus serviços, horários e profissionais. Pronto para usar." },
+              { icon: CalendarCheck, step: "3", title: "Receba", description: "Agendamentos e pagamentos chegam automaticamente no seu painel." },
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.15 }}
+                className="text-center relative"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
+                  <item.icon className="h-7 w-7 text-primary" />
+                </div>
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full">
+                  <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 rounded-full w-6 h-6 flex items-center justify-center">
+                    {item.step}
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold text-zinc-100 mb-2">{item.title}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-28 px-6 border-t border-zinc-800/30">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider">
+              Perguntas Frequentes
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+              Dúvidas? A gente <span className="text-primary">responde</span>
+            </h2>
+          </motion.div>
+
+          <Accordion type="single" collapsible className="space-y-3">
+            {[
+              {
+                q: "Preciso de cartão de crédito para o trial?",
+                a: "Sim, mas você NÃO é cobrado durante os 14 dias. Cancele a qualquer momento antes do fim do trial sem nenhum custo."
+              },
+              {
+                q: "Posso trocar de plano depois?",
+                a: "Sim, a qualquer momento. O Stripe prorratea automaticamente — você paga apenas a diferença proporcional."
+              },
+              {
+                q: "Como funciona a taxa sobre transações?",
+                a: "Quando seus clientes pagam pelo sistema (assinaturas, pacotes, pagamentos online), cobramos uma pequena taxa sobre o valor processado: 2,5% no Essencial ou 1,0% no Profissional. Você recebe o valor integral do cliente — a taxa é cobrada na sua fatura mensal."
+              },
+              {
+                q: "Funciona para outros tipos de negócio?",
+                a: "Sim! Além de barbearias, o modoGESTOR funciona para salões, manicures, estúdios de estética e outros profissionais de serviços."
+              },
+              {
+                q: "E se eu cancelar?",
+                a: "Você mantém acesso até o fim do período pago. Seus dados ficam guardados por 90 dias caso queira voltar."
+              },
+            ].map((item, index) => (
+              <AccordionItem key={index} value={`faq-${index}`} className="border border-zinc-800/40 rounded-xl px-5 bg-zinc-900/30 data-[state=open]:border-zinc-700/50">
+                <AccordionTrigger className="text-sm font-medium text-zinc-200 hover:text-zinc-100 py-4 hover:no-underline">
+                  {item.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-zinc-400 leading-relaxed pb-4">
+                  {item.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-28 px-6 relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.04] to-transparent" />
@@ -654,21 +755,28 @@ const Landing = () => {
           <div className="absolute -inset-20 bg-primary/[0.03] rounded-full blur-3xl" />
           <div className="relative">
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5 leading-tight">
-              Pronto para transformar
+              Pronto para modernizar
               <br />
               seu negócio?
             </h2>
             <p className="text-zinc-400 text-lg mb-10 max-w-lg mx-auto">
               Configure em 5 minutos. Teste grátis por 14 dias. Cancele quando quiser.
             </p>
-            <p className="text-zinc-500 text-sm mb-10">A partir de R$ 59,90/mês após o trial</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
               <a href={getDashboardUrl('/app/register')}>
                 <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-10 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
                   <Zap className="mr-2 h-5 w-5" />
-                  Criar Meu Negócio
+                  Começar Trial Grátis de 14 Dias
                 </Button>
               </a>
+            </div>
+            <div className="flex items-center justify-center gap-6 text-sm text-zinc-500">
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-primary" /> Sem compromisso
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-primary" /> Cancele quando quiser
+              </span>
             </div>
           </div>
         </motion.div>
@@ -679,6 +787,11 @@ const Landing = () => {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2.5">
             <img src={logoBranca} alt="modoGESTOR" className="h-6" />
+          </div>
+          <div className="flex items-center gap-6 text-xs text-zinc-500">
+            <a href={getPublicUrl('/termos')} className="hover:text-zinc-300 transition-colors">Termos de Uso</a>
+            <a href={getPublicUrl('/privacidade')} className="hover:text-zinc-300 transition-colors">Política de Privacidade</a>
+            <a href="mailto:contato@modogestor.com.br" className="hover:text-zinc-300 transition-colors">Contato</a>
           </div>
           <p className="text-zinc-600 text-xs">
             © 2026 modoGESTOR. Todos os direitos reservados.
