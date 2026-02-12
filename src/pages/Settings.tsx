@@ -37,7 +37,8 @@ import {
   CheckCircle,
   Loader2,
   AlertCircle,
-  CalendarOff
+  CalendarOff,
+  Sparkles
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -131,7 +132,7 @@ export default function Settings() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  
+  const [generatingCover, setGeneratingCover] = useState(false);
   // Mercado Pago states
   const [mpConnected, setMpConnected] = useState(false);
   const [mpLoading, setMpLoading] = useState(true);
@@ -422,6 +423,41 @@ export default function Settings() {
     handleLogoUpload(file);
   };
 
+  const handleGenerateCover = async () => {
+    if (!currentTenant || !logoUrl) return;
+
+    try {
+      setGeneratingCover(true);
+      toast({
+        title: "🎨 Gerando capa com IA...",
+        description: "Isso pode levar alguns segundos.",
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-cover', {
+        body: { tenant_id: currentTenant.id, logo_url: logoUrl },
+      });
+
+      if (error) throw error;
+
+      if (data?.cover_url) {
+        setCoverUrl(data.cover_url);
+        toast({
+          title: "Capa gerada com sucesso! ✨",
+          description: "A nova capa foi aplicada ao seu perfil público.",
+        });
+      }
+    } catch (err: any) {
+      console.error('Cover generation error:', err);
+      toast({
+        title: "Erro ao gerar capa",
+        description: err.message || "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
+
   const handleTenantSubmit = async (values: TenantFormData) => {
     if (!currentTenant) return;
 
@@ -654,7 +690,7 @@ export default function Settings() {
                                   </div>
                                 </div>
                               )}
-                              <div className="mt-3 text-center">
+                              <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                                 <label className="cursor-pointer">
                                   <input
                                     type="file"
@@ -675,7 +711,7 @@ export default function Settings() {
                                   >
                                     {uploadingLogo ? (
                                       <>
-                                        <span className="animate-spin mr-2">⏳</span>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                         Enviando...
                                       </>
                                     ) : (
@@ -686,6 +722,28 @@ export default function Settings() {
                                     )}
                                   </Button>
                                 </label>
+                                {logoUrl && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    disabled={generatingCover}
+                                    onClick={handleGenerateCover}
+                                    className="text-orange-400 border-orange-400/30 hover:bg-orange-500/10 hover:text-orange-300"
+                                  >
+                                    {generatingCover ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Gerando Capa...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Sparkles className="h-4 w-4 mr-2" />
+                                        {coverUrl ? 'Regerar Capa' : 'Gerar Capa'}
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ) : (
