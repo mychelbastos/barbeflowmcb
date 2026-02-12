@@ -88,7 +88,13 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
       if (useMp) {
         // Call edge function to create MP preapproval
         const { data: mpResult, error: mpError } = await supabase.functions.invoke('mp-create-subscription', {
-          body: { subscription_id: sub.id },
+          body: {
+            tenant_id: currentTenant.id,
+            plan_id: selectedPlan,
+            customer_name: customer.name,
+            customer_phone: customer.phone,
+            customer_email: customer.email,
+          },
         });
 
         if (mpError) throw mpError;
