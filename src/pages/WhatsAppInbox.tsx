@@ -872,6 +872,9 @@ export default function WhatsAppInbox() {
                   onClick={() => {
                     readConversationsRef.current.add(conv.remote_jid);
                     setSelectedConversation(conv.remote_jid);
+                    setConversations(prev => prev.map(c => 
+                      c.remote_jid === conv.remote_jid ? { ...c, unread_count: 0 } : c
+                    ));
                   }}
                   className={`flex items-center gap-3 p-3 cursor-pointer rounded-xl transition-all duration-200 mb-1 ${
                     selectedConversation === conv.remote_jid 
