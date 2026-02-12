@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound";
 import AuthWatcher from "./components/AuthWatcher";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
+import InstallPWA from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <InstallPWA />
         <BrowserRouter>
           <AuthWatcher />
           <Routes>
