@@ -19,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, plan_id, customer_name, customer_phone, customer_email } = await req.json();
+    const { tenant_id, plan_id, customer_name, customer_phone, customer_email, card_token_id } = await req.json();
 
     // Validação campo a campo
     const missingFields = [];
@@ -150,7 +150,7 @@ serve(async (req) => {
     const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.barberflow.store';
     const tenantSlug = plan.tenant?.slug || '';
 
-    const mpBody = {
+    const mpBody: any = {
       reason: `${plan.name} - ${plan.tenant?.name || 'BarberFlow'}`,
       auto_recurring: {
         frequency: 1,
@@ -159,10 +159,19 @@ serve(async (req) => {
         currency_id: "BRL",
       },
       payer_email: customer_email,
-      back_url: `${frontBaseUrl}/${tenantSlug}/subscription/callback`,
       external_reference: subscription.id,
-      status: "pending",
     };
+
+    // If card_token_id is provided, authorize immediately (in-site payment)
+    // Otherwise, use redirect flow with back_url
+    if (card_token_id) {
+      mpBody.card_token_id = card_token_id;
+      mpBody.status = "authorized";
+      console.log('Using in-site card payment with token');
+    } else {
+      mpBody.back_url = `${frontBaseUrl}/${tenantSlug}/subscription/callback`;
+      mpBody.status = "pending";
+    }
 
     console.log('Creating MP preapproval:', JSON.stringify(mpBody));
 
@@ -193,22 +202,34 @@ serve(async (req) => {
       });
     }
 
-    console.log('MP preapproval created:', mpData.id, 'init_point:', mpData.init_point);
+    console.log('MP preapproval created:', mpData.id, 'status:', mpData.status);
 
     // Update subscription with MP data
+    const updateData: any = {
+      mp_preapproval_id: mpData.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    // If authorized via card token, mark as active immediately
+    if (card_token_id && mpData.status === 'authorized') {
+      updateData.status = 'active';
+      updateData.started_at = new Date().toISOString();
+      console.log('Subscription activated immediately via card token');
+    } else {
+      updateData.checkout_url = mpData.init_point;
+    }
+
     await supabase
       .from('customer_subscriptions')
-      .update({
-        mp_preapproval_id: mpData.id,
-        checkout_url: mpData.init_point,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', subscription.id);
 
     return new Response(JSON.stringify({
       success: true,
-      checkout_url: mpData.init_point,
+      checkout_url: card_token_id ? null : mpData.init_point,
       mp_preapproval_id: mpData.id,
+      status: mpData.status,
+      activated: card_token_id && mpData.status === 'authorized',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

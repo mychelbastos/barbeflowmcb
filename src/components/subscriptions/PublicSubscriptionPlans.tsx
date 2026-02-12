@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Check, CreditCard, Loader2, ChevronLeft, Repeat } from "lucide-react";
+import { SubscriptionCardPayment } from "./SubscriptionCardPayment";
 
 interface PublicSubscriptionPlansProps {
   tenant: any;
@@ -19,6 +20,7 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showCardPayment, setShowCardPayment] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
 
@@ -52,7 +54,7 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
     }
   };
 
-  const handleSubscribe = async () => {
+  const handleProceedToPayment = () => {
     if (!selectedPlan || !phone || !email || !name) return;
 
     const digits = phone.replace(/\D/g, '');
@@ -66,34 +68,35 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
       return;
     }
 
-    try {
-      setSubmitting(true);
-
-      // Call edge function — it handles find-or-create customer + subscription + MP preapproval
-      const { data: mpResult, error: mpErr } = await supabase.functions.invoke('mp-create-subscription', {
-        body: {
-          tenant_id: tenant.id,
-          plan_id: selectedPlan.id,
-          customer_name: name.trim(),
-          customer_phone: digits,
-          customer_email: email.trim(),
-        },
-      });
-
-      if (mpErr) throw mpErr;
-
-      if (mpResult?.checkout_url) {
-        window.location.href = mpResult.checkout_url;
-      } else {
-        throw new Error('URL de checkout não gerada');
-      }
-    } catch (err: any) {
-      console.error('Subscription error:', err);
-      toast({ title: "Erro ao assinar", description: err.message, variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
+    setShowCardPayment(true);
   };
+
+  // Card payment step
+  if (showCardPayment && selectedPlan) {
+    return (
+      <div className="animate-in fade-in duration-300">
+        <SubscriptionCardPayment
+          tenantSlug={tenant.slug}
+          tenantId={tenant.id}
+          planId={selectedPlan.id}
+          planName={selectedPlan.name}
+          priceCents={selectedPlan.price_cents}
+          customerName={name.trim()}
+          customerPhone={phone.replace(/\D/g, '')}
+          customerEmail={email.trim()}
+          onSuccess={() => {
+            setShowCardPayment(false);
+            setSelectedPlan(null);
+            setPhone('');
+            setEmail('');
+            setName('');
+            toast({ title: "Assinatura ativada!", description: "Sua assinatura está ativa." });
+          }}
+          onBack={() => setShowCardPayment(false)}
+        />
+      </div>
+    );
+  }
 
   // Plan selection form
   if (selectedPlan) {
@@ -170,21 +173,12 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
 
           <div className="pt-4 space-y-3">
             <Button
-              onClick={handleSubscribe}
-              disabled={submitting || !name || !phone || !email}
+              onClick={handleProceedToPayment}
+              disabled={!name || !phone || !email}
               className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50"
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Assinar por R$ {(selectedPlan.price_cents / 100).toFixed(2)}/mês
-                </>
-              )}
+              <CreditCard className="h-4 w-4 mr-2" />
+              Continuar para pagamento
             </Button>
 
             <button
