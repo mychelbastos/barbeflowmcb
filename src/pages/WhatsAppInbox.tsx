@@ -55,6 +55,7 @@ interface Message {
   from_me: boolean;
   message_type: string;
   content: string;
+  media_url?: string | null;
   timestamp: string;
   status: string;
 }
@@ -65,7 +66,7 @@ interface Conversation {
   last_message: string;
   last_message_at: string;
   last_message_from_me: boolean;
-  unread_count?: number;
+  unread_count: number;
 }
 
 export default function WhatsAppInbox() {
@@ -82,6 +83,7 @@ export default function WhatsAppInbox() {
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const readConversationsRef = useRef<Set<string>>(new Set());
 
   // WhatsApp connection state
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -299,7 +301,13 @@ export default function WhatsAppInbox() {
             last_message: msg.content || "",
             last_message_at: msg.timestamp,
             last_message_from_me: msg.from_me,
+            unread_count: 0,
           });
+        }
+        // Count unread: incoming messages in conversations not yet "read"
+        if (!msg.from_me && !readConversationsRef.current.has(msg.remote_jid) && msg.remote_jid !== selectedConversation) {
+          const conv = conversationMap.get(msg.remote_jid)!;
+          conv.unread_count = (conv.unread_count || 0) + 1;
         }
       });
 
@@ -830,7 +838,10 @@ export default function WhatsAppInbox() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(index * 0.03, 0.3) }}
-                  onClick={() => setSelectedConversation(conv.remote_jid)}
+                  onClick={() => {
+                    readConversationsRef.current.add(conv.remote_jid);
+                    setSelectedConversation(conv.remote_jid);
+                  }}
                   className={`flex items-center gap-3 p-3 cursor-pointer rounded-xl transition-all duration-200 mb-1 ${
                     selectedConversation === conv.remote_jid 
                       ? "bg-primary/15 border border-primary/20" 
@@ -859,9 +870,14 @@ export default function WhatsAppInbox() {
                       {conv.last_message_from_me && (
                         <CheckCheck className="h-4 w-4 text-primary shrink-0" />
                       )}
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-xs text-muted-foreground truncate flex-1">
                         {conv.last_message}
                       </p>
+                      {conv.unread_count > 0 && (
+                        <span className="ml-1 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5 shrink-0">
+                          {conv.unread_count > 99 ? "99+" : conv.unread_count}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -966,7 +982,23 @@ export default function WhatsAppInbox() {
                                 : "bg-card border border-border/50 rounded-bl-md"
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                            {msg.message_type === "audio" ? (
+                              <div className="flex items-center gap-2 min-w-[200px]">
+                                <audio 
+                                  controls 
+                                  preload="none" 
+                                  className="h-8 w-full max-w-[240px]"
+                                  style={{ filter: msg.from_me ? "invert(1) brightness(2)" : "none" }}
+                                >
+                                  {msg.media_url && <source src={msg.media_url} />}
+                                </audio>
+                                {!msg.media_url && (
+                                  <span className="text-xs opacity-70">🎤 Áudio</span>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                            )}
                             <div className={`flex items-center justify-end gap-1 mt-1 ${
                               msg.from_me ? "text-primary-foreground/70" : "text-muted-foreground"
                             }`}>
