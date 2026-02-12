@@ -121,8 +121,6 @@ export function AiGenerateImageButton({ table, itemId, hasImage, onGenerated }: 
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  if (hasImage) return null;
-
   const handleGenerate = async () => {
     try {
       setLoading(true);
@@ -159,13 +157,14 @@ export function AiGenerateImageButton({ table, itemId, hasImage, onGenerated }: 
       onClick={handleGenerate}
       disabled={loading}
       className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-      title="Gerar imagem com IA"
+      title={hasImage ? "Regenerar imagem com IA" : "Gerar imagem com IA"}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
         <ImagePlus className="h-4 w-4" />
       )}
+      <span className="ml-1 text-xs hidden sm:inline">{hasImage ? "Regenerar" : "Gerar imagem"}</span>
     </Button>
   );
 }
