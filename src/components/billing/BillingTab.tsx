@@ -306,7 +306,10 @@ export function BillingTab() {
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.essencial.commission}</p>
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.essencial.commission}</p>
+              <p className="text-[11px] text-muted-foreground/60 leading-tight">{PLANS.essencial.commissionNote}</p>
+            </div>
             <Button
               onClick={() => handleSubscribe("essencial")}
               disabled={!!checkoutLoading}
@@ -354,7 +357,10 @@ export function BillingTab() {
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.profissional.commission}</p>
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.profissional.commission}</p>
+              <p className="text-[11px] text-muted-foreground/60 leading-tight">{PLANS.profissional.commissionNote}</p>
+            </div>
             <Button
               onClick={() => handleSubscribe("profissional")}
               disabled={!!checkoutLoading}
