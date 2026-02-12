@@ -15,9 +15,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { format, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { 
+  Calendar, Plus, Clock, Users, TrendingUp, Scissors, Phone,
+  ArrowUpRight, Sparkles, UserCheck, User, ChevronRight, Zap,
+} from "lucide-react";
+import { NewServiceModal, NewStaffModal, BlockTimeModal } from "@/components/modals/QuickActions";
+import { WeeklyScheduleGrid } from "@/components/dashboard/WeeklyScheduleGrid";
+import { WeeklyBarChart } from "@/components/dashboard/WeeklyBarChart";
+import { RevenueLineChart } from "@/components/dashboard/RevenueLineChart";
+import { ClientRevenuePanel } from "@/components/dashboard/ClientRevenuePanel";
 
 const spring = { type: "spring" as const, stiffness: 200, damping: 26, mass: 0.6 };
 const gentleSpring = { type: "spring" as const, stiffness: 120, damping: 20, mass: 0.8 };
@@ -31,16 +40,6 @@ const fadeUp = {
   hidden: { opacity: 0, y: 20, scale: 0.96, filter: "blur(4px)" },
   show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.6, ease } },
 };
-const slideIn = {
-  hidden: { opacity: 0, x: -16, filter: "blur(3px)" },
-  show: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.5, ease } },
-};
-
-import { 
-  Calendar, Plus, Clock, Users, TrendingUp, Scissors, Phone,
-  ArrowUpRight, Sparkles, UserCheck, User, ChevronRight, Zap,
-} from "lucide-react";
-import { NewServiceModal, NewStaffModal, BlockTimeModal } from "@/components/modals/QuickActions";
 
 const Dashboard = () => {
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
@@ -140,6 +139,37 @@ const Dashboard = () => {
     }
   };
 
+  // Build all bookings including recurring virtual ones
+  const allBookings = useMemo(() => {
+    const virtualRecurring = recurringClients.flatMap(r => {
+      const { from, to } = dateRange;
+      const result: any[] = [];
+      const current = new Date(from);
+      while (current <= to) {
+        if (current.getDay() === r.weekday && new Date(r.start_date) <= current) {
+          const [h, m] = r.start_time.split(':').map(Number);
+          const startsAt = new Date(current.getFullYear(), current.getMonth(), current.getDate(), h, m);
+          const duration = r.service?.duration_minutes || r.duration_minutes;
+          const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
+          result.push({
+            id: `recurring-${r.id}-${current.toISOString()}`,
+            starts_at: startsAt.toISOString(),
+            ends_at: endsAt.toISOString(),
+            status: 'recurring',
+            customer: r.customer || { name: 'Cliente Fixo', phone: '' },
+            service: r.service || { name: 'Horário Fixo', color: '#8B5CF6', price_cents: 0 },
+            staff: r.staff,
+            is_recurring: true,
+            notes: r.notes,
+          });
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      return result;
+    });
+    return [...periodBookings, ...virtualRecurring];
+  }, [periodBookings, recurringClients, dateRange]);
+
   if (tenantLoading) {
     return (
       <div className="space-y-4 p-4 md:p-0">
@@ -161,7 +191,6 @@ const Dashboard = () => {
   }
 
   const confirmedToday = todayBookings.filter(b => b.status === 'confirmed' || b.status === 'completed').length;
-  const pendingToday = todayBookings.filter(b => b.status === 'pending').length;
 
   const statCards = [
     {
@@ -206,37 +235,6 @@ const Dashboard = () => {
     },
   ];
 
-  // Calendar helpers
-  const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
-  const getBookingsForDay = (day: Date) => {
-    const dayBookings = periodBookings.filter(b => isSameDay(new Date(b.starts_at), day));
-    const dayOfWeek = day.getDay();
-    const recurringForDay = recurringClients
-      .filter(r => r.weekday === dayOfWeek && new Date(r.start_date) <= day)
-      .map(r => {
-        const [h, m] = r.start_time.split(':').map(Number);
-        const startsAt = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m);
-        const duration = r.service?.duration_minutes || r.duration_minutes;
-        const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
-        return {
-          id: `recurring-${r.id}-${day.toISOString()}`,
-          starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          status: 'recurring',
-          customer: r.customer || { name: 'Cliente Fixo', phone: '' },
-          service: r.service || { name: 'Cliente Fixo', color: '#8B5CF6', price_cents: 0 },
-          staff: r.staff,
-          is_recurring: true,
-          notes: r.notes,
-        };
-      });
-    return [...dayBookings, ...recurringForDay]
-      .sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-  };
-
-  const daysWithBookings = days.map(day => ({ day, bookings: getBookingsForDay(day) }));
-  const hasAnyBookings = daysWithBookings.some(d => d.bookings.length > 0);
-
   const quickActions = [
     { label: "Novo Serviço", desc: "Adicionar ao catálogo", icon: Scissors, onClick: () => setShowNewService(true) },
     { label: "Profissional", desc: "Adicionar à equipe", icon: Users, onClick: () => setShowNewStaff(true) },
@@ -252,13 +250,13 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 px-4 md:px-0">
+    <div className="space-y-5 px-4 md:px-0">
       {/* Date Range */}
       <DateRangeSelector className="overflow-x-auto" />
 
       {/* Stat Cards */}
       <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {statCards.map((card, idx) => (
+        {statCards.map((card) => (
           <motion.div
             key={card.label}
             variants={fadeUp}
@@ -267,16 +265,14 @@ const Dashboard = () => {
             onClick={() => navigate(card.href)}
             className={`group relative cursor-pointer rounded-2xl glass-panel glass-panel-hover transition-shadow duration-700 shadow-lg shadow-transparent ${card.glowColor} overflow-hidden`}
           >
-            {/* Gradient overlay */}
             <motion.div 
               className={`absolute inset-0 bg-gradient-to-br ${card.gradient} rounded-2xl`}
               initial={{ opacity: 0 }}
               whileHover={{ opacity: 1 }}
               transition={{ duration: 0.4 }}
             />
-            
             <div className="relative p-4 md:p-5">
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-3">
                 <motion.div
                   className="w-10 h-10 rounded-xl bg-zinc-800/40 flex items-center justify-center backdrop-blur-sm"
                   whileHover={{ scale: 1.15, rotate: 8 }}
@@ -284,175 +280,57 @@ const Dashboard = () => {
                 >
                   <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
                 </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, x: -4 }}
-                  whileHover={{ opacity: 1, x: 0 }}
-                  className="text-zinc-700 group-hover:text-zinc-400 transition-colors duration-500"
-                >
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </motion.div>
+                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors duration-500" />
               </div>
-              <motion.p 
-                className="text-2xl md:text-[28px] font-bold text-zinc-100 tracking-tight leading-none mb-1.5"
-                layout
-              >
+              <p className="text-2xl md:text-[28px] font-bold text-zinc-100 tracking-tight leading-none mb-1">
                 {card.value}
-              </motion.p>
+              </p>
               <p className="text-xs text-zinc-500 font-medium">{card.label}</p>
-              {card.sub && (
-                <p className="text-[10px] text-zinc-600 mt-0.5 font-medium">{card.sub}</p>
-              )}
+              {card.sub && <p className="text-[10px] text-zinc-600 mt-0.5 font-medium">{card.sub}</p>}
             </div>
           </motion.div>
         ))}
       </motion.div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 md:gap-5">
-        {/* Calendar Timeline */}
-        <motion.div
-          initial={{ opacity: 0, y: 28, filter: "blur(6px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.7, delay: 0.15, ease }}
-          className="rounded-2xl glass-panel overflow-hidden"
-        >
-          <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/30">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-blue-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-zinc-100 tracking-tight">Agenda</h2>
-                <p className="text-[11px] text-zinc-600">
-                  {format(dateRange.from, "dd/MM", { locale: ptBR })} — {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(dashPath('/app/bookings'))}
-              className="text-xs text-zinc-500 hover:text-zinc-100 gap-1 rounded-lg"
-            >
-              Ver Todos <ChevronRight className="h-3 w-3" />
-            </Button>
-          </div>
+      {/* Main Grid: Schedule + Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 md:gap-5">
+        {/* Left Column: Schedule + Charts */}
+        <div className="space-y-4">
+          {/* Weekly Schedule Grid */}
+          {!loading && (
+            <WeeklyScheduleGrid
+              bookings={allBookings}
+              dateRange={dateRange}
+              onSelectBooking={setSelectedBooking}
+            />
+          )}
+          {loading && (
+            <div className="rounded-2xl glass-panel h-80 animate-pulse" />
+          )}
 
-          <div className="p-4 md:p-5">
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-14 bg-zinc-800/20 rounded-xl animate-pulse" />
-                ))}
-              </div>
-            ) : !hasAnyBookings ? (
-              <div className="text-center py-20">
-                <div className="w-14 h-14 rounded-2xl bg-zinc-800/40 flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                  <Calendar className="h-6 w-6 text-zinc-600" />
-                </div>
-                <p className="text-sm text-zinc-400 font-semibold">Nenhum agendamento</p>
-                <p className="text-xs text-zinc-600 mt-1">no período selecionado</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {daysWithBookings.map(({ day, bookings: dayBookings }) => {
-                  if (dayBookings.length === 0) return null;
-                  const isToday = isSameDay(day, new Date());
-                  return (
-                    <div key={day.toISOString()}>
-                      {/* Day header */}
-                      <div className="flex items-center gap-3 px-2 py-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
-                          isToday 
-                            ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/25' 
-                            : 'bg-zinc-800/40 text-zinc-400'
-                        }`}>
-                          {format(day, 'dd')}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-semibold capitalize ${isToday ? 'text-emerald-400' : 'text-zinc-300'}`}>
-                            {format(day, 'EEEE', { locale: ptBR })}
-                          </p>
-                          <p className="text-[11px] text-zinc-600">{format(day, "dd 'de' MMMM", { locale: ptBR })}</p>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                          isToday 
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                            : 'bg-zinc-800/40 text-zinc-500'
-                        }`}>
-                          {dayBookings.length}
-                        </span>
-                      </div>
+          {/* Revenue Line Chart */}
+          {!loading && (
+            <RevenueLineChart bookings={allBookings} dateRange={dateRange} />
+          )}
+        </div>
 
-                      {/* Bookings */}
-                      <div className="ml-5 border-l-2 border-zinc-800/30 pl-5 pb-3 space-y-1">
-                        <AnimatePresence mode="popLayout">
-                        {dayBookings.map((booking: any, bIdx: number) => {
-                          const st = statusConfig[booking.status] || statusConfig.pending;
-                          return (
-                            <motion.div
-                              key={booking.id}
-                              initial={{ opacity: 0, x: -14, filter: "blur(3px)" }}
-                              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                              exit={{ opacity: 0, x: 14, filter: "blur(3px)" }}
-                              transition={{ duration: 0.4, delay: bIdx * 0.04, ease }}
-                              whileHover={{ x: 6, transition: gentleSpring }}
-                              onClick={() => setSelectedBooking(booking)}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer group/item hover:bg-zinc-800/20 transition-colors duration-300"
-                            >
-                              <div
-                                className="w-1 h-8 rounded-full flex-shrink-0 opacity-70 group-hover/item:opacity-100 transition-opacity"
-                                style={{ backgroundColor: booking.service?.color || '#3B82F6' }}
-                              />
-                              <div className="flex items-center gap-1.5 text-zinc-600 w-14 flex-shrink-0">
-                                <Clock className="h-3 w-3" />
-                                <span className="text-xs font-mono font-semibold">
-                                  {format(new Date(booking.starts_at), 'HH:mm')}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  {booking.is_recurring && <UserCheck className="h-3 w-3 text-violet-400 flex-shrink-0" />}
-                                  <p className="text-sm font-medium text-zinc-200 truncate">
-                                    {booking.customer?.name}
-                                  </p>
-                                </div>
-                                <p className="text-[11px] text-zinc-600 truncate">
-                                  {booking.service?.name}
-                                  {booking.staff?.name ? ` · ${booking.staff.name}` : ''}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                {booking.is_recurring ? (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                                    Fixo
-                                  </span>
-                                ) : (
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${st.className}`}>
-                                    {st.label}
-                                  </span>
-                                )}
-                                <span className="text-xs font-bold text-zinc-500 hidden sm:block tabular-nums">
-                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                        </AnimatePresence>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </motion.div>
+        {/* Right Column: Revenue Panel + Bar Chart + Quick Actions */}
+        <div className="space-y-4">
+          {!loading && (
+            <ClientRevenuePanel bookings={allBookings} totalRevenue={revenue} />
+          )}
 
-        {/* Sidebar */}
-        <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-4">
+          {!loading && (
+            <WeeklyBarChart bookings={allBookings} dateRange={dateRange} />
+          )}
+
           {/* Quick Actions */}
-          <motion.div variants={fadeUp} className="rounded-2xl glass-panel overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.6, delay: 0.35, ease }}
+            className="rounded-2xl glass-panel overflow-hidden"
+          >
             <div className="px-5 py-4 border-b border-zinc-800/30 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center">
                 <Zap className="h-3.5 w-3.5 text-emerald-400" />
@@ -460,16 +338,15 @@ const Dashboard = () => {
               <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Ações Rápidas</h3>
             </div>
             <div className="p-3 space-y-1">
-               {quickActions.map((action) => (
+              {quickActions.map((action) => (
                 <motion.button
                   key={action.label}
                   onClick={action.onClick}
                   whileHover={{ x: 6, transition: gentleSpring }}
                   whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
-                  transition={gentleSpring}
                   className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/30 transition-all duration-300 group"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-zinc-800/40 group-hover:bg-zinc-700/40 flex items-center justify-center transition-all duration-300 group-hover:shadow-sm">
+                  <div className="w-9 h-9 rounded-xl bg-zinc-800/40 group-hover:bg-zinc-700/40 flex items-center justify-center transition-all duration-300">
                     <action.icon className="h-4 w-4" />
                   </div>
                   <div className="text-left flex-1">
@@ -481,71 +358,7 @@ const Dashboard = () => {
               ))}
             </div>
           </motion.div>
-
-          {/* Popular Services */}
-          <motion.div variants={fadeUp} className="rounded-2xl glass-panel overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-800/30 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-zinc-100 tracking-tight">Serviços</h3>
-                  <p className="text-[10px] text-zinc-600">Catálogo ativo</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(dashPath('/app/services'))}
-                className="text-[11px] text-zinc-600 hover:text-zinc-300 h-7 px-2 rounded-lg"
-              >
-                Ver todos
-              </Button>
-            </div>
-            <div className="p-4">
-              {loading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-11 bg-zinc-800/20 rounded-xl animate-pulse" />
-                  ))}
-                </div>
-              ) : services.length === 0 ? (
-                <div className="text-center py-8">
-                  <Scissors className="h-5 w-5 text-zinc-700 mx-auto mb-2" />
-                  <p className="text-sm text-zinc-600">Nenhum serviço</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {services.slice(0, 5).map((service, sIdx) => (
-                    <motion.div
-                      key={service.id}
-                      initial={{ opacity: 0, x: -12, filter: "blur(3px)" }}
-                      animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                      transition={{ duration: 0.45, delay: 0.3 + sIdx * 0.06, ease }}
-                      whileHover={{ x: 5, transition: gentleSpring }}
-                      className="flex items-center gap-3 group cursor-default p-2 rounded-xl hover:bg-zinc-800/20 transition-colors duration-300"
-                    >
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
-                        style={{ backgroundColor: `${service.color}15` }}
-                      >
-                        <Scissors className="h-3.5 w-3.5" style={{ color: service.color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-300 truncate">{service.name}</p>
-                        <p className="text-[11px] text-zinc-600">{service.duration_minutes} min</p>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-400 tabular-nums">
-                        R$ {(service.price_cents / 100).toFixed(0)}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Modals */}
@@ -566,7 +379,6 @@ const Dashboard = () => {
               transition={{ duration: 0.5, ease }}
               className="space-y-4"
             >
-              {/* Customer */}
               <div className="p-4 rounded-xl bg-zinc-800/20 border border-zinc-800/30 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
@@ -589,7 +401,6 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* Details */}
               <div className="space-y-3">
                 {[
                   { icon: Scissors, label: "Serviço", value: selectedBooking.service?.name },
