@@ -341,81 +341,45 @@ serve(async (req) => {
     const endsAtDate = new Date(startsAtDate.getTime() + (totalDuration * 60 * 1000));
     const ends_at = endsAtDate.toISOString();
 
-    // 6. Check conflicts
+    // 6-9. Atomic booking creation with advisory lock (prevents race conditions / double-bookings)
     const bufferTime = tenantSettings.buffer_time ?? 10;
-    const bufferedStart = new Date(startsAtDate.getTime() - (bufferTime * 60 * 1000));
-    const bufferedEnd = new Date(endsAtDate.getTime() + (bufferTime * 60 * 1000));
-
-    const { data: conflictingBookings } = await supabase
-      .from('bookings')
-      .select('id, starts_at, ends_at')
-      .eq('tenant_id', tenant_id).eq('staff_id', finalStaffId)
-      .in('status', ['confirmed', 'pending', 'pending_payment', 'completed'])
-      .or(`and(starts_at.lt.${bufferedEnd.toISOString()},ends_at.gt.${bufferedStart.toISOString()})`);
-
-    if (conflictingBookings && conflictingBookings.length > 0) {
-      return createErrorResponse(ErrorType.TIME_CONFLICT, 'Time slot not available', 409);
-    }
-
-    const { data: blocks } = await supabase
-      .from('blocks').select('id')
-      .eq('tenant_id', tenant_id)
-      .or(`staff_id.eq.${finalStaffId},staff_id.is.null`)
-      .or(`and(starts_at.lt.${ends_at},ends_at.gt.${starts_at})`);
-
-    if (blocks && blocks.length > 0) {
-      return createErrorResponse(ErrorType.TIME_CONFLICT, 'Time slot is blocked', 409);
-    }
-
-    // 7. Upsert customer
-    let customer_id: string;
-    const normalizedPhone = normalizePhone(customer_phone);
-
-    const { data: allCustomers } = await supabase
-      .from('customers').select('id, name, phone')
-      .eq('tenant_id', tenant_id);
-
-    const existingCustomer = allCustomers?.find(c => normalizePhone(c.phone) === normalizedPhone);
-
-    if (existingCustomer) {
-      customer_id = existingCustomer.id;
-      const updates: Record<string, string> = {};
-      if (customer_name.trim() && customer_name.trim() !== existingCustomer.name) updates.name = customer_name.trim();
-      if (customer_email) updates.email = customer_email;
-      if (customer_birthday) updates.birthday = customer_birthday;
-      if (Object.keys(updates).length > 0) {
-        await supabase.from('customers').update(updates).eq('id', customer_id);
-      }
-    } else {
-      const { data: newCustomer, error: customerCreateError } = await supabase
-        .from('customers')
-        .insert({ tenant_id, name: customer_name.trim(), phone: normalizedPhone, email: customer_email || null, birthday: customer_birthday || null })
-        .select('id').single();
-      if (customerCreateError || !newCustomer) {
-        return createErrorResponse(ErrorType.CUSTOMER_CREATE_FAILED, 'Failed to create customer', 500);
-      }
-      customer_id = newCustomer.id;
-    }
-
-    // 8. Determine booking status
     const isBenefitBooking = !!(customer_package_id || customer_subscription_id);
     const bookingStatus = isBenefitBooking ? 'confirmed' : (payment_method === 'online' ? 'pending_payment' : 'confirmed');
 
-    // 9. Create booking
-    const { data: booking, error: bookingError } = await supabase
+    const { data: atomicResult, error: atomicError } = await supabase.rpc('create_booking_if_available', {
+      p_tenant_id: tenant_id,
+      p_service_id: service_id,
+      p_staff_id: finalStaffId,
+      p_customer_id: customer_id,
+      p_starts_at: starts_at,
+      p_ends_at: ends_at,
+      p_status: bookingStatus,
+      p_notes: notes || null,
+      p_created_via: payload.created_via || 'public',
+      p_customer_package_id: customer_package_id || null,
+      p_customer_subscription_id: customer_subscription_id || null,
+      p_buffer_minutes: bufferTime,
+    });
+
+    if (atomicError) {
+      const errMsg = atomicError.message || '';
+      if (errMsg.includes('TIME_CONFLICT') || errMsg.includes('BLOCK_CONFLICT')) {
+        return createErrorResponse(ErrorType.TIME_CONFLICT, 'Time slot not available', 409);
+      }
+      return createErrorResponse(ErrorType.BOOKING_CREATE_FAILED, 'Failed to create booking', 500, { atomicError });
+    }
+
+    const bookingId = atomicResult as string;
+
+    // Fetch the full booking data for response and notifications
+    const { data: booking, error: bookingFetchError } = await supabase
       .from('bookings')
-      .insert({
-        tenant_id, service_id, staff_id: finalStaffId, customer_id,
-        starts_at, ends_at, status: bookingStatus, notes: notes || null,
-        created_via: payload.created_via || 'public',
-        customer_package_id: customer_package_id || null,
-        customer_subscription_id: customer_subscription_id || null
-      })
       .select(`*, service:services(name, price_cents, duration_minutes), staff:staff(name), customer:customers(name, phone, email)`)
+      .eq('id', bookingId)
       .single();
 
-    if (bookingError || !booking) {
-      return createErrorResponse(ErrorType.BOOKING_CREATE_FAILED, 'Failed to create booking', 500, { bookingError });
+    if (bookingFetchError || !booking) {
+      return createErrorResponse(ErrorType.BOOKING_CREATE_FAILED, 'Booking created but failed to fetch details', 500, { bookingFetchError });
     }
 
     // 10. Handle package/subscription session decrement AFTER booking creation

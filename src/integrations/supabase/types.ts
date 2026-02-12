@@ -1703,6 +1703,23 @@ export type Database = {
         Args: { customer_phone: string; tenant_uuid: string }
         Returns: boolean
       }
+      create_booking_if_available: {
+        Args: {
+          p_buffer_minutes?: number
+          p_created_via?: string
+          p_customer_id: string
+          p_customer_package_id?: string
+          p_customer_subscription_id?: string
+          p_ends_at: string
+          p_notes?: string
+          p_service_id: string
+          p_staff_id: string
+          p_starts_at: string
+          p_status?: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       get_customer_stats: {
         Args: { p_tenant_id: string }
         Returns: {

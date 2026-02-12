@@ -66,6 +66,22 @@ Deno.serve(async (req) => {
         .eq("id", booking_id)
         .eq("tenant_id", tenant_id);
       if (error) throw error;
+
+      // Send WhatsApp cancellation notification
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+          },
+          body: JSON.stringify({ type: "booking_cancelled", booking_id, tenant_id }),
+        });
+      } catch (notifError) {
+        console.error("WhatsApp cancellation notification error:", notifError);
+      }
+
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
