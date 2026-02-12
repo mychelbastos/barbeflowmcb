@@ -1,13 +1,16 @@
 import { Button } from "@/components/ui/button";
-import { Scissors, Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle } from "lucide-react";
+import { Scissors, Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard } from "lucide-react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { getDashboardUrl } from "@/lib/hostname";
 import { useRef } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import dashboardMockup from "@/assets/dashboard-mockup.png";
 import mobileMockup from "@/assets/mobile-mockup.png";
 
 const Landing = () => {
   const heroRef = useRef(null);
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.95]);
@@ -44,16 +47,27 @@ const Landing = () => {
                 ))}
               </div>
               <div className="flex items-center gap-2">
-                <a href={getDashboardUrl('/app/login')}>
-                  <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100">
-                    Entrar
-                  </Button>
-                </a>
-                <a href={getDashboardUrl('/app/register')}>
-                  <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
-                    Começar Grátis
-                  </Button>
-                </a>
+                {isLoggedIn ? (
+                  <a href={getDashboardUrl('/app/dashboard')}>
+                    <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
+                      <LayoutDashboard className="h-4 w-4 mr-1.5" />
+                      Meu Painel
+                    </Button>
+                  </a>
+                ) : (
+                  <>
+                    <a href={getDashboardUrl('/app/login')}>
+                      <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100">
+                        Entrar
+                      </Button>
+                    </a>
+                    <a href={getDashboardUrl('/app/register')}>
+                      <Button size="sm" className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
+                        Começar Grátis
+                      </Button>
+                    </a>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -111,18 +125,29 @@ const Landing = () => {
             transition={{ duration: 0.6, delay: 0.7 }}
             className="flex flex-col sm:flex-row gap-3 justify-center mb-8"
           >
-            <a href={getDashboardUrl('/app/register')}>
-              <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
-                <Zap className="mr-2 h-5 w-5" />
-                Começar Agora — Grátis
-              </Button>
-            </a>
-            <a href="#demo">
-              <Button size="lg" variant="ghost" className="w-full sm:w-auto bg-zinc-800/60 border border-zinc-700/50 hover:bg-zinc-800 h-13 px-8 text-base text-zinc-100 rounded-xl backdrop-blur-sm">
-                <Play className="mr-2 h-4 w-4" />
-                Ver Demonstração
-              </Button>
-            </a>
+            {isLoggedIn ? (
+              <a href={getDashboardUrl('/app/dashboard')}>
+                <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
+                  <LayoutDashboard className="mr-2 h-5 w-5" />
+                  Ir ao Dashboard
+                </Button>
+              </a>
+            ) : (
+              <>
+                <a href={getDashboardUrl('/app/register')}>
+                  <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
+                    <Zap className="mr-2 h-5 w-5" />
+                    Começar Agora — Grátis
+                  </Button>
+                </a>
+                <a href="#demo">
+                  <Button size="lg" variant="ghost" className="w-full sm:w-auto bg-zinc-800/60 border border-zinc-700/50 hover:bg-zinc-800 h-13 px-8 text-base text-zinc-100 rounded-xl backdrop-blur-sm">
+                    <Play className="mr-2 h-4 w-4" />
+                    Ver Demonstração
+                  </Button>
+                </a>
+              </>
+            )}
           </motion.div>
 
           <motion.div

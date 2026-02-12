@@ -28,11 +28,15 @@ export const useAuth = () => {
 
         // Only show welcome toast on explicit sign-in, not token refresh or session restore
         if (event === 'SIGNED_IN' && !sessionStorage.getItem('bf_welcomed')) {
-          sessionStorage.setItem('bf_welcomed', '1');
-          toast({
-            title: "Bem-vindo!",
-            description: "Login realizado com sucesso.",
-          });
+          // Only show welcome toast on dashboard routes, not on public landing
+          const isDashRoute = window.location.pathname.includes('/app') || window.location.pathname.includes('/dashboard');
+          if (isDashRoute) {
+            sessionStorage.setItem('bf_welcomed', '1');
+            toast({
+              title: "Bem-vindo!",
+              description: "Login realizado com sucesso.",
+            });
+          }
         } else if (event === 'SIGNED_OUT') {
           sessionStorage.removeItem('bf_welcomed');
           toast({
