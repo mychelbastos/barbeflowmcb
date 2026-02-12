@@ -131,10 +131,10 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
       }
 
       const imagePrompts: Record<AllowedTable, string> = {
-        products: `Professional product photography of a premium professional service product called "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Dark moody background with warm amber lighting. Studio quality, centered product, luxurious aesthetic. High resolution, sharp focus, e-commerce style.`,
-        services: `Professional promotional photo representing the service "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Warm lighting, premium interior, elegant atmosphere. High quality, sharp focus, marketing material style.`,
-        service_packages: `Elegant promotional image for a service package called "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Premium look with warm tones, luxury atmosphere. Clean composition, professional marketing style.`,
-        subscription_plans: `Premium subscription plan promotional image for "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Exclusive, VIP feel with warm tones. Modern, clean, professional marketing aesthetic.`,
+        products: `Professional product photography of "${item.name}"${item.description ? ` (${item.description})` : ''}. Dark moody background, warm amber lighting, studio quality, centered, luxurious e-commerce aesthetic. Sharp focus, high resolution.`,
+        services: `Realistic close-up photograph showing the actual service being performed: "${item.name}"${item.description ? ` (${item.description})` : ''}. Focus on the specific action — for example, if it's a scissor haircut show scissors cutting hair on a real person's head; if it's a beard trim show a barber trimming a man's beard with clippers or razor; if it's a shave show a straight razor on skin with foam. The image must depict the real procedure happening, not abstract or symbolic. Professional barbershop environment, warm cinematic lighting, shallow depth of field, editorial photography style.`,
+        service_packages: `Elegant promotional collage representing the service package "${item.name}"${item.description ? ` (${item.description})` : ''}. Show multiple barbershop services being performed. Premium warm tones, luxury atmosphere, professional marketing style.`,
+        subscription_plans: `Premium VIP membership card concept for "${item.name}"${item.description ? ` (${item.description})` : ''}. Exclusive feel with gold and dark tones, modern clean design, professional marketing aesthetic.`,
       };
 
       console.log(`Generating image for ${finalTable}: ${item.name}`);
