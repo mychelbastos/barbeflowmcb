@@ -202,9 +202,12 @@ const Landing = () => {
           >
             <div className="flex items-center gap-3">
               <div className="flex -space-x-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                    {String.fromCharCode(65 + i)}
+                {[testimonialCarlos, testimonialRafael, testimonialAndre].map((photo, i) => (
+                  <img key={i} src={photo} alt="" className="w-8 h-8 rounded-full border-2 border-zinc-900 object-cover" />
+                ))}
+                {[...Array(2)].map((_, i) => (
+                  <div key={`placeholder-${i}`} className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                    {String.fromCharCode(68 + i)}
                   </div>
                 ))}
               </div>
