@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Scissors, Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard } from "lucide-react";
+import { Scissors, Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe } from "lucide-react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { getDashboardUrl } from "@/lib/hostname";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import dashboardMockup from "@/assets/dashboard-mockup.png";
 import mobileMockup from "@/assets/mobile-mockup.png";
@@ -11,6 +11,7 @@ const Landing = () => {
   const heroRef = useRef(null);
   const { user } = useAuth();
   const isLoggedIn = !!user;
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.95]);
@@ -157,10 +158,10 @@ const Landing = () => {
             className="flex items-center justify-center gap-6 text-sm text-zinc-500"
           >
             <span className="flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-emerald-400" /> Grátis por 30 dias
+              <Check className="h-4 w-4 text-emerald-400" /> 14 dias grátis
             </span>
             <span className="flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-emerald-400" /> Sem cartão de crédito
+              <Check className="h-4 w-4 text-emerald-400" /> Todos os recursos
             </span>
             <span className="hidden sm:flex items-center gap-1.5">
               <Check className="h-4 w-4 text-emerald-400" /> Setup em 5 min
@@ -457,7 +458,7 @@ const Landing = () => {
 
       {/* Pricing Section */}
       <section id="preços" className="py-28 px-6 border-t border-zinc-800/30">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -468,73 +469,187 @@ const Landing = () => {
               Preços
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Simples. Transparente.
+              Simples. Transparente. Sem surpresas.
             </h2>
-            <p className="text-zinc-500 text-lg">Comece grátis, escale quando precisar</p>
+            <p className="text-zinc-500 text-lg mb-8">Todos os recursos inclusos. A diferença está na taxa por transação.</p>
+
+            {/* Billing toggle */}
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-zinc-900/60 border border-zinc-800/40">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  billingCycle === 'monthly'
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                Mensal
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                  billingCycle === 'annual'
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                Anual
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                  -20%
+                </span>
+              </button>
+            </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-            {/* Monthly */}
+          <div className="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto">
+            {/* Essencial */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40"
+              className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
             >
-              <p className="text-sm font-medium text-zinc-400 mb-2">Mensal</p>
+              <p className="text-sm font-semibold text-zinc-300 mb-1">Essencial</p>
+              <p className="text-zinc-500 text-xs mb-5">Para barbearias que querem digitalizar a operação</p>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold text-zinc-100">Em breve</span>
+                <span className="text-4xl font-bold text-zinc-100">
+                  R$ {billingCycle === 'monthly' ? '59,90' : '47,90'}
+                </span>
+                <span className="text-zinc-500 text-sm">/mês</span>
               </div>
-              <p className="text-zinc-500 text-sm mb-8">Flexibilidade total, sem fidelidade</p>
-              <ul className="space-y-3 mb-8">
-                {["Agendamentos ilimitados", "Profissionais ilimitados", "WhatsApp automático", "Pagamento online", "Dashboard completo", "Suporte prioritário"].map((item) => (
-                  <li key={item} className="flex items-center gap-2.5 text-sm text-zinc-300">
-                    <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              {billingCycle === 'annual' && (
+                <p className="text-emerald-400 text-xs mb-4">
+                  R$ 574,80/ano — economia de R$ 143,40
+                </p>
+              )}
+              <div className="flex items-center gap-2 mt-2 mb-6 px-3 py-2 rounded-lg bg-amber-500/[0.06] border border-amber-500/15">
+                <span className="text-amber-400 text-sm font-semibold">2,5%</span>
+                <span className="text-zinc-400 text-xs">por transação processada</span>
+              </div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "Agendamento online 24/7",
+                  "Gestão de clientes",
+                  "Financeiro completo",
+                  "Notificações WhatsApp e e-mail",
+                  "Pacotes de serviços",
+                  "Assinaturas recorrentes",
+                  "Pagamento online (PIX/Cartão)",
+                  "Taxa de cancelamento (50%)",
+                  "Relatórios completos",
+                  "Página pública de agendamento",
+                  "1 profissional incluso",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-300">
+                    <Check className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                     {item}
                   </li>
                 ))}
               </ul>
               <a href={getDashboardUrl('/app/register')}>
-                <Button variant="outline" className="w-full rounded-xl h-11 border-zinc-700/50 text-zinc-100 hover:bg-zinc-800">
-                  Começar Grátis
+                <Button variant="outline" className="w-full rounded-xl h-12 border-zinc-700/50 text-zinc-100 hover:bg-zinc-800 font-semibold">
+                  Começar 14 dias grátis
                 </Button>
               </a>
             </motion.div>
 
-            {/* Annual */}
+            {/* Profissional */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="relative p-8 rounded-2xl bg-zinc-900/60 border border-emerald-500/30 shadow-xl shadow-emerald-500/5"
+              className="relative p-8 rounded-2xl bg-zinc-900/60 border border-emerald-500/30 shadow-xl shadow-emerald-500/5 flex flex-col"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="px-3 py-1 rounded-full bg-emerald-500 text-zinc-950 text-xs font-bold">
-                  Melhor valor
+                <span className="px-4 py-1 rounded-full bg-emerald-500 text-zinc-950 text-xs font-bold shadow-lg shadow-emerald-500/25">
+                  Mais popular
                 </span>
               </div>
-              <p className="text-sm font-medium text-emerald-400 mb-2">Anual</p>
+              <p className="text-sm font-semibold text-emerald-400 mb-1">Profissional</p>
+              <p className="text-zinc-500 text-xs mb-5">Para quem quer escalar e pagar menos por transação</p>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold text-zinc-100">Em breve</span>
+                <span className="text-4xl font-bold text-zinc-100">
+                  R$ {billingCycle === 'monthly' ? '89,90' : '71,90'}
+                </span>
+                <span className="text-zinc-500 text-sm">/mês</span>
               </div>
-              <p className="text-zinc-500 text-sm mb-8">Economize com o plano anual</p>
-              <ul className="space-y-3 mb-8">
-                {["Tudo do plano mensal", "Desconto exclusivo anual", "Onboarding personalizado", "Prioridade em novos recursos"].map((item) => (
-                  <li key={item} className="flex items-center gap-2.5 text-sm text-zinc-300">
-                    <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              {billingCycle === 'annual' && (
+                <p className="text-emerald-400 text-xs mb-4">
+                  R$ 862,80/ano — economia de R$ 215,40
+                </p>
+              )}
+              <div className="flex items-center gap-2 mt-2 mb-6 px-3 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15">
+                <span className="text-emerald-400 text-sm font-semibold">1,0%</span>
+                <span className="text-zinc-400 text-xs">por transação processada</span>
+              </div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "Tudo do plano Essencial",
+                  "Agendamento direto pelo WhatsApp",
+                  "Domínio personalizado",
+                  "Taxa de transação 60% menor",
+                  "1 profissional incluso",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-zinc-300">
+                    <Check className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                     {item}
                   </li>
                 ))}
+                {/* Exclusive features highlighted */}
+                <li className="flex items-start gap-2.5 text-sm text-emerald-300/90 pt-2 border-t border-zinc-800/40">
+                  <MessageCircle className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  Chatbot de agendamento via WhatsApp
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-emerald-300/90">
+                  <Globe className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  minhabarbearia.com.br
+                </li>
               </ul>
               <a href={getDashboardUrl('/app/register')}>
-                <Button className="w-full rounded-xl h-11 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold shadow-lg shadow-emerald-500/20">
-                  Começar Grátis
+                <Button className="w-full rounded-xl h-12 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold shadow-lg shadow-emerald-500/20">
+                  Começar 14 dias grátis
                 </Button>
               </a>
             </motion.div>
           </div>
+
+          {/* Additional staff pricing */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="max-w-4xl mx-auto mt-6 text-center"
+          >
+            <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-zinc-900/40 border border-zinc-800/40 text-sm">
+              <Users className="h-4 w-4 text-zinc-400" />
+              <span className="text-zinc-400">Profissional adicional:</span>
+              <span className="font-semibold text-zinc-200">+R$ 24,90/mês</span>
+            </div>
+          </motion.div>
+
+          {/* Break-even callout */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="max-w-3xl mx-auto mt-8 p-5 rounded-2xl bg-gradient-to-r from-emerald-500/[0.04] to-transparent border border-emerald-500/10"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-200 mb-1">Quando o upgrade se paga sozinho?</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Acima de <span className="text-emerald-400 font-semibold">R$ 2.000/mês</span> em transações, o Profissional fica mais barato que o Essencial — e ainda inclui agendamento pelo WhatsApp e domínio próprio.
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -556,8 +671,9 @@ const Landing = () => {
               sua barbearia?
             </h2>
             <p className="text-zinc-400 text-lg mb-10 max-w-lg mx-auto">
-              Configure em 5 minutos. Sem cartão de crédito. Cancele quando quiser.
+              Configure em 5 minutos. Teste grátis por 14 dias. Cancele quando quiser.
             </p>
+            <p className="text-zinc-500 text-sm mb-10">A partir de R$ 59,90/mês após o trial</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a href={getDashboardUrl('/app/register')}>
                 <Button size="lg" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold h-13 px-10 text-base rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:scale-[1.02]">
@@ -580,7 +696,7 @@ const Landing = () => {
             <span className="font-bold text-sm">BarberFlow</span>
           </div>
           <p className="text-zinc-600 text-xs">
-            © 2025 BarberFlow. Todos os direitos reservados.
+            © 2026 BarberFlow. Todos os direitos reservados.
           </p>
         </div>
       </footer>
