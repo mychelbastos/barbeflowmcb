@@ -994,28 +994,27 @@ END:VCALENDAR`;
                 )}
               </div>
 
-              {/* CTA */}
-              <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowMyPackages(true)}
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl h-9 px-2.5"
-                title="Meus Pacotes"
-              >
-                <Package className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCustomerBookings(true)}
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl h-9 px-3"
-              >
-                <CalendarCheck className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline text-xs">Meus Agendamentos</span>
-              </Button>
-              </div>
             </div>
+          </div>
+
+          {/* Action buttons below header */}
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowMyPackages(true)}
+              className="border-zinc-700/60 bg-zinc-900/40 text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl h-12 text-sm font-medium"
+            >
+              <Package className="h-4 w-4 mr-2 text-amber-400" />
+              Meus Pacotes
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowCustomerBookings(true)}
+              className="border-zinc-700/60 bg-zinc-900/40 text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl h-12 text-sm font-medium"
+            >
+              <CalendarCheck className="h-4 w-4 mr-2 text-emerald-400" />
+              Meus Agendamentos
+            </Button>
           </div>
         </div>
       </div>
