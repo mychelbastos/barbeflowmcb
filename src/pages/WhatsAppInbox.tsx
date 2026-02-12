@@ -241,26 +241,54 @@ export default function WhatsAppInbox() {
     scrollToBottom();
   }, [messages]);
 
+  const normalizePhone = (phone: string) => {
+    let digits = phone.replace(/\D/g, "");
+    if (digits.length >= 12 && digits.startsWith("55")) {
+      digits = digits.substring(2);
+    }
+    if (digits.length === 10) {
+      digits = digits.substring(0, 2) + "9" + digits.substring(2);
+    }
+    return digits;
+  };
+
   const loadConversations = async () => {
     if (!currentTenant?.id) return;
 
     try {
       setRefreshing(true);
-      const { data, error } = await supabase
-        .from("whatsapp_messages")
-        .select("*")
-        .eq("tenant_id", currentTenant.id)
-        .order("timestamp", { ascending: false });
+      const [messagesRes, customersRes] = await Promise.all([
+        supabase
+          .from("whatsapp_messages")
+          .select("*")
+          .eq("tenant_id", currentTenant.id)
+          .order("timestamp", { ascending: false }),
+        supabase
+          .from("customers")
+          .select("name, phone")
+          .eq("tenant_id", currentTenant.id),
+      ]);
 
-      if (error) throw error;
+      if (messagesRes.error) throw messagesRes.error;
+
+      // Build phone-to-name map from customers
+      const phoneToName = new Map<string, string>();
+      (customersRes.data || []).forEach((c) => {
+        phoneToName.set(c.phone, c.name);
+      });
 
       const conversationMap = new Map<string, Conversation>();
       
-      data?.forEach((msg: Message) => {
+      messagesRes.data?.forEach((msg: Message) => {
         if (!conversationMap.has(msg.remote_jid)) {
+          // Extract phone from remote_jid and normalize to match customer DB
+          const rawPhone = msg.remote_jid.replace("@s.whatsapp.net", "");
+          const normalized = normalizePhone(rawPhone);
+          const customerName = phoneToName.get(normalized) || null;
+
           conversationMap.set(msg.remote_jid, {
             remote_jid: msg.remote_jid,
-            contact_name: null,
+            contact_name: customerName,
             last_message: msg.content || "",
             last_message_at: msg.timestamp,
             last_message_from_me: msg.from_me,
@@ -740,9 +768,9 @@ export default function WhatsAppInbox() {
                 </Avatar>
                 <div>
                   <p className="font-medium text-sm">
-                    {formatPhoneDisplay(selectedConversation)}
+                    {conversations.find(c => c.remote_jid === selectedConversation)?.contact_name || formatPhoneDisplay(selectedConversation)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Online</p>
+                  <p className="text-xs text-muted-foreground">{formatPhoneDisplay(selectedConversation)}</p>
                 </div>
               </div>
               <DropdownMenu>
