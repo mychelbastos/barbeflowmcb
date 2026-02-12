@@ -20,6 +20,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -77,6 +87,7 @@ export default function Services() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [enhancingServiceId, setEnhancingServiceId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,10 +274,6 @@ export default function Services() {
   };
 
   const handleDelete = async (service: any) => {
-    if (!confirm(`Tem certeza que deseja excluir o serviço "${service.name}"?`)) {
-      return;
-    }
-
     try {
       // Try to delete first
       const { error } = await supabase
@@ -474,7 +481,7 @@ export default function Services() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(service)}
+                      onClick={() => setDeleteTarget(service)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -714,6 +721,31 @@ export default function Services() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir serviço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o serviço "{deleteTarget?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) {
+                  handleDelete(deleteTarget);
+                  setDeleteTarget(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
