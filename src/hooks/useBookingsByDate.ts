@@ -70,6 +70,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [allDayBookings, setAllDayBookings] = useState<{ staff_id: string | null; customer_id: string; starts_at: string; status: string }[]>([]);
   const [blocks, setBlocks] = useState<BlockData[]>([]);
   const [settings, setSettings] = useState<TenantSettings>({ slot_duration: 15, buffer_time: 10, timezone: TZ });
   const [loading, setLoading] = useState(true);
@@ -86,7 +87,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       const dayStart = `${dateStr}T00:00:00-03:00`;
       const dayEnd = `${dateStr}T23:59:59-03:00`;
 
-      const [staffRes, schedulesRes, bookingsRes, blocksRes, tenantRes, recurringRes] = await Promise.all([
+      const [staffRes, schedulesRes, bookingsRes, allBookingsRes, blocksRes, tenantRes, recurringRes] = await Promise.all([
         supabase
           .from("staff")
           .select("id, name, photo_url, color, active")
@@ -106,6 +107,13 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
           .gte("starts_at", dayStart)
           .lte("starts_at", dayEnd)
           .neq("status", "cancelled"),
+        // Fetch ALL bookings (including cancelled) to check if a recurring slot was already materialized
+        supabase
+          .from("bookings")
+          .select("id, staff_id, customer_id, starts_at, status")
+          .eq("tenant_id", tenantId)
+          .gte("starts_at", dayStart)
+          .lte("starts_at", dayEnd),
         supabase
           .from("blocks")
           .select("*")
@@ -129,6 +137,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       setStaff(staffRes.data || []);
       setSchedules(schedulesRes.data || []);
       setBookings((bookingsRes.data as any) || []);
+      setAllDayBookings((allBookingsRes.data as any) || []);
       setBlocks(blocksRes.data || []);
       setRecurringSlots((recurringRes.data as any) || []);
 
@@ -199,8 +208,8 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       const startsAt = new Date(`${dateStr}T${rc.start_time}-03:00`);
       const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
 
-      // Check if a real booking already exists for this staff+customer at this time
-      const alreadyExists = real.some((b) => {
+      // Check if ANY real booking (including cancelled) exists for this staff+customer at this time
+      const alreadyExists = allDayBookings.some((b) => {
         return b.staff_id === rc.staff_id &&
           b.customer_id === rc.customer_id &&
           Math.abs(new Date(b.starts_at).getTime() - startsAt.getTime()) < 60000;
@@ -229,7 +238,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
     }
 
     return real;
-  }, [bookings, recurringSlots, dateStr]);
+  }, [bookings, recurringSlots, dateStr, allDayBookings]);
 
   return {
     staff,
