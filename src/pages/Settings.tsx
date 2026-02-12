@@ -2,6 +2,7 @@ import mpIcon from "@/assets/mercadopago-icon.jpg";
 import { useState, useEffect } from "react";
 import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { CustomerImportExport } from "@/components/CustomerImportExport";
+import WhatsAppConfigEmbed from "@/pages/WhatsAppConfig";
 import { useSearchParams } from "react-router-dom";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -123,7 +124,8 @@ export default function Settings() {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "general");
   const [showNewTenantModal, setShowNewTenantModal] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -195,6 +197,14 @@ export default function Settings() {
       });
       setSearchParams({});
       setActiveTab('payments');
+    }
+  }, [searchParams]);
+
+  // Sync tab from URL
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
     }
   }, [searchParams]);
 
@@ -500,19 +510,15 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-          <TabsList className={`inline-flex w-auto min-w-full md:w-full ${isSuperAdmin ? 'md:grid md:grid-cols-6' : 'md:grid md:grid-cols-5'}`}>
-            <TabsTrigger value="general" className="text-xs md:text-sm whitespace-nowrap">Geral</TabsTrigger>
-            <TabsTrigger value="scheduling" className="text-xs md:text-sm whitespace-nowrap">Agendamento</TabsTrigger>
-            <TabsTrigger value="notifications" className="text-xs md:text-sm whitespace-nowrap">Notificações</TabsTrigger>
-            <TabsTrigger value="payments" className="text-xs md:text-sm whitespace-nowrap">Pagamentos</TabsTrigger>
-            <TabsTrigger value="data" className="text-xs md:text-sm whitespace-nowrap">
-              <Database className="h-3.5 w-3.5 mr-1" />
-              Dados
-            </TabsTrigger>
-            {isSuperAdmin && (
-              <TabsTrigger value="multi-tenant" className="text-xs md:text-sm whitespace-nowrap">Multi-Barbearia</TabsTrigger>
-            )}
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 hidden md:hidden">
+          <TabsList>
+            <TabsTrigger value="general">Geral</TabsTrigger>
+            <TabsTrigger value="scheduling">Agendamento</TabsTrigger>
+            <TabsTrigger value="notifications">Notificações</TabsTrigger>
+            <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+            <TabsTrigger value="data">Dados</TabsTrigger>
+            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="multi-tenant">Multi-Barbearia</TabsTrigger>}
           </TabsList>
         </div>
 
@@ -1254,6 +1260,11 @@ export default function Settings() {
             </Card>
           </TabsContent>
         )}
+
+        {/* WhatsApp Tab */}
+        <TabsContent value="whatsapp">
+          <WhatsAppConfigEmbed />
+        </TabsContent>
       </Tabs>
 
       <NewTenantModal
