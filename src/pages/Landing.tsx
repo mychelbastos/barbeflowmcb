@@ -8,6 +8,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import dashboardMockup from "@/assets/dashboard-mockup.png";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
 import mobileMockup from "@/assets/mobile-mockup.png";
+import testimonialCarlos from "@/assets/testimonial-carlos.jpg";
+import testimonialRafael from "@/assets/testimonial-rafael.jpg";
+import testimonialAndre from "@/assets/testimonial-andre.jpg";
 
 const Landing = () => {
   const heroRef = useRef(null);
@@ -411,9 +414,9 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { name: "Carlos Mendes", role: "Studio Premium", quote: "Depois do modoGESTOR, minhas faltas caíram pela metade. Os clientes adoram agendar pelo celular." },
-              { name: "Rafael Costa", role: "Studio RC", quote: "O dashboard financeiro me deu uma visão que eu nunca tive. Consegui aumentar minha receita em 35%." },
-              { name: "André Silva", role: "Espaço André", quote: "Setup em 10 minutos e já estava funcionando. O WhatsApp automático economiza horas do meu dia." },
+              { name: "Carlos Mendes", role: "Studio Premium", quote: "Depois do modoGESTOR, minhas faltas caíram pela metade. Os clientes adoram agendar pelo celular.", photo: testimonialCarlos },
+              { name: "Rafael Costa", role: "Studio RC", quote: "O dashboard financeiro me deu uma visão que eu nunca tive. Consegui aumentar minha receita em 35%.", photo: testimonialRafael },
+              { name: "André Silva", role: "Espaço André", quote: "Setup em 10 minutos e já estava funcionando. O WhatsApp automático economiza horas do meu dia.", photo: testimonialAndre },
             ].map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -431,9 +434,7 @@ const Landing = () => {
                 </div>
                 <p className="text-zinc-300 text-sm leading-relaxed mb-6">"{testimonial.quote}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-amber-700/30 flex items-center justify-center text-xs font-bold text-primary border border-primary/20">
-                    {testimonial.name.charAt(0)}
-                  </div>
+                  <img src={testimonial.photo} alt={testimonial.name} className="w-9 h-9 rounded-full object-cover border border-primary/20" />
                   <div>
                     <p className="text-sm font-semibold text-zinc-100">{testimonial.name}</p>
                     <p className="text-xs text-zinc-500">{testimonial.role}</p>
