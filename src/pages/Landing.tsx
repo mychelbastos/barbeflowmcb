@@ -474,7 +474,7 @@ const Landing = () => {
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-            {/* Free */}
+            {/* Monthly */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -482,14 +482,13 @@ const Landing = () => {
               transition={{ delay: 0.1 }}
               className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40"
             >
-              <p className="text-sm font-medium text-zinc-400 mb-2">Starter</p>
+              <p className="text-sm font-medium text-zinc-400 mb-2">Mensal</p>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-bold">R$ 0</span>
-                <span className="text-zinc-500 text-sm">/ 30 dias</span>
+                <span className="text-3xl font-bold text-zinc-100">Em breve</span>
               </div>
-              <p className="text-zinc-500 text-sm mb-8">Perfeito para testar sem compromisso</p>
+              <p className="text-zinc-500 text-sm mb-8">Flexibilidade total, sem fidelidade</p>
               <ul className="space-y-3 mb-8">
-                {["Agendamentos ilimitados", "Até 3 profissionais", "Página de agendamento", "Dashboard básico"].map((item) => (
+                {["Agendamentos ilimitados", "Profissionais ilimitados", "WhatsApp automático", "Pagamento online", "Dashboard completo", "Suporte prioritário"].map((item) => (
                   <li key={item} className="flex items-center gap-2.5 text-sm text-zinc-300">
                     <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                     {item}
@@ -503,7 +502,7 @@ const Landing = () => {
               </a>
             </motion.div>
 
-            {/* Pro */}
+            {/* Annual */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -513,17 +512,16 @@ const Landing = () => {
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="px-3 py-1 rounded-full bg-emerald-500 text-zinc-950 text-xs font-bold">
-                  Popular
+                  Melhor valor
                 </span>
               </div>
-              <p className="text-sm font-medium text-emerald-400 mb-2">Profissional</p>
+              <p className="text-sm font-medium text-emerald-400 mb-2">Anual</p>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-bold">R$ 49</span>
-                <span className="text-zinc-500 text-sm">/ mês</span>
+                <span className="text-3xl font-bold text-zinc-100">Em breve</span>
               </div>
-              <p className="text-zinc-500 text-sm mb-8">Tudo que sua barbearia precisa</p>
+              <p className="text-zinc-500 text-sm mb-8">Economize com o plano anual</p>
               <ul className="space-y-3 mb-8">
-                {["Tudo do Starter", "Até 10 profissionais", "WhatsApp automático", "Pagamento online", "Relatórios avançados", "Suporte prioritário"].map((item) => (
+                {["Tudo do plano mensal", "Desconto exclusivo anual", "Onboarding personalizado", "Prioridade em novos recursos"].map((item) => (
                   <li key={item} className="flex items-center gap-2.5 text-sm text-zinc-300">
                     <Check className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                     {item}
@@ -532,7 +530,7 @@ const Landing = () => {
               </ul>
               <a href={getDashboardUrl('/app/register')}>
                 <Button className="w-full rounded-xl h-11 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold shadow-lg shadow-emerald-500/20">
-                  Começar Agora
+                  Começar Grátis
                 </Button>
               </a>
             </motion.div>
