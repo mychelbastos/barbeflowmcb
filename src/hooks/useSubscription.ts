@@ -15,10 +15,18 @@ export interface SubscriptionData {
 export const PLANS = {
   essencial: {
     product_id: "prod_Ty1Jvoc0qpDOUu",
-    price_id: "price_1T05HMCxw1gIFu9gYyzo61F3",
     name: "Essencial",
-    price_monthly: 5990,
     commission: "2,5%",
+    month: {
+      price_monthly: 5990,
+      display: "R$ 59,90/mês",
+    },
+    year: {
+      price_monthly: 4790,
+      price_yearly: 57480,
+      display: "R$ 47,90/mês",
+      display_yearly: "R$ 574,80/ano",
+    },
     features: [
       "Agendamento online",
       "Gestão de clientes",
@@ -31,10 +39,18 @@ export const PLANS = {
   },
   profissional: {
     product_id: "prod_Ty1KYrBniQmXyi",
-    price_id: "price_1T05HvCxw1gIFu9guQDhSvfs",
     name: "Profissional",
-    price_monthly: 8990,
     commission: "1,0%",
+    month: {
+      price_monthly: 8990,
+      display: "R$ 89,90/mês",
+    },
+    year: {
+      price_monthly: 7190,
+      price_yearly: 86280,
+      display: "R$ 71,90/mês",
+      display_yearly: "R$ 862,80/ano",
+    },
     features: [
       "Tudo do Essencial",
       "Chatbot WhatsApp",
@@ -64,17 +80,27 @@ export function useSubscription() {
 
   useEffect(() => {
     checkSubscription();
-    // Refresh every 60 seconds
     const interval = setInterval(checkSubscription, 60_000);
     return () => clearInterval(interval);
   }, [checkSubscription]);
 
+  const status = subscription?.status;
+  const planName = (subscription?.plan_name || "essencial") as keyof typeof PLANS;
+
   const hasActiveSubscription =
-    subscription?.status === "active" || subscription?.status === "trialing";
-  const isPastDue = subscription?.status === "past_due";
-  const isCanceled = subscription?.status === "canceled";
-  const needsSubscription = !subscription || subscription.status === "none";
-  const isTrialing = subscription?.status === "trialing";
+    status === "active" || status === "trialing";
+  const isPastDue = status === "past_due";
+  const isCanceled = status === "canceled";
+  const isTrialing = status === "trialing";
+  const needsSubscription = !status || status === "none";
+  const isReadOnly = status === "canceled" || status === "unpaid";
+  const canWrite = hasActiveSubscription || isPastDue;
+
+  const features = {
+    whatsappChatbot: planName === "profissional",
+    customDomain: planName === "profissional",
+    reducedRate: planName === "profissional",
+  };
 
   return {
     subscription,
@@ -84,6 +110,10 @@ export function useSubscription() {
     isCanceled,
     needsSubscription,
     isTrialing,
+    isReadOnly,
+    canWrite,
+    planName,
+    features,
     checkSubscription,
   };
 }

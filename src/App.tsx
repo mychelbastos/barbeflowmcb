@@ -26,6 +26,7 @@ import PaymentReturn from "./pages/PaymentReturn";
 import NotFound from "./pages/NotFound";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import Onboarding from "./pages/Onboarding";
 import AuthWatcher from "./components/AuthWatcher";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
@@ -75,6 +76,8 @@ const App = () => (
               <>
                 <Route path={`${dashPrefix}/login`} element={<Login />} />
                 <Route path={`${dashPrefix}/register`} element={<Login />} />
+                
+                <Route path={`${dashPrefix}/onboarding`} element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                 
                 <Route path={dashPrefix || '/'} element={<ProtectedAppShell />}>
                   <Route path={dashPrefix ? 'dashboard' : 'dashboard'} element={<Dashboard />} />

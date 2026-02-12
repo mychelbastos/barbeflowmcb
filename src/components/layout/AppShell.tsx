@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { dashPath } from "@/lib/hostname";
+import { SubscriptionBanner } from "@/components/billing/SubscriptionBanner";
 import { TenantSelector } from "@/components/TenantSelector";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -510,6 +512,15 @@ export default function AppShell() {
   const { user, signOut } = useAuth();
   const { currentTenant } = useTenant();
   const { openBookingModal } = useBookingModal();
+  const { needsSubscription, loading: subLoading } = useSubscription();
+  const location = useLocation();
+
+  // Redirect to onboarding if no subscription (except billing page)
+  const isBillingPage = location.pathname.includes("/settings") && location.search.includes("tab=billing");
+  const isOnboardingPage = location.pathname.includes("/onboarding");
+  if (!subLoading && needsSubscription && !isBillingPage && !isOnboardingPage) {
+    return <Navigate to={dashPath("/app/onboarding")} replace />;
+  }
 
   if (isMobile) {
     return (
@@ -566,6 +577,9 @@ export default function AppShell() {
             </div>
           </header>
 
+          {/* Subscription Banner */}
+          <SubscriptionBanner />
+
           {/* Mobile Content */}
           <main className="pb-28 bg-zinc-950 overflow-x-hidden">
             <div className="pt-3">
@@ -618,6 +632,9 @@ export default function AppShell() {
                 </div>
               </div>
             </header>
+
+            {/* Subscription Banner */}
+            <SubscriptionBanner />
 
             {/* Desktop Content */}
             <main className="flex-1 p-4 md:p-6 bg-zinc-950 overflow-x-hidden">

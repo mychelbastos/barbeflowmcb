@@ -12,6 +12,24 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+// Price ID resolution from env vars
+const PRICE_MAP: Record<string, Record<string, string>> = {
+  essencial: {
+    month: "STRIPE_PRICE_ESSENCIAL_MONTHLY",
+    year: "STRIPE_PRICE_ESSENCIAL_YEARLY",
+  },
+  profissional: {
+    month: "STRIPE_PRICE_PROFISSIONAL_MONTHLY",
+    year: "STRIPE_PRICE_PROFISSIONAL_YEARLY",
+  },
+};
+
+// Fallback price IDs (test mode)
+const FALLBACK_PRICES: Record<string, string> = {
+  STRIPE_PRICE_ESSENCIAL_MONTHLY: "price_1T05HMCxw1gIFu9gYyzo61F3",
+  STRIPE_PRICE_PROFISSIONAL_MONTHLY: "price_1T05HvCxw1gIFu9guQDhSvfs",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -59,8 +77,22 @@ serve(async (req) => {
     if (!tenant) throw new Error("Tenant não encontrado");
     logStep("Tenant found", { tenantId: tenant.id, name: tenant.name });
 
-    const { price_id } = await req.json();
-    if (!price_id) throw new Error("price_id obrigatório");
+    const body = await req.json();
+    const plan = body.plan as string; // 'essencial' | 'profissional'
+    const billingInterval = body.billing_interval as string || "month"; // 'month' | 'year'
+    
+    // Also support legacy price_id param
+    let priceId = body.price_id as string;
+    
+    if (!priceId) {
+      if (!plan || !PRICE_MAP[plan]) throw new Error("Plano inválido");
+      const envKey = PRICE_MAP[plan]?.[billingInterval];
+      if (!envKey) throw new Error("Intervalo de cobrança inválido");
+      priceId = Deno.env.get(envKey) || FALLBACK_PRICES[envKey] || "";
+      if (!priceId) throw new Error(`Price ID não configurado para ${plan}/${billingInterval}`);
+    }
+
+    logStep("Price resolved", { plan, billingInterval, priceId });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -96,7 +128,7 @@ serve(async (req) => {
       customer: customerId,
       mode: "subscription",
       payment_method_types: ["card"],
-      line_items: [{ price: price_id, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: 14,
         metadata: { tenant_id: tenant.id },
