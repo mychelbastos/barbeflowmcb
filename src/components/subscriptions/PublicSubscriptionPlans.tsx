@@ -69,59 +69,20 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
     try {
       setSubmitting(true);
 
-      // Find or create customer
-      const { data: customers } = await supabase
-        .from('customers')
-        .select('id, phone, name')
-        .eq('tenant_id', tenant.id);
-
-      let customerId: string;
-      const canonicalize = (p: string) => {
-        let d = p.replace(/\D/g, '');
-        if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
-        if (d.length === 10) d = d.slice(0, 2) + '9' + d.slice(2);
-        return d;
-      };
-      const canonicalDigits = canonicalize(digits);
-      const matched = customers?.find(c => canonicalize(c.phone) === canonicalDigits);
-
-      if (matched) {
-        customerId = matched.id;
-        // Update email if needed
-        await supabase.from('customers').update({ email }).eq('id', customerId);
-      } else {
-        const { data: newCust, error: custErr } = await supabase
-          .from('customers')
-          .insert({ tenant_id: tenant.id, name: name.trim(), phone: digits, email })
-          .select('id')
-          .single();
-        if (custErr || !newCust) throw new Error('Erro ao criar cliente');
-        customerId = newCust.id;
-      }
-
-      // Create subscription record
-      const { data: sub, error: subErr } = await supabase
-        .from('customer_subscriptions')
-        .insert({
-          tenant_id: tenant.id,
-          customer_id: customerId,
-          plan_id: selectedPlan.id,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (subErr || !sub) throw new Error('Erro ao criar assinatura');
-
-      // Call edge function to create MP preapproval
+      // Call edge function — it handles find-or-create customer + subscription + MP preapproval
       const { data: mpResult, error: mpErr } = await supabase.functions.invoke('mp-create-subscription', {
-        body: { subscription_id: sub.id },
+        body: {
+          tenant_id: tenant.id,
+          plan_id: selectedPlan.id,
+          customer_name: name.trim(),
+          customer_phone: digits,
+          customer_email: email.trim(),
+        },
       });
 
       if (mpErr) throw mpErr;
 
       if (mpResult?.checkout_url) {
-        // Redirect to MP authorization page
         window.location.href = mpResult.checkout_url;
       } else {
         throw new Error('URL de checkout não gerada');
