@@ -23,8 +23,9 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
   const { dayCountMap, maxCount, totalBookings } = useMemo(() => {
     const map = new Map<string, number>();
     let total = 0;
-    const periodDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
-    periodDays.forEach(day => {
+    // Count bookings for the entire displayed month, not just the selected range
+    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    monthDays.forEach(day => {
       const key = format(day, "yyyy-MM-dd");
       const count = bookings.filter(b => isSameDay(new Date(b.starts_at), day)).length;
       map.set(key, count);
@@ -32,7 +33,7 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
     });
     const max = Math.max(...Array.from(map.values()), 1);
     return { dayCountMap: map, maxCount: max, totalBookings: total };
-  }, [bookings, dateRange]);
+  }, [bookings, monthStart, monthEnd]);
 
   const isInRange = (day: Date) => {
     const d = format(day, "yyyy-MM-dd");

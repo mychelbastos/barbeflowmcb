@@ -27,7 +27,6 @@ import { WeeklyScheduleGrid } from "@/components/dashboard/WeeklyScheduleGrid";
 import { WeeklyBarChart } from "@/components/dashboard/WeeklyBarChart";
 import { RevenueLineChart } from "@/components/dashboard/RevenueLineChart";
 import { ClientRevenuePanel } from "@/components/dashboard/ClientRevenuePanel";
-import { MonthlyHeatmapCalendar } from "@/components/dashboard/MonthlyHeatmapCalendar";
 
 const spring = { type: "spring" as const, stiffness: 200, damping: 26, mass: 0.6 };
 const gentleSpring = { type: "spring" as const, stiffness: 120, damping: 20, mass: 0.8 };
@@ -319,10 +318,6 @@ const Dashboard = () => {
         <div className="space-y-4">
           {!loading && (
             <ClientRevenuePanel bookings={allBookings} totalRevenue={revenue} />
-          )}
-
-          {!loading && (
-            <MonthlyHeatmapCalendar bookings={allBookings} dateRange={dateRange} />
           )}
 
           {!loading && (
