@@ -80,30 +80,30 @@ serve(async (req) => {
 
     // Build prompt based on table type
     const prompts: Record<AllowedTable, string> = {
-      products: `Transform this product photo into a professional barbershop/grooming product image. Make it look like a premium e-commerce product shot with:
-- Dark moody barbershop-themed background with warm amber/gold lighting
+      products: `Transform this product photo into a professional premium product image. Make it look like a premium e-commerce product shot with:
+- Dark moody background with warm amber/gold lighting
 - Professional studio-quality lighting on the product
-- Subtle barbershop elements (wood texture, leather, warm tones)
+- Subtle premium elements (wood texture, leather, warm tones)
 - Sharp focus and high contrast
 - The product "${item.name}" should be the hero, centered and prominent
 Keep the actual product exactly as it is, only enhance the presentation and background.`,
-      services: `Transform this barbershop service photo into a professional marketing image. Make it look like a premium barbershop promotional shot with:
+      services: `Transform this service photo into a professional marketing image. Make it look like a premium promotional shot with:
 - Professional studio lighting with warm, inviting tones
-- Clean, elegant barbershop atmosphere
+- Clean, elegant atmosphere
 - Sharp focus on the main subject
-- High-end grooming/barbershop aesthetic
+- High-end professional aesthetic
 - The service "${item.name}" should be clearly represented
 Keep the main subject as is, enhance lighting, background and overall quality.`,
-      service_packages: `Transform this image into a professional promotional photo for a barbershop service package. Make it look premium and appealing with:
-- Clean, modern aesthetic with warm barbershop tones
+      service_packages: `Transform this image into a professional promotional photo for a service package. Make it look premium and appealing with:
+- Clean, modern aesthetic with warm tones
 - Professional lighting and composition
-- High-end grooming/spa atmosphere
+- High-end spa atmosphere
 - The package "${item.name}" should feel luxurious and valuable
 Enhance the overall quality while keeping the original subject intact.`,
       subscription_plans: `Transform this image into a professional subscription plan promotional photo. Make it look premium with:
 - Elegant, modern aesthetic suggesting recurring premium service
 - Professional studio-quality lighting
-- Warm, inviting barbershop atmosphere
+- Warm, inviting atmosphere
 - The plan "${item.name}" should convey exclusivity and value
 Enhance quality and presentation while keeping the original subject.`,
     };

@@ -269,7 +269,7 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: Calendar, title: "Agendamento Online 24/7", description: "Seus clientes agendam a qualquer hora, sem criar conta. Link exclusivo da sua barbearia.", accent: "emerald" },
+              { icon: Calendar, title: "Agendamento Online 24/7", description: "Seus clientes agendam a qualquer hora, sem criar conta. Link exclusivo do seu negócio.", accent: "emerald" },
               { icon: Users, title: "Gestão de Equipe", description: "Cadastre profissionais, defina horários individuais e acompanhe a performance de cada um.", accent: "blue" },
               { icon: MessageCircle, title: "WhatsApp Automático", description: "Confirmações, lembretes e notificações enviadas automaticamente via WhatsApp.", accent: "green" },
               { icon: CreditCard, title: "Pagamento Antecipado", description: "Integração com Mercado Pago. Reduza faltas com cobrança no agendamento.", accent: "violet" },
@@ -423,9 +423,9 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { name: "Carlos Mendes", role: "Barbearia Premium", quote: "Depois do modoGESTOR, minhas faltas caíram pela metade. Os clientes adoram agendar pelo celular." },
-              { name: "Rafael Costa", role: "Studio RC Barber", quote: "O dashboard financeiro me deu uma visão que eu nunca tive. Consegui aumentar minha receita em 35%." },
-              { name: "André Silva", role: "Barber House", quote: "Setup em 10 minutos e já estava funcionando. O WhatsApp automático economiza horas do meu dia." },
+              { name: "Carlos Mendes", role: "Studio Premium", quote: "Depois do modoGESTOR, minhas faltas caíram pela metade. Os clientes adoram agendar pelo celular." },
+              { name: "Rafael Costa", role: "Studio RC", quote: "O dashboard financeiro me deu uma visão que eu nunca tive. Consegui aumentar minha receita em 35%." },
+              { name: "André Silva", role: "Espaço André", quote: "Setup em 10 minutos e já estava funcionando. O WhatsApp automático economiza horas do meu dia." },
             ].map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -512,7 +512,7 @@ const Landing = () => {
               className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
             >
               <p className="text-sm font-semibold text-zinc-300 mb-1">Essencial</p>
-              <p className="text-zinc-500 text-xs mb-5">Para barbearias que querem digitalizar a operação</p>
+              <p className="text-zinc-500 text-xs mb-5">Para profissionais que querem digitalizar a operação</p>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-4xl font-bold text-zinc-100">
                   R$ {billingCycle === 'monthly' ? '59,90' : '47,90'}

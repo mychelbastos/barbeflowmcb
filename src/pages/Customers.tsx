@@ -493,7 +493,7 @@ export default function Customers() {
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">Clientes</h1>
             <p className="text-sm md:text-base text-muted-foreground">
-              Gerencie a base de clientes da barbearia
+              Gerencie a base de clientes do seu estabelecimento
             </p>
           </div>
           <Button onClick={() => setShowAddModal(true)} size="sm" className="shrink-0">
@@ -1023,7 +1023,7 @@ export default function Customers() {
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
             <DialogDescription>
-              Cadastre um novo cliente na barbearia
+              Cadastre um novo cliente no estabelecimento
             </DialogDescription>
           </DialogHeader>
           

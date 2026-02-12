@@ -350,7 +350,7 @@ export default function Staff() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-foreground">Profissionais</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Gerencie a equipe da barbearia
+            Gerencie a equipe do seu estabelecimento
           </p>
         </div>
       </div>
@@ -701,7 +701,7 @@ export default function Staff() {
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between">
                     <div>
-                      <FormLabel>Barbeiro Chefe (Dono)</FormLabel>
+                      <FormLabel>Profissional Principal (Dono)</FormLabel>
                       <p className="text-xs text-muted-foreground">
                         O dono não recebe comissão — ele distribui para os outros
                       </p>

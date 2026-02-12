@@ -33,14 +33,14 @@ serve(async (req) => {
     if (type === 'text') {
       // Generate title and description
       const contextMap: Record<string, string> = {
-        products: 'produto de barbearia/grooming',
-        services: 'serviço de barbearia',
-        service_packages: 'pacote de serviços de barbearia',
-        subscription_plans: 'plano de assinatura de barbearia',
+        products: 'produto de serviços profissionais',
+        services: 'serviço profissional',
+        service_packages: 'pacote de serviços profissionais',
+        subscription_plans: 'plano de assinatura profissional',
       };
-      const context = contextMap[table as string] || 'item de barbearia';
+      const context = contextMap[table as string] || 'item de serviço profissional';
 
-      const prompt = `Você é um especialista em marketing para barbearias premium. 
+      const prompt = `Você é um especialista em marketing para negócios de serviços premium. 
 Gere um título (máximo 40 caracteres) e uma descrição curta e persuasiva (máximo 120 caracteres) para um ${context}.
 
 ${item_name ? `Nome atual: "${item_name}"` : ''}
@@ -131,10 +131,10 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
       }
 
       const imagePrompts: Record<AllowedTable, string> = {
-        products: `Professional product photography of a premium barbershop/grooming product called "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Dark moody background with warm amber lighting. Studio quality, centered product, luxurious barbershop aesthetic. High resolution, sharp focus, e-commerce style.`,
-        services: `Professional barbershop promotional photo representing the service "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Warm lighting, premium barbershop interior, elegant masculine atmosphere. High quality, sharp focus, marketing material style.`,
-        service_packages: `Elegant promotional image for a barbershop package called "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Premium look with warm tones, luxury grooming atmosphere. Clean composition, professional marketing style.`,
-        subscription_plans: `Premium subscription plan promotional image for "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Exclusive, VIP feel with warm barbershop tones. Modern, clean, professional marketing aesthetic.`,
+        products: `Professional product photography of a premium professional service product called "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Dark moody background with warm amber lighting. Studio quality, centered product, luxurious aesthetic. High resolution, sharp focus, e-commerce style.`,
+        services: `Professional promotional photo representing the service "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Warm lighting, premium interior, elegant atmosphere. High quality, sharp focus, marketing material style.`,
+        service_packages: `Elegant promotional image for a service package called "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Premium look with warm tones, luxury atmosphere. Clean composition, professional marketing style.`,
+        subscription_plans: `Premium subscription plan promotional image for "${item.name}"${item.description ? `, described as: ${item.description}` : ''}. Exclusive, VIP feel with warm tones. Modern, clean, professional marketing aesthetic.`,
       };
 
       console.log(`Generating image for ${finalTable}: ${item.name}`);

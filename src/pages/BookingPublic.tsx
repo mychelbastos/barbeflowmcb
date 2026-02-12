@@ -764,7 +764,7 @@ const BookingPublic = () => {
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const params = new URLSearchParams({
       action: 'TEMPLATE',
-      text: `${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}`,
+      text: `${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Estabelecimento'}`,
       dates: `${fmt(startDate)}/${fmt(endDate)}`,
       details: 'Agendamento confirmado',
       location: tenant?.address || tenant?.name || '',
@@ -786,13 +786,13 @@ const BookingPublic = () => {
 VERSION:2.0
 PRODID:-//Booking//Booking Event//EN
 BEGIN:VEVENT
-UID:booking-${booking.id}@${tenant?.slug || 'barbearia'}
+UID:booking-${booking.id}@${tenant?.slug || 'modogestor'}
 DTSTAMP:${formatICSDate(new Date())}
 DTSTART:${formatICSDate(startDate)}
 DTEND:${formatICSDate(endDate)}
-SUMMARY:${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Barbearia'}
+SUMMARY:${booking.service?.name || 'Agendamento'} - ${tenant?.name || 'Estabelecimento'}
 DESCRIPTION:Agendamento confirmado
-LOCATION:${tenant?.address || tenant?.name || 'Barbearia'}
+LOCATION:${tenant?.address || tenant?.name || 'Estabelecimento'}
 END:VEVENT
 END:VCALENDAR`;
 
@@ -1310,7 +1310,7 @@ END:VCALENDAR`;
                   </div>
                   <div>
                     <h3 className="font-medium group-hover:text-white transition-colors">Pagar no local</h3>
-                    <p className="text-zinc-500 text-sm">Pague ao chegar na barbearia</p>
+                    <p className="text-zinc-500 text-sm">Pague ao chegar no estabelecimento</p>
                   </div>
                 </div>
               </button>

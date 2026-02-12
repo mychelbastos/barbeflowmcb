@@ -147,13 +147,13 @@ serve(async (req) => {
       });
     }
 
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.barberflow.store';
+    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
     const tenantSlug = plan.tenant?.slug || '';
 
     const backUrl = `${frontBaseUrl}/${tenantSlug}/subscription/callback`;
 
     const mpBody: any = {
-      reason: `${plan.name} - ${plan.tenant?.name || 'BarberFlow'}`,
+      reason: `${plan.name} - ${plan.tenant?.name || 'modoGESTOR'}`,
       auto_recurring: {
         frequency: 1,
         frequency_type: "months",
@@ -246,7 +246,7 @@ serve(async (req) => {
           });
           const formattedPrice = `R$ ${(plan.price_cents / 100).toFixed(2)}`;
 
-          const message = `✅ *Assinatura Ativada!*\n\nOlá ${customer_name}!\n\nSua assinatura foi ativada com sucesso.\n\n📋 *Plano:* ${plan.name}\n💰 *Valor:* ${formattedPrice}/mês\n📅 *Válida até:* ${formattedEnd}\n\nSua assinatura será renovada automaticamente a cada 30 dias.\n\n${plan.tenant?.name || 'BarberFlow'} agradece! 🙏`;
+          const message = `✅ *Assinatura Ativada!*\n\nOlá ${customer_name}!\n\nSua assinatura foi ativada com sucesso.\n\n📋 *Plano:* ${plan.name}\n💰 *Valor:* ${formattedPrice}/mês\n📅 *Válida até:* ${formattedEnd}\n\nSua assinatura será renovada automaticamente a cada 30 dias.\n\n${plan.tenant?.name || 'modoGESTOR'} agradece! 🙏`;
 
           let phone = canonical;
           if (!phone.startsWith('55')) phone = '55' + phone;
@@ -261,7 +261,7 @@ serve(async (req) => {
               tenant_id,
               tenant_slug: tenantSlug,
               customer: { name: customer_name, phone: customer_phone },
-              tenant: { name: plan.tenant?.name || 'BarberFlow', slug: tenantSlug },
+              tenant: { name: plan.tenant?.name || 'modoGESTOR', slug: tenantSlug },
             };
 
             const n8nResp = await fetch(n8nWebhookUrl, {

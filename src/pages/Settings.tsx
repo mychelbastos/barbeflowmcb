@@ -436,7 +436,7 @@ export default function Settings() {
 
       toast({
         title: "Dados atualizados",
-        description: "As informações da barbearia foram atualizadas com sucesso.",
+        description: "As informações do estabelecimento foram atualizadas com sucesso.",
       });
 
       // await refreshTenant?.(); // TODO: Implement refreshTenant in useTenant hook
@@ -505,7 +505,7 @@ export default function Settings() {
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-foreground">Configurações</h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Gerencie as configurações da sua barbearia
+          Gerencie as configurações do seu estabelecimento
         </p>
       </div>
 
@@ -518,7 +518,7 @@ export default function Settings() {
             <TabsTrigger value="payments">Pagamentos</TabsTrigger>
             <TabsTrigger value="data">Dados</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-            {isSuperAdmin && <TabsTrigger value="multi-tenant">Multi-Barbearia</TabsTrigger>}
+            {isSuperAdmin && <TabsTrigger value="multi-tenant">Multi-Empresa</TabsTrigger>}
           </TabsList>
         </div>
 
@@ -528,7 +528,7 @@ export default function Settings() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Store className="h-5 w-5 mr-2" />
-                Informações da Barbearia
+                Informações do Estabelecimento
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -540,9 +540,9 @@ export default function Settings() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome da Barbearia *</FormLabel>
+                          <FormLabel>Nome do Estabelecimento *</FormLabel>
                           <FormControl>
-                            <Input placeholder="Barbearia Premium" {...field} />
+                            <Input placeholder="Meu Estabelecimento" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -558,10 +558,10 @@ export default function Settings() {
                           <FormControl>
                             <div className="flex">
                               <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                                barberflow.store/
+                                modogestor.com.br/
                               </span>
                               <Input 
-                                placeholder="barbearia-premium" 
+                                placeholder="meu-estabelecimento" 
                                 className="rounded-l-none"
                                 {...field} 
                               />
@@ -598,7 +598,7 @@ export default function Settings() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="contato@barbearia.com" {...field} />
+                            <Input placeholder="contato@empresa.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1198,7 +1198,7 @@ export default function Settings() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Globe className="h-5 w-5 mr-2" />
-                  Gerenciamento Multi-Barbearia
+                  Gerenciamento Multi-Empresa
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1211,7 +1211,7 @@ export default function Settings() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Suas Barbearias</h3>
+                  <h3 className="text-lg font-medium mb-4">Seus Estabelecimentos</h3>
                   <div className="space-y-3">
                     {tenants.map((tenant) => (
                       <div
@@ -1238,7 +1238,7 @@ export default function Settings() {
                   <div className="mt-4">
                     <Button onClick={() => setShowNewTenantModal(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Criar Nova Barbearia
+                      Criar Novo Estabelecimento
                     </Button>
                   </div>
                 </div>

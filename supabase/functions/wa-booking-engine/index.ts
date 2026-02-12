@@ -54,7 +54,7 @@ async function handleMenu(_text: string, _payload: Record<string, unknown>, tena
     .eq("id", tenantId)
     .single();
 
-  const name = tenant?.name || "nossa barbearia";
+  const name = tenant?.name || "nosso estabelecimento";
 
   const menuMsg =
     `Olá! Bem-vindo(a) à *${name}* ✂️\n\n` +
@@ -66,7 +66,7 @@ async function handleMenu(_text: string, _payload: Record<string, unknown>, tena
   if (isFirstInteraction) {
     const introMsg =
       `Olá! 👋\n` +
-      `Este é um sistema de agendamento automatizado feito por IA da *BarberFlow* ✂️\n\n` +
+      `Este é um sistema de agendamento automatizado feito por IA do *modoGESTOR* 📋\n\n` +
       `Siga as instruções abaixo para prosseguir com o agendamento.\n\n` +
       `Caso prefira, você pode cancelar o atendimento automatizado a qualquer momento para falar com um atendente humano.`;
 

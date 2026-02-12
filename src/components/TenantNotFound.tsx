@@ -16,13 +16,13 @@ export function TenantNotFound({ slug }: TenantNotFoundProps) {
 
         <h1 className="text-2xl font-semibold mb-2">Estabelecimento não encontrado</h1>
         <p className="text-zinc-400 mb-2">
-          Não encontramos nenhuma barbearia com o endereço informado.
+          Não encontramos nenhum estabelecimento com o endereço informado.
         </p>
         {slug && (
           <p className="text-zinc-600 text-sm mb-8 font-mono">/{slug}</p>
         )}
 
-        <Button asChild className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-medium">
+        <Button asChild className="w-full h-12 bg-primary hover:bg-primary-hover text-primary-foreground rounded-xl font-medium">
           <Link to="/">
             <Home className="h-4 w-4 mr-2" />
             Ir para a página inicial

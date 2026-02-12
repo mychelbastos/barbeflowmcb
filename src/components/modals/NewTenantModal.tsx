@@ -157,7 +157,7 @@ export function NewTenantModal({ open, onOpenChange }: NewTenantModalProps) {
                 <FormItem>
                   <FormLabel>Nome do Estabelecimento *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Barbearia Central" {...field} />
+                    <Input placeholder="Meu Estabelecimento" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -171,7 +171,7 @@ export function NewTenantModal({ open, onOpenChange }: NewTenantModalProps) {
                 <FormItem>
                   <FormLabel>Slug (URL) *</FormLabel>
                   <FormControl>
-                    <Input placeholder="barbearia-central" {...field} />
+                    <Input placeholder="meu-estabelecimento" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -199,7 +199,7 @@ export function NewTenantModal({ open, onOpenChange }: NewTenantModalProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="contato@barbearia.com" {...field} />
+                    <Input placeholder="contato@empresa.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
