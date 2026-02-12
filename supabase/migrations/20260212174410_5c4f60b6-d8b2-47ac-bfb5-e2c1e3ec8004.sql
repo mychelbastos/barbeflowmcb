@@ -1,0 +1,1 @@
+DELETE FROM customer_subscriptions WHERE status = 'pending' AND started_at IS NULL;

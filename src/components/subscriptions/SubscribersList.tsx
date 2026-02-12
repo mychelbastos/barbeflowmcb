@@ -5,7 +5,7 @@ import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pause, XCircle, UserPlus, Calendar } from "lucide-react";
+import { Loader2, Pause, XCircle, UserPlus, Calendar, Trash2 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -109,6 +109,19 @@ export function SubscribersList() {
     }
   };
 
+  const handleDelete = async (sub: any) => {
+    const { error } = await supabase
+      .from('customer_subscriptions')
+      .delete()
+      .eq('id', sub.id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Assinatura excluída" });
+      loadData();
+    }
+  };
+
   const filtered = subscribers.filter(s => {
     if (filterPlan !== 'all' && s.plan_id !== filterPlan) return false;
     if (filterStatus !== 'all' && s.status !== filterStatus) return false;
@@ -191,6 +204,11 @@ export function SubscribersList() {
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </>
+                )}
+                {(sub.status === 'pending' || sub.status === 'cancelled') && (
+                  <Button variant="ghost" size="sm" title="Excluir assinatura" onClick={() => handleDelete(sub)}>
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
                 )}
               </div>
             </div>
