@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
+import { useBookingModal } from "@/hooks/useBookingModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Package, CheckCircle, Clock, Loader2, XCircle, Plus, Trash2 } from "lucide-react";
+import { Package, CheckCircle, Clock, Loader2, XCircle, Plus, Trash2, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,6 +24,7 @@ interface CustomerPackagesTabProps {
 export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
+  const { openBookingModal } = useBookingModal();
   const [customerPackages, setCustomerPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -259,6 +261,7 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
                   {(cp.services || []).map((svc: any) => {
                     const remaining = svc.sessions_total - svc.sessions_used;
                     const pct = svc.sessions_total > 0 ? (svc.sessions_used / svc.sessions_total) * 100 : 0;
+                    const hasRemaining = remaining > 0;
                     return (
                       <div key={svc.id} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
@@ -273,6 +276,20 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
                             style={{ width: `${100 - pct}%` }}
                           />
                         </div>
+                        {hasRemaining && cp.payment_status === 'confirmed' && cp.status !== 'completed' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[11px] text-emerald-400 hover:text-emerald-300 px-1"
+                            onClick={() => openBookingModal({
+                              customerPackageId: cp.id,
+                              allowedServiceIds: [svc.service_id],
+                              preselectedCustomerId: customerId,
+                            })}
+                          >
+                            <Calendar className="h-3 w-3 mr-1" /> Agendar
+                          </Button>
+                        )}
                       </div>
                     );
                   })}

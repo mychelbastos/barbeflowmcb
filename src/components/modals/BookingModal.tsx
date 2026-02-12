@@ -246,82 +246,28 @@ export function BookingModal() {
     try {
       setFormLoading(true);
 
-      let customerId = selectedCustomerId;
-
-      if (!customerId) {
-        // Try to find existing customer by phone
-        const { data: existingCustomer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('tenant_id', currentTenant.id)
-          .eq('phone', data.customer_phone)
-          .single();
-
-        if (existingCustomer) {
-          customerId = existingCustomer.id;
-          await supabase
-            .from('customers')
-            .update({ name: data.customer_name, email: data.customer_email || null })
-            .eq('id', customerId);
-        } else {
-          const { data: newCustomer, error: customerError } = await supabase
-            .from('customers')
-            .insert({
-              tenant_id: currentTenant.id,
-              name: data.customer_name,
-              phone: data.customer_phone,
-              email: data.customer_email || null,
-            })
-            .select()
-            .single();
-          if (customerError) throw customerError;
-          customerId = newCustomer.id;
-        }
-      }
-
-      const { data: service } = await supabase
-        .from('services')
-        .select('duration_minutes')
-        .eq('id', data.service_id)
-        .single();
-
-      const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
-      const baseDuration = service?.duration_minutes || 60;
-      const totalDuration = baseDuration + (data.extra_slots || 0) * extraSlotDuration;
-
       const startsAt = new Date(`${data.date}T${data.time}`);
-      const endsAt = new Date(startsAt.getTime() + totalDuration * 60000);
 
-      const { data: newBooking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
+      const { data: result, error } = await supabase.functions.invoke('create-booking', {
+        body: {
           tenant_id: currentTenant.id,
-          customer_id: customerId,
           service_id: data.service_id,
           staff_id: data.staff_id === "none" ? null : data.staff_id,
+          customer_name: data.customer_name,
+          customer_phone: data.customer_phone,
+          customer_email: data.customer_email || undefined,
           starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          status: 'confirmed',
-          notes: data.notes || null,
-        })
-        .select('id')
-        .single();
+          notes: data.notes || undefined,
+          extra_slots: data.extra_slots || 0,
+          created_via: 'admin',
+          payment_method: 'onsite',
+          customer_package_id: customerPackageId || undefined,
+          customer_subscription_id: customerSubscriptionId || undefined,
+        },
+      });
 
-      if (bookingError) throw bookingError;
-
-      if (newBooking) {
-        try {
-          await supabase.functions.invoke('send-whatsapp-notification', {
-            body: {
-              type: 'booking_confirmed',
-              booking_id: newBooking.id,
-              tenant_id: currentTenant.id,
-            },
-          });
-        } catch (notifError) {
-          console.error('Error sending WhatsApp notification:', notifError);
-        }
-      }
+      if (error) throw error;
+      if (!result?.success) throw new Error(result?.error || 'Erro ao criar agendamento');
 
       toast({
         title: "Sucesso",

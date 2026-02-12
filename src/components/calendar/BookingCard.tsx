@@ -36,6 +36,16 @@ export function BookingCard({ booking, onClick, isRecurring }: BookingCardProps)
             Fixo
           </span>
         )}
+        {booking.customer_package_id && (
+          <span className="flex-shrink-0 text-[8px] font-bold bg-amber-500/20 text-amber-400 px-1 rounded leading-tight">
+            Pacote
+          </span>
+        )}
+        {booking.customer_subscription_id && (
+          <span className="flex-shrink-0 text-[8px] font-bold bg-emerald-500/20 text-emerald-400 px-1 rounded leading-tight">
+            Assinatura
+          </span>
+        )}
       </div>
       <p className="text-[10px] text-muted-foreground truncate leading-tight">
         {booking.service?.name}

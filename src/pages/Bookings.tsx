@@ -185,6 +185,60 @@ export default function Bookings() {
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
+      // If cancelling, check for benefit-linked booking and refund session
+      if (newStatus === "cancelled") {
+        const { data: bookingData } = await supabase
+          .from("bookings")
+          .select("customer_package_id, customer_subscription_id, service_id")
+          .eq("id", bookingId)
+          .single();
+
+        if (bookingData?.customer_package_id) {
+          // Refund package session
+          const { data: cpSvc } = await supabase
+            .from("customer_package_services")
+            .select("id, sessions_used")
+            .eq("customer_package_id", bookingData.customer_package_id)
+            .eq("service_id", bookingData.service_id)
+            .single();
+          if (cpSvc && cpSvc.sessions_used > 0) {
+            await supabase.from("customer_package_services")
+              .update({ sessions_used: cpSvc.sessions_used - 1 })
+              .eq("id", cpSvc.id);
+            // Also update the parent customer_packages counter
+            const { data: cp } = await supabase
+              .from("customer_packages")
+              .select("id, sessions_used, status")
+              .eq("id", bookingData.customer_package_id)
+              .single();
+            if (cp) {
+              const updates: any = { sessions_used: Math.max(0, cp.sessions_used - 1) };
+              if (cp.status === "completed") updates.status = "active";
+              await supabase.from("customer_packages").update(updates).eq("id", cp.id);
+            }
+          }
+        }
+
+        if (bookingData?.customer_subscription_id) {
+          // Refund subscription session
+          const todayStr = new Date().toISOString().split("T")[0];
+          const { data: usage } = await supabase
+            .from("subscription_usage")
+            .select("id, sessions_used, booking_ids")
+            .eq("subscription_id", bookingData.customer_subscription_id)
+            .eq("service_id", bookingData.service_id)
+            .lte("period_start", todayStr)
+            .gte("period_end", todayStr)
+            .maybeSingle();
+          if (usage && usage.sessions_used > 0) {
+            const newBookingIds = (usage.booking_ids || []).filter((id: string) => id !== bookingId);
+            await supabase.from("subscription_usage")
+              .update({ sessions_used: usage.sessions_used - 1, booking_ids: newBookingIds })
+              .eq("id", usage.id);
+          }
+        }
+      }
+
       const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", bookingId);
       if (error) throw error;
 
@@ -619,9 +673,21 @@ export default function Bookings() {
                   <p className="text-sm">{selectedBooking.notes}</p>
                 </div>
               )}
-              <div>
-                <Label className="text-sm font-medium">Valor</Label>
-                <p className="text-sm font-semibold">R$ {((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}</p>
+              <div className="flex items-center gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Valor</Label>
+                  <p className="text-sm font-semibold">
+                    {selectedBooking.customer_package_id || selectedBooking.customer_subscription_id
+                      ? 'Incluso no plano/pacote'
+                      : `R$ ${((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}`}
+                  </p>
+                </div>
+                {selectedBooking.customer_package_id && (
+                  <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">Pacote</Badge>
+                )}
+                {selectedBooking.customer_subscription_id && (
+                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]">Assinatura</Badge>
+                )}
               </div>
 
               {/* Quick status actions */}

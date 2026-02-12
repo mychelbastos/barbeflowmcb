@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TenantNotFound } from "@/components/TenantNotFound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PackagePurchaseFlow } from "@/components/public/PackagePurchaseFlow";
 
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
@@ -1125,37 +1126,56 @@ END:VCALENDAR`;
                 plans={subscriptionPlans}
               />
             ) : bookingTab === 'packages' ? (
-              /* Packages Tab */
-              <div className="space-y-3">
-                {packages.map((pkg: any) => (
-                  <button
-                    key={pkg.id}
-                    onClick={() => handlePackageSelect(pkg)}
-                    className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Package className="h-4 w-4 text-emerald-400 shrink-0" />
-                          <h3 className="font-medium group-hover:text-white transition-colors">{pkg.name}</h3>
+              /* Packages Tab — purchase without forced booking */
+              purchasingPackage ? (
+                <PackagePurchaseFlow
+                  tenant={tenant}
+                  pkg={purchasingPackage}
+                  onSuccess={() => { setPurchasingPackage(null); }}
+                  onCancel={() => setPurchasingPackage(null)}
+                  onScheduleNow={() => {
+                    // After purchase, go to service selection with first service of package
+                    const firstSvc = purchasingPackage.package_services?.[0];
+                    if (firstSvc) {
+                      setPurchasingPackage(null);
+                      handleServiceSelect(firstSvc.service_id);
+                    } else {
+                      setPurchasingPackage(null);
+                    }
+                  }}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {packages.map((pkg: any) => (
+                    <button
+                      key={pkg.id}
+                      onClick={() => setPurchasingPackage(pkg)}
+                      className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Package className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <h3 className="font-medium group-hover:text-white transition-colors">{pkg.name}</h3>
+                          </div>
+                          <div className="space-y-1">
+                            {(pkg.package_services || []).map((ps: any) => (
+                              <div key={ps.id || ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shrink-0" />
+                                <span className="truncate">{ps.service?.name}</span>
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{ps.sessions_count}x</Badge>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          {(pkg.package_services || []).map((ps: any) => (
-                            <div key={ps.id || ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shrink-0" />
-                              <span className="truncate">{ps.service?.name}</span>
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{ps.sessions_count}x</Badge>
-                            </div>
-                          ))}
-                        </div>
+                        <span className="font-semibold text-emerald-400 whitespace-nowrap text-lg">
+                          R$ {(pkg.price_cents / 100).toFixed(0)}
+                        </span>
                       </div>
-                      <span className="font-semibold text-emerald-400 whitespace-nowrap text-lg">
-                        R$ {(pkg.price_cents / 100).toFixed(0)}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </button>
+                  ))}
+                </div>
+              )
             ) : null}
           </div>
         )}

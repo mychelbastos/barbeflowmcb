@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
+import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pause, XCircle, UserPlus } from "lucide-react";
+import { Loader2, Pause, XCircle, UserPlus, Calendar } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -30,6 +31,7 @@ const statusLabels: Record<string, string> = {
 export function SubscribersList() {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
+  const { openBookingModal } = useBookingModal();
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,6 +174,14 @@ export function SubscribersList() {
                 )}
               </div>
               <div className="flex items-center gap-1">
+                {(sub.status === 'active' || sub.status === 'authorized') && (
+                  <Button variant="ghost" size="sm" title="Agendar" onClick={() => openBookingModal({
+                    customerSubscriptionId: sub.id,
+                    preselectedCustomerId: sub.customer_id,
+                  })}>
+                    <Calendar className="h-3.5 w-3.5 text-emerald-400" />
+                  </Button>
+                )}
                 {sub.status === 'active' && (
                   <>
                     <Button variant="ghost" size="sm" onClick={() => handlePause(sub)}>
