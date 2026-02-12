@@ -27,7 +27,9 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
 // Fallback price IDs (test mode)
 const FALLBACK_PRICES: Record<string, string> = {
   STRIPE_PRICE_ESSENCIAL_MONTHLY: "price_1T05HMCxw1gIFu9gYyzo61F3",
+  STRIPE_PRICE_ESSENCIAL_YEARLY: "price_1T05VNCxw1gIFu9gm1teleab",
   STRIPE_PRICE_PROFISSIONAL_MONTHLY: "price_1T05HvCxw1gIFu9guQDhSvfs",
+  STRIPE_PRICE_PROFISSIONAL_YEARLY: "price_1T05W3Cxw1gIFu9gKCNzmSvM",
 };
 
 serve(async (req) => {
