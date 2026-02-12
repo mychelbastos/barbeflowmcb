@@ -64,6 +64,7 @@ serve(async (req) => {
       const evolutionUrl = `${EVOLUTION_API_URL}/message/sendWhatsAppAudio/${connection.evolution_instance_name}`;
       console.log("Sending audio to Evolution:", evolutionUrl);
 
+      // Evolution API expects raw base64 string for audio
       const evolutionResponse = await fetch(evolutionUrl, {
         method: "POST",
         headers: {
@@ -72,7 +73,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           number: formattedPhone,
-          audio: `data:${media_type || "audio/ogg; codecs=opus"};base64,${audio_base64}`,
+          audio: audio_base64,
+          encoding: true,
         }),
       });
 
