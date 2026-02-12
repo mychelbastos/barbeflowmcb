@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -75,6 +76,7 @@ interface NavItem {
   title: string;
   url: string;
   icon: any;
+  statusDot?: boolean; // show a connected/disconnected dot
   children?: { title: string; url: string; icon: any }[];
 }
 
@@ -111,7 +113,7 @@ const baseNavigationItems: NavItem[] = [
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
     ]
   },
-  { title: "WhatsApp", url: "/app/whatsapp/inbox", icon: MessageCircle },
+  { title: "WhatsApp", url: "/app/whatsapp", icon: MessageCircle, statusDot: true },
   { title: "Configurações", url: "/app/settings", icon: Settings },
 ];
 
@@ -131,7 +133,7 @@ const applyDashPath = (items: NavItem[]): NavItem[] => items.map(item => ({
 const navigationItems = applyDashPath(baseNavigationItems);
 const bottomTabItems = baseBottomTabItems.map(item => ({ ...item, url: dashPath(item.url) }));
 
-function NavItemLink({ item, isActive, onClick }: { item: { title: string; url: string; icon: any }; isActive: boolean; onClick?: () => void }) {
+function NavItemLink({ item, isActive, onClick, statusDot }: { item: { title: string; url: string; icon: any }; isActive: boolean; onClick?: () => void; statusDot?: 'connected' | 'disconnected' | null }) {
   return (
     <NavLink
       to={item.url}
@@ -157,7 +159,10 @@ function NavItemLink({ item, isActive, onClick }: { item: { title: string; url: 
         <item.icon className={`h-4 w-4 transition-colors duration-500 ${isActive ? 'text-emerald-400' : 'text-zinc-600 group-hover:text-zinc-400'}`} />
       </motion.div>
       <span className="text-sm font-medium relative z-10">{item.title}</span>
-      {isActive && (
+      {statusDot && (
+        <span className={`relative z-10 ml-auto w-2 h-2 rounded-full ${statusDot === 'connected' ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+      )}
+      {!statusDot && isActive && (
         <motion.div 
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -204,6 +209,7 @@ function AppSidebar() {
   const { currentTenant } = useTenant();
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const waConnected = useWhatsAppStatus();
 
   return (
     <Sidebar className="border-r border-zinc-800/30 bg-zinc-950/80 backdrop-blur-xl">
@@ -249,7 +255,11 @@ function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <NavItemLink item={item} isActive={isActive} />
+                      <NavItemLink 
+                        item={item} 
+                        isActive={isActive} 
+                        statusDot={item.statusDot ? (waConnected ? 'connected' : 'disconnected') : null}
+                      />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -303,6 +313,7 @@ function MobileDrawer() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { currentTenant } = useTenant();
+  const waConnected = useWhatsAppStatus();
 
   return (
     <Drawer open={open} onOpenChange={setOpen}>
@@ -378,7 +389,10 @@ function MobileDrawer() {
                 >
                   <item.icon className="h-4 w-4" />
                   <span className="text-sm font-medium">{item.title}</span>
-                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                  {item.statusDot && (
+                    <span className={`ml-auto w-2 h-2 rounded-full ${waConnected ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                  )}
+                  {!item.statusDot && isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                 </NavLink>
               );
             })}

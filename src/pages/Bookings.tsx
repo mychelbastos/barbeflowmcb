@@ -716,8 +716,8 @@ export default function Bookings() {
                     type="button"
                     onClick={() => {
                       const digits = selectedBooking.customer.phone.replace(/\D/g, '');
-                      const remoteJid = `${digits.startsWith('55') ? digits : '55' + digits}@s.whatsapp.net`;
-                      navigate(`/app/whatsapp/inbox?contact=${encodeURIComponent(remoteJid)}`);
+                      const phone = digits.startsWith('55') ? digits : '55' + digits;
+                      window.open(`https://web.whatsapp.com/send?phone=${phone}`, '_blank');
                     }}
                   >
                     <MessageCircle className="h-4 w-4 mr-1 text-emerald-500" /> WhatsApp

@@ -19,7 +19,7 @@ import Services from "./pages/Services";
 import Staff from "./pages/Staff";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
-import WhatsAppInbox from "./pages/WhatsAppInbox";
+import WhatsAppConfig from "./pages/WhatsAppConfig";
 import Products from "./pages/Products";
 import RecurringClients from "./pages/RecurringClients";
 import BookingPublic from "./pages/BookingPublic";
@@ -85,7 +85,7 @@ const App = () => (
                   <Route path="finance" element={<Finance />} />
                   <Route path="commissions" element={<CommissionsPage />} />
                   <Route path="products" element={<Products />} />
-                  <Route path="whatsapp/inbox" element={<WhatsAppInbox />} />
+                  <Route path="whatsapp" element={<WhatsAppConfig />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>
               </>
