@@ -101,6 +101,12 @@ const BookingPublic = () => {
   
   // Benefits map for service cards display
   const [benefitsMap, setBenefitsMap] = useState<Map<string, any>>(new Map());
+  
+  // Early identification
+  const [earlyPhone, setEarlyPhone] = useState('');
+  const [earlyIdentified, setEarlyIdentified] = useState(false);
+  const [earlyIdentifiedName, setEarlyIdentifiedName] = useState('');
+  const [earlyLoading, setEarlyLoading] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -580,7 +586,47 @@ const BookingPublic = () => {
     setCustomerFound(false);
     setActiveSubscription(null);
     setSubscriptionCoveredService(false);
+    setEarlyPhone('');
+    setEarlyIdentified(false);
+    setEarlyIdentifiedName('');
+    setBenefitsMap(new Map());
     setStep(1);
+  };
+
+  // Early identification: lookup customer and load benefits for service badges
+  const handleEarlyIdentification = async (phoneValue: string) => {
+    const digits = phoneValue.replace(/\D/g, '');
+    if (digits.length < 10 || !tenant) return;
+    
+    setEarlyLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('public-customer-bookings', {
+        body: { action: 'lookup', phone: digits, tenant_id: tenant.id },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.found && data.customer) {
+        setEarlyIdentified(true);
+        setEarlyIdentifiedName(data.customer.name);
+        // Pre-fill contact info for later
+        setCustomerPhone(phoneValue);
+        setCustomerName(data.customer.name);
+        setCustomerEmail(data.customer.email || '');
+        setCustomerBirthday(data.customer.birthday || '');
+        setCustomerFound(true);
+        // Fetch benefits to show badges
+        await fetchCustomerBenefits(digits);
+      } else {
+        setEarlyIdentified(false);
+        setEarlyIdentifiedName('');
+        setBenefitsMap(new Map());
+      }
+    } catch (err) {
+      console.error('Error in early identification:', err);
+    } finally {
+      setEarlyLoading(false);
+    }
   };
 
   // Format phone for display
@@ -1040,6 +1086,68 @@ END:VCALENDAR`;
               </div>
             ) : bookingTab === 'services' ? (
               <div className="space-y-3">
+                {/* Early phone identification */}
+                <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  {earlyIdentified ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <Check className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">Olá, {earlyIdentifiedName}!</p>
+                          <p className="text-xs text-zinc-500">Seus benefícios estão visíveis abaixo</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEarlyPhone('');
+                          setEarlyIdentified(false);
+                          setEarlyIdentifiedName('');
+                          setBenefitsMap(new Map());
+                          setCustomerFound(false);
+                        }}
+                        className="text-xs text-zinc-500 hover:text-zinc-300 underline"
+                      >
+                        Trocar
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs text-zinc-400 mb-2">
+                        <User className="h-3 w-3 inline mr-1" />
+                        Já é cliente? Informe seu telefone para ver seus benefícios
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="(11) 99999-9999"
+                          value={earlyPhone}
+                          onChange={(e) => {
+                            const formatted = formatPhoneInput(e.target.value);
+                            setEarlyPhone(formatted);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleEarlyIdentification(earlyPhone);
+                            }
+                          }}
+                          className="bg-zinc-800 border-zinc-700 text-white text-sm h-9"
+                          maxLength={15}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEarlyIdentification(earlyPhone)}
+                          disabled={earlyLoading || earlyPhone.replace(/\D/g, '').length < 10}
+                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 h-9 px-3 shrink-0"
+                        >
+                          {earlyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Buscar'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {services.map((service) => (
                   <button
                     key={service.id}
@@ -1063,9 +1171,15 @@ END:VCALENDAR`;
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="font-medium mb-1 group-hover:text-white transition-colors">{service.name}</h3>
-                          <span className="font-semibold text-emerald-400 whitespace-nowrap">
-                            R$ {(service.price_cents / 100).toFixed(2)}
-                          </span>
+                          {benefitsMap.has(service.id) ? (
+                            <span className="font-semibold text-amber-400 whitespace-nowrap text-xs">
+                              R$ 0,00
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-emerald-400 whitespace-nowrap">
+                              R$ {(service.price_cents / 100).toFixed(2)}
+                            </span>
+                          )}
                         </div>
                         <p className="text-zinc-500 text-sm line-clamp-2 mb-2">{service.description}</p>
                         <div className="flex items-center gap-3 text-xs text-zinc-600">
@@ -1075,10 +1189,12 @@ END:VCALENDAR`;
                           </span>
                         </div>
                         {benefitsMap.has(service.id) && (
-                          <BenefitBadge
-                            type={benefitsMap.get(service.id).type}
-                            remaining={benefitsMap.get(service.id).remaining}
-                          />
+                          <div className="mt-2">
+                            <BenefitBadge
+                              type={benefitsMap.get(service.id).type}
+                              remaining={benefitsMap.get(service.id).remaining}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
