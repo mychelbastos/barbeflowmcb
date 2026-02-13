@@ -486,12 +486,22 @@ const BookingPublic = () => {
       });
       const todayStr = new Date().toISOString().split('T')[0];
       (benefitsData.subscriptions || []).forEach((sub: any) => {
+        // First, map services from usage records (active period)
+        const usageMapped = new Set<string>();
         (sub.usage || []).forEach((u: any) => {
           if (u.period_start <= todayStr && u.period_end >= todayStr) {
+            usageMapped.add(u.service_id);
             const remaining = u.sessions_limit === null ? null : u.sessions_limit - u.sessions_used;
             if (remaining === null || remaining > 0) {
-              map.set(u.service_id, { type: 'subscription' as const, remaining, limit: u.sessions_limit, customerSubscriptionId: sub.id });
+              map.set(u.service_id, { type: 'subscription' as const, remaining, limit: u.sessions_limit, used: u.sessions_used, customerSubscriptionId: sub.id });
             }
+          }
+        });
+        // Then, map plan_services that don't have usage records yet (no bookings made)
+        (sub.plan_services || []).forEach((ps: any) => {
+          if (!usageMapped.has(ps.service_id) && !map.has(ps.service_id)) {
+            const limit = ps.sessions_per_cycle ?? null;
+            map.set(ps.service_id, { type: 'subscription' as const, remaining: limit, limit, used: 0, customerSubscriptionId: sub.id });
           }
         });
       });
@@ -1091,15 +1101,15 @@ END:VCALENDAR`;
                             <Check className="h-4 w-4 text-emerald-400" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white">
-                              {earlyIdentifiedName ? `Olá, ${earlyIdentifiedName}!` : 'Telefone registrado!'}
+                          <p className="text-sm font-medium text-white">
+                              {earlyIdentifiedName ? `Olá, ${earlyIdentifiedName}!` : 'Bem-vindo!'}
                             </p>
                             <p className="text-xs text-zinc-500">
                               {earlyIdentifiedName 
                                 ? (benefitsMap.size > 0 
                                     ? 'Seus benefícios estão visíveis abaixo' 
                                     : 'Nenhum pacote ou assinatura ativa')
-                                : 'Novo por aqui? Preencha seus dados ao finalizar'}
+                                : 'Primeira vez? Seus dados serão preenchidos ao finalizar'}
                             </p>
                           </div>
                         </div>
