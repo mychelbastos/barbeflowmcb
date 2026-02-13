@@ -589,20 +589,20 @@ export function BookingModal() {
                           <button
                             key={c.id}
                             type="button"
-                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors"
+                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors group"
                             onClick={() => selectCustomer(c)}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-medium text-foreground truncate">{c.name}</span>
                               <div className="flex items-center gap-1 shrink-0">
                                 {c.benefits?.hasSubscription && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20 group-hover:bg-white/90 group-hover:text-violet-700 group-hover:border-violet-300">
                                     <Repeat className="h-2.5 w-2.5 mr-0.5" />
                                     {c.benefits.subscriptionName || 'Assinatura'}
                                   </Badge>
                                 )}
                                 {c.benefits?.hasPackage && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-400 border-amber-500/20">
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 group-hover:bg-white/90 group-hover:text-amber-700 group-hover:border-amber-300">
                                     <Package className="h-2.5 w-2.5 mr-0.5" />
                                     {c.benefits.packageCount}x Pacote
                                   </Badge>
