@@ -269,9 +269,9 @@ export function ServicePackagesTab() {
           <p className="text-xs text-muted-foreground mt-1">Crie pacotes como "10 cortes + 5 barbas por R$350"</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ overflow: 'hidden' }}>
           {packages.map((pkg) => (
-            <Card key={pkg.id} className={!pkg.active ? "opacity-50" : ""}>
+            <Card key={pkg.id} className={`overflow-hidden ${!pkg.active ? "opacity-50" : ""}`}>
               {pkg.photo_url && (
                 <div className="h-28 w-full overflow-hidden rounded-t-lg">
                   <img src={pkg.photo_url} alt={pkg.name} className="w-full h-full object-cover" />
@@ -288,7 +288,7 @@ export function ServicePackagesTab() {
                         </Badge>
                       )}
                     </div>
-                    <span className="text-sm font-semibold text-emerald-400">
+                    <span className="text-sm font-semibold text-primary">
                       R$ {(pkg.price_cents / 100).toFixed(2)}
                     </span>
                   </div>
@@ -315,7 +315,7 @@ export function ServicePackagesTab() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 pt-2 border-t border-border">
+                <div className="flex items-center flex-wrap gap-1 pt-2 border-t border-border">
                   <AiGenerateImageButton
                     table="service_packages"
                     itemId={pkg.id}
