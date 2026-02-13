@@ -89,7 +89,7 @@ export default function RecurringClients() {
     if (!currentTenant) return;
     try {
       setLoading(true);
-      const [recRes, staffRes, svcRes, custRes] = await Promise.all([
+      const [recRes, staffRes, svcRes, custRes, pkgRes, subRes] = await Promise.all([
         supabase
           .from("recurring_clients")
           .select("*, customer:customers(name, phone)")
@@ -113,12 +113,32 @@ export default function RecurringClients() {
           .select("id, name, phone")
           .eq("tenant_id", currentTenant.id)
           .order("name"),
+        supabase
+          .from("customer_packages")
+          .select("customer_id")
+          .eq("tenant_id", currentTenant.id)
+          .eq("status", "active"),
+        supabase
+          .from("customer_subscriptions")
+          .select("customer_id")
+          .eq("tenant_id", currentTenant.id)
+          .in("status", ["active", "authorized"]),
       ]);
       if (recRes.error) throw recRes.error;
       if (staffRes.error) throw staffRes.error;
       if (svcRes.error) throw svcRes.error;
       if (custRes.error) throw custRes.error;
-      setRecords((recRes.data as any) || []);
+
+      const packageCustomerIds = new Set((pkgRes.data || []).map((r: any) => r.customer_id));
+      const subscriptionCustomerIds = new Set((subRes.data || []).map((r: any) => r.customer_id));
+
+      const enrichedRecords = ((recRes.data as any) || []).map((r: any) => ({
+        ...r,
+        hasPackage: packageCustomerIds.has(r.customer_id),
+        hasSubscription: subscriptionCustomerIds.has(r.customer_id),
+      }));
+
+      setRecords(enrichedRecords);
       setStaff(staffRes.data || []);
       setServices(svcRes.data || []);
       setCustomers(custRes.data || []);
@@ -418,6 +438,16 @@ export default function RecurringClients() {
                       <Badge variant={r.active ? "default" : "secondary"} className="text-xs">
                         {r.active ? "Ativo" : "Inativo"}
                       </Badge>
+                      {(r as any).hasPackage && (
+                        <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/30">
+                          Pacote
+                        </Badge>
+                      )}
+                      {(r as any).hasSubscription && (
+                        <Badge variant="secondary" className="text-[10px] h-5 bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-500 dark:border-violet-500/30">
+                          Assinatura
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap mt-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
