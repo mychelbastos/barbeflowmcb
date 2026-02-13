@@ -9,7 +9,7 @@ All colors MUST be HSL.
 @layer base {
   /* Light Theme (default) */
   :root {
-    --background: 0 0% 98%;
+    --background: 0 0% 100%;
     --foreground: 240 10% 10%;
 
     --card: 0 0% 100%;
@@ -23,22 +23,22 @@ All colors MUST be HSL.
     --primary-foreground: 0 0% 10%;
     --primary-hover: 45 100% 45%;
 
-    --secondary: 240 5% 92%;
+    --secondary: 240 5% 96%;
     --secondary-foreground: 240 6% 10%;
-    --secondary-hover: 240 5% 88%;
+    --secondary-hover: 240 5% 92%;
 
     --accent: 45 100% 50%;
     --accent-foreground: 0 0% 10%;
     --accent-hover: 45 100% 45%;
 
-    --muted: 240 5% 92%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 40%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 6% 85%;
-    --input: 240 6% 85%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
     --ring: 45 100% 50%;
 
     /* Success */
@@ -52,22 +52,22 @@ All colors MUST be HSL.
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(45 100% 50%), hsl(45 100% 60%));
     --gradient-accent: linear-gradient(135deg, hsl(45 100% 50%), hsl(45 100% 60%));
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 98%) 0%, hsl(0 0% 94%) 50%, hsl(45 100% 50%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 50%, hsl(45 100% 50%) 100%);
 
     /* Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.08);
-    --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.12);
-    --shadow-large: 0 8px 32px -8px hsl(0 0% 0% / 0.16);
-    --shadow-accent: 0 4px 16px -4px hsl(45 100% 50% / 0.2);
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.05);
+    --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.08);
+    --shadow-large: 0 8px 32px -8px hsl(0 0% 0% / 0.12);
+    --shadow-accent: 0 4px 16px -4px hsl(45 100% 50% / 0.15);
     --shadow-glow-primary: 0 0 20px -4px hsl(45 100% 50% / 0.15);
     --shadow-glow-blue: 0 0 20px -4px hsl(217 91% 60% / 0.12);
     --shadow-glow-violet: 0 0 20px -4px hsl(263 70% 50% / 0.12);
     --shadow-glow-amber: 0 0 20px -4px hsl(38 92% 50% / 0.12);
 
     /* Glass */
-    --glass-bg: hsl(0 0% 100% / 0.7);
-    --glass-border: hsl(240 6% 85% / 0.5);
-    --glass-hover: hsl(0 0% 96% / 0.8);
+    --glass-bg: hsl(0 0% 100% / 0.8);
+    --glass-border: hsl(240 6% 90% / 0.5);
+    --glass-hover: hsl(0 0% 98% / 0.9);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -75,13 +75,13 @@ All colors MUST be HSL.
 
     --radius: 12px;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 6% 25%;
     --sidebar-primary: 45 100% 50%;
     --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 240 5% 94%;
+    --sidebar-accent: 240 5% 96%;
     --sidebar-accent-foreground: 240 6% 25%;
-    --sidebar-border: 240 6% 88%;
+    --sidebar-border: 240 6% 92%;
     --sidebar-ring: 45 100% 50%;
 
     /* Chart colors */
