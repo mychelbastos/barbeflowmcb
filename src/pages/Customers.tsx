@@ -812,7 +812,7 @@ export default function Customers() {
                 </TabsContent>
 
                 <TabsContent value="balance" className="mt-4">
-                  <CustomerBalanceTab customerId={selectedCustomer.id} customerName={selectedCustomer.name} />
+                  <CustomerBalanceTab customerId={selectedCustomer.id} />
                 </TabsContent>
               </Tabs>
             </div>

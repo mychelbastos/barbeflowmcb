@@ -701,8 +701,6 @@ export default function Staff() {
         <StaffScheduleManager
           staffId={selectedStaffForSchedule.id}
           staffName={selectedStaffForSchedule.name}
-          open={showScheduleDialog}
-          onOpenChange={setShowScheduleDialog}
         />
       )}
     </div>
