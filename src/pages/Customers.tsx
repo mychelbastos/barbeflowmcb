@@ -157,7 +157,7 @@ export default function Customers() {
         query = query.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
       }
 
-      const [customersResult, recurringResult, packageResult] = await Promise.all([
+      const [customersResult, recurringResult, packageResult, subscriptionResult] = await Promise.all([
         query,
         supabase
           .from('recurring_clients')
@@ -168,7 +168,12 @@ export default function Customers() {
           .from('customer_packages')
           .select('customer_id')
           .eq('tenant_id', currentTenant.id)
-          .eq('status', 'active')
+          .eq('status', 'active'),
+        supabase
+          .from('customer_subscriptions')
+          .select('customer_id')
+          .eq('tenant_id', currentTenant.id)
+          .in('status', ['active', 'authorized'])
       ]);
 
       if (customersResult.error) throw customersResult.error;
@@ -180,6 +185,9 @@ export default function Customers() {
       );
       const packageCustomerIds = new Set(
         (packageResult.data || []).map((r: any) => r.customer_id)
+      );
+      const subscriptionCustomerIds = new Set(
+        (subscriptionResult.data || []).map((r: any) => r.customer_id)
       );
 
       // Get stats in bulk with a single RPC call
@@ -201,6 +209,7 @@ export default function Customers() {
           lastVisit: stats?.last_visit ? new Date(stats.last_visit) : null,
           isRecurring: recurringCustomerIds.has(customer.id),
           hasPackage: packageCustomerIds.has(customer.id),
+          hasSubscription: subscriptionCustomerIds.has(customer.id),
         };
       });
 
@@ -545,8 +554,13 @@ export default function Customers() {
                           </Badge>
                         )}
                         {customer.hasPackage && (
-                          <Badge variant="secondary" className="text-[10px] h-5 bg-amber-500/10 text-amber-500 border-amber-200 dark:border-amber-500/30">
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/30">
                             Pacote
+                          </Badge>
+                        )}
+                        {customer.hasSubscription && (
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-500 dark:border-violet-500/30">
+                            Assinatura
                           </Badge>
                         )}
                       </div>
