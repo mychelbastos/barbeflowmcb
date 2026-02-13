@@ -23,7 +23,6 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
   const { dayCountMap, maxCount, totalBookings } = useMemo(() => {
     const map = new Map<string, number>();
     let total = 0;
-    // Count bookings for the entire displayed month, not just the selected range
     const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
     monthDays.forEach(day => {
       const key = format(day, "yyyy-MM-dd");
@@ -50,16 +49,16 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
       className="rounded-2xl glass-panel overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 md:px-5 py-3 border-b border-zinc-800/30">
+      <div className="flex items-center justify-between px-4 md:px-5 py-3 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-            <CalendarDays className="h-4 w-4 text-emerald-400" />
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <CalendarDays className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-zinc-100 tracking-tight capitalize">
+            <h3 className="text-sm font-bold text-foreground tracking-tight capitalize">
               {format(referenceDate, "MMMM yyyy", { locale: ptBR })}
             </h3>
-            <p className="text-[10px] text-zinc-600">{totalBookings} agendamentos no período</p>
+            <p className="text-[10px] text-muted-foreground">{totalBookings} agendamentos no período</p>
           </div>
         </div>
       </div>
@@ -69,7 +68,7 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
         {/* Weekday headers */}
         <div className="grid grid-cols-7 mb-1.5">
           {WEEKDAYS.map((d, i) => (
-            <div key={i} className="text-center text-[10px] font-bold text-zinc-600 uppercase tracking-wider py-1">
+            <div key={i} className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider py-1">
               {d}
             </div>
           ))}
@@ -95,31 +94,31 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
                   !isCurrentMonth
                     ? "opacity-20"
                     : isToday
-                    ? "ring-1 ring-emerald-500/40"
+                    ? "ring-1 ring-primary/40"
                     : ""
-                } ${inRange ? "bg-zinc-800/20" : ""}`}
+                } ${inRange ? "bg-muted/30" : ""}`}
               >
                 {/* Background intensity indicator */}
                 {count > 0 && isCurrentMonth && (
                   <div
-                    className="absolute inset-0 rounded-lg bg-emerald-500 transition-opacity"
+                    className="absolute inset-0 rounded-lg bg-primary transition-opacity"
                     style={{ opacity: intensity * 0.25 }}
                   />
                 )}
 
                 <span className={`relative text-[11px] font-semibold leading-none ${
                   isToday
-                    ? "text-emerald-400 font-bold"
+                    ? "text-primary font-bold"
                     : isCurrentMonth
-                    ? "text-zinc-300"
-                    : "text-zinc-700"
+                    ? "text-foreground"
+                    : "text-muted-foreground"
                 }`}>
                   {format(day, "d")}
                 </span>
 
                 {count > 0 && isCurrentMonth && (
                   <span className={`relative text-[8px] font-bold leading-none mt-0.5 ${
-                    isToday ? "text-emerald-400" : "text-emerald-500/70"
+                    isToday ? "text-primary" : "text-primary/70"
                   }`}>
                     {count}
                   </span>
@@ -130,16 +129,16 @@ export function WeeklyBarChart({ bookings, dateRange }: WeeklyBarChartProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-zinc-800/20">
-          <span className="text-[9px] text-zinc-600">Menos</span>
+        <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-border">
+          <span className="text-[9px] text-muted-foreground">Menos</span>
           {[0.05, 0.1, 0.15, 0.2, 0.25].map((opacity, i) => (
             <div
               key={i}
-              className="w-3 h-3 rounded-[3px] bg-emerald-500"
+              className="w-3 h-3 rounded-[3px] bg-primary"
               style={{ opacity: opacity + 0.05 }}
             />
           ))}
-          <span className="text-[9px] text-zinc-600">Mais</span>
+          <span className="text-[9px] text-muted-foreground">Mais</span>
         </div>
       </div>
     </motion.div>

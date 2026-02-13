@@ -28,19 +28,19 @@ const SLOT_HEIGHT = 48;
 const statusColors: Record<string, string> = {
   confirmed: "from-emerald-500/80 to-emerald-600/60 border-emerald-400/30",
   completed: "from-blue-500/80 to-blue-600/60 border-blue-400/30",
-  pending: "from-zinc-500/60 to-zinc-600/40 border-zinc-400/20",
+  pending: "from-gray-500/60 to-gray-600/40 border-gray-400/20",
   cancelled: "from-red-500/60 to-red-600/40 border-red-400/20",
   no_show: "from-amber-500/60 to-amber-600/40 border-amber-400/20",
   recurring: "from-violet-500/80 to-violet-600/60 border-violet-400/30",
 };
 
 const statusBadge: Record<string, { label: string; cls: string }> = {
-  confirmed: { label: "Confirmado", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  completed: { label: "Concluído", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  pending: { label: "Pendente", cls: "bg-zinc-800/60 text-zinc-400 border-zinc-700/30" },
-  cancelled: { label: "Cancelado", cls: "bg-red-500/10 text-red-400 border-red-500/20" },
-  no_show: { label: "Faltou", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-  recurring: { label: "Fixo", cls: "bg-violet-500/10 text-violet-400 border-violet-500/20" },
+  confirmed: { label: "Confirmado", cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
+  completed: { label: "Concluído", cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+  pending: { label: "Pendente", cls: "bg-muted text-muted-foreground border-border" },
+  cancelled: { label: "Cancelado", cls: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20" },
+  no_show: { label: "Faltou", cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+  recurring: { label: "Fixo", cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20" },
 };
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -64,8 +64,8 @@ function MobileScheduleList({ bookings, dateRange, onSelectBooking }: WeeklySche
     <div className="p-3 space-y-1">
       {!hasAny ? (
         <div className="text-center py-12">
-          <Calendar className="h-6 w-6 text-zinc-700 mx-auto mb-3" />
-          <p className="text-sm text-zinc-500">Nenhum agendamento na semana</p>
+          <Calendar className="h-6 w-6 text-muted-foreground/50 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhum agendamento na semana</p>
         </div>
       ) : (
         daysWithBookings.map(({ day, bookings: dayBookings }) => {
@@ -76,25 +76,25 @@ function MobileScheduleList({ bookings, dateRange, onSelectBooking }: WeeklySche
               <div className="flex items-center gap-2.5 px-2 py-2">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm ${
                   isToday
-                    ? "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-sm shadow-emerald-500/20"
-                    : "bg-zinc-800/40 text-zinc-400"
+                    ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground"
                 }`}>
                   {format(day, "dd")}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold capitalize ${isToday ? "text-emerald-400" : "text-zinc-300"}`}>
+                  <p className={`text-sm font-semibold capitalize ${isToday ? "text-primary" : "text-foreground"}`}>
                     {format(day, "EEEE", { locale: ptBR })}
                   </p>
-                  <p className="text-[10px] text-zinc-600">{format(day, "dd 'de' MMMM", { locale: ptBR })}</p>
+                  <p className="text-[10px] text-muted-foreground">{format(day, "dd 'de' MMMM", { locale: ptBR })}</p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  isToday ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-zinc-800/40 text-zinc-500"
+                  isToday ? "bg-primary/10 text-primary border border-primary/20" : "bg-muted text-muted-foreground"
                 }`}>
                   {dayBookings.length}
                 </span>
               </div>
 
-              <div className="ml-4 border-l-2 border-zinc-800/30 pl-3 pb-2 space-y-1">
+              <div className="ml-4 border-l-2 border-border pl-3 pb-2 space-y-1">
                 {dayBookings.map((booking, idx) => {
                   const st = booking.is_recurring ? "recurring" : (booking.status || "pending");
                   const badge = statusBadge[st] || statusBadge.pending;
@@ -105,21 +105,21 @@ function MobileScheduleList({ bookings, dateRange, onSelectBooking }: WeeklySche
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: idx * 0.03, ease }}
                       onClick={() => onSelectBooking?.(booking)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer active:bg-zinc-800/30 transition-colors"
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer active:bg-muted/50 transition-colors"
                     >
                       <div
                         className="w-1 h-7 rounded-full flex-shrink-0"
                         style={{ backgroundColor: booking.service?.color || "#3B82F6" }}
                       />
                       <div className="flex items-center gap-1 w-12 flex-shrink-0">
-                        <Clock className="h-2.5 w-2.5 text-zinc-600" />
-                        <span className="text-[11px] font-mono font-semibold text-zinc-500">
+                        <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                        <span className="text-[11px] font-mono font-semibold text-muted-foreground">
                           {format(new Date(booking.starts_at), "HH:mm")}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-200 truncate">{booking.customer?.name}</p>
-                        <p className="text-[10px] text-zinc-600 truncate">{booking.service?.name}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{booking.customer?.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{booking.service?.name}</p>
                       </div>
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${badge.cls} flex-shrink-0`}>
                         {badge.label}
@@ -138,7 +138,6 @@ function MobileScheduleList({ bookings, dateRange, onSelectBooking }: WeeklySche
 
 // --- Desktop: full grid ---
 function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklyScheduleGridProps) {
-  // Limit to max 7 days to prevent horizontal overflow
   const MAX_DAYS = 7;
   const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
   const days = allDays.length > MAX_DAYS ? allDays.slice(-MAX_DAYS) : allDays;
@@ -165,22 +164,22 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
   return (
     <>
       {/* Day headers */}
-      <div className={`grid border-b border-zinc-800/30`} style={{ gridTemplateColumns: `50px repeat(${days.length}, 1fr)` }}>
+      <div className={`grid border-b border-border`} style={{ gridTemplateColumns: `50px repeat(${days.length}, 1fr)` }}>
         <div className="p-2" />
         {days.map((day) => {
           const isToday = checkIsToday(day);
           const dayKey = format(day, "yyyy-MM-dd");
           const count = bookingsByDay.get(dayKey)?.length || 0;
           return (
-            <div key={dayKey} className={`p-2 text-center border-l border-zinc-800/20 ${isToday ? "bg-emerald-500/[0.04]" : ""}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-emerald-400" : "text-zinc-600"}`}>
+            <div key={dayKey} className={`p-2 text-center border-l border-border/50 ${isToday ? "bg-primary/[0.04]" : ""}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? "text-primary" : "text-muted-foreground"}`}>
                 {format(day, "EEE", { locale: ptBR })}
               </p>
-              <p className={`text-lg font-bold ${isToday ? "text-emerald-400" : "text-zinc-300"}`}>
+              <p className={`text-lg font-bold ${isToday ? "text-primary" : "text-foreground"}`}>
                 {format(day, "dd")}
               </p>
               {count > 0 && (
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isToday ? "bg-emerald-500/15 text-emerald-400" : "bg-zinc-800/40 text-zinc-500"}`}>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${isToday ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {count}
                 </span>
               )}
@@ -195,7 +194,7 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
           {HOURS.map((hour) => (
             <div
               key={hour}
-              className="absolute left-0 right-0 flex items-start justify-end pr-2 text-[10px] font-mono text-zinc-600 font-semibold"
+              className="absolute left-0 right-0 flex items-start justify-end pr-2 text-[10px] font-mono text-muted-foreground font-semibold"
               style={{ top: (hour - 7) * SLOT_HEIGHT - 6 }}
             >
               {String(hour).padStart(2, "0")}:00
@@ -209,9 +208,9 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
           const isToday = checkIsToday(day);
 
           return (
-            <div key={dayKey} className={`relative border-l border-zinc-800/20 ${isToday ? "bg-emerald-500/[0.02]" : ""}`}>
+            <div key={dayKey} className={`relative border-l border-border/50 ${isToday ? "bg-primary/[0.02]" : ""}`}>
               {HOURS.map((hour) => (
-                <div key={hour} className="absolute left-0 right-0 border-t border-zinc-800/15" style={{ top: (hour - 7) * SLOT_HEIGHT }} />
+                <div key={hour} className="absolute left-0 right-0 border-t border-border/30" style={{ top: (hour - 7) * SLOT_HEIGHT }} />
               ))}
 
               {isToday && (() => {
@@ -220,8 +219,8 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
                 if (currentHour >= 7 && currentHour <= 21) {
                   return (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute left-0 right-0 z-20 flex items-center" style={{ top: (currentHour - 7) * SLOT_HEIGHT }}>
-                      <div className="w-2 h-2 rounded-full bg-emerald-400 -ml-1 shadow-lg shadow-emerald-500/30" />
-                      <div className="flex-1 h-[2px] bg-emerald-400/60" />
+                      <div className="w-2 h-2 rounded-full bg-primary -ml-1 shadow-lg shadow-primary/30" />
+                      <div className="flex-1 h-[2px] bg-primary/60" />
                     </motion.div>
                   );
                 }
@@ -260,21 +259,20 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
 export function WeeklyScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklyScheduleGridProps) {
   const isMobile = useIsMobile();
   
-  // For display: show at most last 7 days
   const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
   const displayFrom = allDays.length > 7 ? allDays[allDays.length - 7] : dateRange.from;
   const displayTo = dateRange.to;
 
   return (
     <div className="rounded-2xl glass-panel overflow-hidden">
-      <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-zinc-800/30">
+      <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-border">
         <div className="flex items-center gap-2.5 md:gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <Calendar className="h-4 w-4 text-blue-400" />
+            <Calendar className="h-4 w-4 text-blue-500" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-zinc-100 tracking-tight">Agenda Semanal</h2>
-            <p className="text-[11px] text-zinc-600">
+            <h2 className="text-sm font-bold text-foreground tracking-tight">Agenda Semanal</h2>
+            <p className="text-[11px] text-muted-foreground">
               {format(displayFrom, "dd/MM", { locale: ptBR })} — {format(displayTo, "dd/MM/yyyy", { locale: ptBR })}
             </p>
           </div>

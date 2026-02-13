@@ -136,7 +136,6 @@ const Dashboard = () => {
     }
   };
 
-  // Build all bookings including recurring virtual ones
   const allBookings = useMemo(() => {
     const virtualRecurring = recurringClients.flatMap(r => {
       const { from, to } = dateRange;
@@ -196,7 +195,7 @@ const Dashboard = () => {
       sub: loading ? "" : `${confirmedToday} confirmados`,
       icon: Calendar,
       gradient: "from-blue-500/20 to-blue-600/5",
-      iconColor: "text-blue-400",
+      iconColor: "text-blue-500",
       glowColor: "group-hover:shadow-blue-500/10",
       href: dashPath('/app/bookings'),
     },
@@ -216,7 +215,7 @@ const Dashboard = () => {
       sub: "na equipe",
       icon: Users,
       gradient: "from-violet-500/20 to-violet-600/5",
-      iconColor: "text-violet-400",
+      iconColor: "text-violet-500",
       glowColor: "group-hover:shadow-violet-500/10",
       href: dashPath('/app/staff'),
     },
@@ -226,20 +225,18 @@ const Dashboard = () => {
       sub: "no período",
       icon: TrendingUp,
       gradient: "from-amber-500/20 to-amber-600/5",
-      iconColor: "text-amber-400",
+      iconColor: "text-amber-500",
       glowColor: "group-hover:shadow-amber-500/10",
       href: dashPath('/app/finance'),
     },
   ];
 
-
-
   const statusConfig: Record<string, { label: string; className: string }> = {
-    confirmed: { label: 'Confirmado', className: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' },
-    completed: { label: 'Concluído', className: 'bg-blue-500/10 text-blue-400 border border-blue-500/20' },
-    cancelled: { label: 'Cancelado', className: 'bg-red-500/10 text-red-400 border border-red-500/20' },
-    no_show: { label: 'Faltou', className: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
-    pending: { label: 'Pendente', className: 'bg-zinc-800/60 text-zinc-400 border border-zinc-700/30' },
+    confirmed: { label: 'Confirmado', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
+    completed: { label: 'Concluído', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20' },
+    cancelled: { label: 'Cancelado', className: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20' },
+    no_show: { label: 'Faltou', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
+    pending: { label: 'Pendente', className: 'bg-muted text-muted-foreground border border-border' },
   };
 
   return (
@@ -267,19 +264,19 @@ const Dashboard = () => {
             <div className="relative p-4 md:p-5">
               <div className="flex items-start justify-between mb-3">
                 <motion.div
-                  className="w-10 h-10 rounded-xl bg-zinc-800/40 flex items-center justify-center backdrop-blur-sm"
+                  className="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center backdrop-blur-sm"
                   whileHover={{ scale: 1.15, rotate: 8 }}
                   transition={gentleSpring}
                 >
                   <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
                 </motion.div>
-                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors duration-500" />
+                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors duration-500" />
               </div>
-              <p className="text-2xl md:text-[28px] font-bold text-zinc-100 tracking-tight leading-none mb-1">
+              <p className="text-2xl md:text-[28px] font-bold text-foreground tracking-tight leading-none mb-1">
                 {card.value}
               </p>
-              <p className="text-xs text-zinc-500 font-medium">{card.label}</p>
-              {card.sub && <p className="text-[10px] text-zinc-600 mt-0.5 font-medium">{card.sub}</p>}
+              <p className="text-xs text-muted-foreground font-medium">{card.label}</p>
+              {card.sub && <p className="text-[10px] text-muted-foreground/70 mt-0.5 font-medium">{card.sub}</p>}
             </div>
           </motion.div>
         ))}
@@ -301,7 +298,7 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Right Column: Revenue Panel + Bar Chart + Quick Actions */}
+        {/* Right Column: Revenue Panel + Bar Chart */}
         <div className="space-y-4">
           {!loading && (
             <ClientRevenuePanel bookings={allBookings} totalRevenue={revenue} />
@@ -310,9 +307,6 @@ const Dashboard = () => {
           {!loading && (
             <WeeklyBarChart bookings={allBookings} dateRange={dateRange} />
           )}
-
-
-
         </div>
       </div>
 
@@ -321,12 +315,11 @@ const Dashboard = () => {
         <RevenueLineChart bookings={allBookings} dateRange={dateRange} />
       )}
 
-
       {/* Booking Detail Modal */}
       <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
-        <DialogContent className="sm:max-w-md glass-panel border-zinc-800/30 shadow-2xl shadow-black/40">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-zinc-100 text-base font-bold tracking-tight">Detalhes do Agendamento</DialogTitle>
+            <DialogTitle className="text-foreground text-base font-bold tracking-tight">Detalhes do Agendamento</DialogTitle>
           </DialogHeader>
           {selectedBooking && (
             <motion.div 
@@ -335,22 +328,22 @@ const Dashboard = () => {
               transition={{ duration: 0.5, ease }}
               className="space-y-4"
             >
-              <div className="p-4 rounded-xl bg-zinc-800/20 border border-zinc-800/30 space-y-3">
+              <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
-                    <User className="h-5 w-5 text-zinc-400" />
+                  <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center">
+                    <User className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="font-bold text-zinc-100">{selectedBooking.customer?.name}</p>
+                    <p className="font-bold text-foreground">{selectedBooking.customer?.name}</p>
                     {selectedBooking.is_recurring && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 mt-0.5 inline-block">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 mt-0.5 inline-block">
                         Cliente Fixo
                       </span>
                     )}
                   </div>
                 </div>
                 {selectedBooking.customer?.phone && (
-                  <div className="flex items-center gap-2 text-sm text-zinc-500">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Phone className="h-3.5 w-3.5" />
                     <span>{selectedBooking.customer.phone}</span>
                   </div>
@@ -365,18 +358,18 @@ const Dashboard = () => {
                   { icon: TrendingUp, label: "Valor", value: `R$ ${((selectedBooking.service?.price_cents || 0) / 100).toFixed(2)}`, highlight: true },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center justify-between py-1">
-                    <div className="flex items-center gap-2 text-sm text-zinc-500">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <item.icon className="h-3.5 w-3.5" />
                       <span>{item.label}</span>
                     </div>
-                    <span className={`text-sm font-semibold ${(item as any).highlight ? 'text-primary font-bold' : 'text-zinc-200'}`}>
+                    <span className={`text-sm font-semibold ${(item as any).highlight ? 'text-primary font-bold' : 'text-foreground'}`}>
                       {item.value}
                     </span>
                   </div>
                 ))}
                 {!selectedBooking.is_recurring && (
                   <div className="flex items-center justify-between py-1">
-                    <span className="text-sm text-zinc-500">Status</span>
+                    <span className="text-sm text-muted-foreground">Status</span>
                     {(() => {
                       const st = statusConfig[selectedBooking.status] || statusConfig.pending;
                       return (
@@ -388,9 +381,9 @@ const Dashboard = () => {
                   </div>
                 )}
                 {selectedBooking.notes && (
-                  <div className="pt-3 border-t border-zinc-800/30">
-                    <p className="text-[11px] text-zinc-600 mb-1 font-medium">Observações</p>
-                    <p className="text-sm text-zinc-300">{selectedBooking.notes}</p>
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-[11px] text-muted-foreground mb-1 font-medium">Observações</p>
+                    <p className="text-sm text-foreground/80">{selectedBooking.notes}</p>
                   </div>
                 )}
               </div>
