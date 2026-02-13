@@ -10,7 +10,7 @@ import {
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  completed: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
+  completed: 'bg-muted text-muted-foreground border-border',
 };
 
 const paymentColors: Record<string, string> = {

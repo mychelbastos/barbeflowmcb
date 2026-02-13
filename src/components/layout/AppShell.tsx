@@ -177,7 +177,7 @@ function NavItemLink({ item, isActive, onClick, statusDot }: { item: { title: st
       </motion.div>
       <span className="text-sm font-medium relative z-10">{item.title}</span>
       {statusDot && (
-        <span className={`relative z-10 ml-auto w-2 h-2 rounded-full ${statusDot === 'connected' ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+        <span className={`relative z-10 ml-auto w-2 h-2 rounded-full ${statusDot === 'connected' ? 'bg-emerald-400' : 'bg-muted-foreground/40'}`} />
       )}
       {!statusDot && isActive && (
         <motion.div 

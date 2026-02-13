@@ -16,7 +16,7 @@ const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   paused: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
-  expired: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
+  expired: 'bg-muted text-muted-foreground border-border',
 };
 
 const statusLabels: Record<string, string> = {
@@ -164,7 +164,7 @@ export function SubscribersList() {
       ) : (
         <div className="space-y-2">
           {filtered.map((sub) => (
-            <div key={sub.id} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/30">
+            <div key={sub.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm text-foreground truncate">{sub.customer?.name}</span>

@@ -187,27 +187,27 @@ export function CustomerBookingsModal({
       case 'confirmed': return 'bg-emerald-500/10 text-emerald-400';
       case 'pending': return 'bg-amber-500/10 text-amber-400';
       case 'pending_payment': return 'bg-blue-500/10 text-blue-400';
-      default: return 'bg-zinc-500/10 text-zinc-400';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-zinc-100">
+          <DialogTitle>
             {step === 'phone' ? 'Meus Agendamentos' : 'Seus Agendamentos'}
           </DialogTitle>
         </DialogHeader>
 
         {step === 'phone' && (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Digite seu número de celular para consultar seus agendamentos em {tenantName}.
             </p>
             
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">
+              <label className="block text-sm text-muted-foreground mb-2">
                 <Phone className="h-4 w-4 inline mr-1" />
                 Número do celular
               </label>
@@ -217,14 +217,14 @@ export function CustomerBookingsModal({
                 value={phone}
                 onChange={handlePhoneChange}
                 maxLength={15}
-                className="h-12 bg-zinc-800/50 border-zinc-700 rounded-xl placeholder:text-zinc-600"
+                className="h-12 rounded-xl"
               />
             </div>
 
             <Button
               onClick={handleSearch}
               disabled={loading || phone.replace(/\D/g, '').length < 10}
-              className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
+              className="w-full h-12 rounded-xl font-medium"
             >
               {loading ? (
                 <>
@@ -242,7 +242,7 @@ export function CustomerBookingsModal({
           <div className="space-y-4">
             <button
               onClick={() => setStep('phone')}
-              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               Trocar número
@@ -250,11 +250,11 @@ export function CustomerBookingsModal({
 
             {bookings.length === 0 ? (
               <div className="text-center py-8">
-                <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CalendarX className="h-8 w-8 text-zinc-600" />
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CalendarX className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium text-zinc-300 mb-2">Nenhum agendamento encontrado</h3>
-                <p className="text-sm text-zinc-500">
+                <h3 className="font-medium text-foreground mb-2">Nenhum agendamento encontrado</h3>
+                <p className="text-sm text-muted-foreground">
                   Não encontramos agendamentos futuros para este número.
                 </p>
               </div>
@@ -263,18 +263,18 @@ export function CustomerBookingsModal({
                 {bookings.map((booking) => (
                   <div
                     key={booking.id}
-                    className="p-4 bg-zinc-800/50 border border-zinc-700/50 rounded-xl"
+                    className="p-4 bg-muted/50 border border-border rounded-xl"
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <Scissors className="h-4 w-4 text-zinc-500" />
-                          <span className="font-medium text-zinc-100 truncate">
+                          <Scissors className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-foreground truncate">
                             {booking.service?.name || 'Serviço'}
                           </span>
                         </div>
                         {booking.staff?.name && (
-                          <div className="flex items-center gap-2 text-sm text-zinc-400">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <User className="h-3 w-3" />
                             {booking.staff.name}
                           </div>
@@ -285,7 +285,7 @@ export function CustomerBookingsModal({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-zinc-400 mb-3">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {formatBookingDate(booking.starts_at)}

@@ -409,8 +409,8 @@ export default function RecurringClients() {
             <Card key={r.id} className={!r.active ? "opacity-60" : ""}>
               <CardContent className="flex items-center justify-between p-4 gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${r.active ? "bg-emerald-500/10" : "bg-zinc-700/30"}`}>
-                    <UserCheck className={`h-5 w-5 ${r.active ? "text-emerald-500" : "text-zinc-500"}`} />
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${r.active ? "bg-emerald-500/10" : "bg-muted"}`}>
+                    <UserCheck className={`h-5 w-5 ${r.active ? "text-emerald-500" : "text-muted-foreground"}`} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
