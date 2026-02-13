@@ -55,6 +55,7 @@ interface CustomerSuggestion {
   name: string;
   phone: string;
   email: string | null;
+  benefits?: { hasSubscription: boolean; hasPackage: boolean; subscriptionName?: string; packageCount?: number };
 }
 
 interface AvailableSlot {
@@ -408,8 +409,51 @@ export function BookingModal() {
           .order('name')
           .limit(8);
         if (error) throw error;
-        setCustomerSuggestions(data || []);
-        setShowSuggestions((data || []).length > 0);
+        
+        const customers: CustomerSuggestion[] = data || [];
+        
+        // Enrich with benefit info
+        if (customers.length > 0) {
+          const customerIds = customers.map(c => c.id);
+          const now = new Date();
+          
+          const [subsRes, pkgsRes] = await Promise.all([
+            supabase
+              .from('customer_subscriptions')
+              .select('customer_id, status, started_at, current_period_start, current_period_end, plan:subscription_plans(name)')
+              .eq('tenant_id', currentTenant.id)
+              .in('customer_id', customerIds)
+              .in('status', ['active', 'authorized']),
+            supabase
+              .from('customer_packages')
+              .select('customer_id, status, payment_status')
+              .eq('tenant_id', currentTenant.id)
+              .in('customer_id', customerIds)
+              .eq('status', 'active')
+              .eq('payment_status', 'confirmed'),
+          ]);
+          
+          for (const c of customers) {
+            const activeSub = (subsRes.data || []).find(s => {
+              if (s.customer_id !== c.id) return false;
+              const start = s.current_period_start ? new Date(s.current_period_start) : (s.started_at ? new Date(s.started_at) : null);
+              if (!start) return false;
+              const end = s.current_period_end ? new Date(s.current_period_end) : new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+              return now <= end;
+            });
+            const pkgCount = (pkgsRes.data || []).filter(p => p.customer_id === c.id).length;
+            
+            c.benefits = {
+              hasSubscription: !!activeSub,
+              hasPackage: pkgCount > 0,
+              subscriptionName: activeSub ? (activeSub.plan as any)?.name : undefined,
+              packageCount: pkgCount,
+            };
+          }
+        }
+        
+        setCustomerSuggestions(customers);
+        setShowSuggestions(customers.length > 0);
       } catch (err) {
         console.error('Error searching customers:', err);
       } finally {
@@ -545,10 +589,26 @@ export function BookingModal() {
                           <button
                             key={c.id}
                             type="button"
-                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors flex flex-col"
+                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm transition-colors"
                             onClick={() => selectCustomer(c)}
                           >
-                            <span className="font-medium text-foreground">{c.name}</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium text-foreground truncate">{c.name}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {c.benefits?.hasSubscription && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                                    <Repeat className="h-2.5 w-2.5 mr-0.5" />
+                                    {c.benefits.subscriptionName || 'Assinatura'}
+                                  </Badge>
+                                )}
+                                {c.benefits?.hasPackage && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-400 border-amber-500/20">
+                                    <Package className="h-2.5 w-2.5 mr-0.5" />
+                                    {c.benefits.packageCount}x Pacote
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                             <span className="text-xs text-muted-foreground">{c.phone}{c.email ? ` · ${c.email}` : ''}</span>
                           </button>
                         ))}
