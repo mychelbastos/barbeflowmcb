@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -423,12 +423,12 @@ const Products = () => {
       </div>
 
       <Tabs defaultValue="products" className="space-y-6">
-        <TabsList className="bg-zinc-900/50 border border-zinc-800/50">
-          <TabsTrigger value="products" className="data-[state=active]:bg-zinc-800">
+        <TabsList className="bg-muted border border-border">
+          <TabsTrigger value="products" className="data-[state=active]:bg-background">
             <Package className="h-4 w-4 mr-2" />
             Produtos
           </TabsTrigger>
-          <TabsTrigger value="sales" className="data-[state=active]:bg-zinc-800">
+          <TabsTrigger value="sales" className="data-[state=active]:bg-background">
             <ShoppingCart className="h-4 w-4 mr-2" />
             Vendas
           </TabsTrigger>
@@ -445,41 +445,41 @@ const Products = () => {
 
           {loadingProducts ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : products.length === 0 ? (
-            <div className="text-center py-12 bg-zinc-900/50 border border-zinc-800/50 rounded-xl">
-              <Package className="h-12 w-12 mx-auto text-zinc-600 mb-4" />
-              <h3 className="font-medium text-zinc-300 mb-2">Nenhum produto cadastrado</h3>
-              <p className="text-sm text-zinc-500">Cadastre produtos para começar a vender.</p>
+            <div className="text-center py-12 bg-muted/30 border border-border rounded-xl">
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="font-medium text-foreground mb-2">Nenhum produto cadastrado</h3>
+              <p className="text-sm text-muted-foreground">Cadastre produtos para começar a vender.</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {products.map((product) => {
                 const profit = calculateProfit(product.purchase_price_cents, product.sale_price_cents);
                 return (
-                  <div key={product.id} className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl overflow-hidden">
-                    <div className="aspect-video bg-zinc-800 relative">
+                  <div key={product.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="aspect-video bg-muted relative">
                       {product.photo_url ? (
                         <img src={product.photo_url} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-12 w-12 text-zinc-600" />
+                          <Package className="h-12 w-12 text-muted-foreground" />
                         </div>
                       )}
                     </div>
                     <div className="p-4">
-                      <h3 className="font-medium text-zinc-100 mb-2">{product.name}</h3>
+                      <h3 className="font-medium text-foreground mb-2">{product.name}</h3>
                       <div className="space-y-1 text-sm">
-                        <div className="flex justify-between text-zinc-400">
+                        <div className="flex justify-between text-muted-foreground">
                           <span>Custo:</span>
                           <span>R$ {(product.purchase_price_cents / 100).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-zinc-300">
+                        <div className="flex justify-between text-foreground">
                           <span>Venda:</span>
                           <span className="font-medium">R$ {(product.sale_price_cents / 100).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-primary pt-1 border-t border-zinc-800">
+                        <div className="flex justify-between text-primary pt-1 border-t border-border">
                           <span>Lucro:</span>
                           <span className="font-semibold">R$ {(profit / 100).toFixed(2)}</span>
                         </div>
@@ -497,7 +497,7 @@ const Products = () => {
                             size="sm" 
                             onClick={() => handleEnhanceImage(product)} 
                             disabled={enhancingProductId === product.id}
-                            className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+                            className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/10"
                             title="Melhorar imagem com IA"
                           >
                             {enhancingProductId === product.id ? (
@@ -507,11 +507,11 @@ const Products = () => {
                             )}
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => openProductModal(product)} className="flex-1 text-zinc-400 hover:text-zinc-100">
+                        <Button variant="ghost" size="sm" onClick={() => openProductModal(product)} className="flex-1 text-muted-foreground hover:text-foreground">
                           <Edit className="h-4 w-4 mr-1" />
                           Editar
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(product)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteProduct(product)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -527,24 +527,24 @@ const Products = () => {
         <TabsContent value="sales" className="space-y-6">
           {/* Summary Cards */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="p-4 bg-zinc-900/50 border border-zinc-800/50 rounded-xl">
+            <div className="p-4 bg-muted/30 border border-border rounded-xl">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-blue-400" />
+                  <DollarSign className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Receita de Produtos</p>
-                  <p className="text-xl font-bold text-zinc-100">R$ {(totalSalesRevenue / 100).toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">Receita de Produtos</p>
+                  <p className="text-xl font-bold text-foreground">R$ {(totalSalesRevenue / 100).toFixed(2)}</p>
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-zinc-900/50 border border-zinc-800/50 rounded-xl">
+            <div className="p-4 bg-muted/30 border border-border rounded-xl">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Lucro de Produtos</p>
+                  <p className="text-xs text-muted-foreground">Lucro de Produtos</p>
                   <p className="text-xl font-bold text-primary">R$ {(totalSalesProfit / 100).toFixed(2)}</p>
                 </div>
               </div>
@@ -560,49 +560,49 @@ const Products = () => {
 
           {loadingSales ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : sales.length === 0 ? (
-            <div className="text-center py-12 bg-zinc-900/50 border border-zinc-800/50 rounded-xl">
-              <ShoppingCart className="h-12 w-12 mx-auto text-zinc-600 mb-4" />
-              <h3 className="font-medium text-zinc-300 mb-2">Nenhuma venda no período</h3>
-              <p className="text-sm text-zinc-500">Registre vendas para ver o histórico aqui.</p>
+            <div className="text-center py-12 bg-muted/30 border border-border rounded-xl">
+              <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="font-medium text-foreground mb-2">Nenhuma venda no período</h3>
+              <p className="text-sm text-muted-foreground">Registre vendas para ver o histórico aqui.</p>
             </div>
           ) : (
-            <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-zinc-800/50 border-b border-zinc-700/50">
+                  <thead className="bg-muted/50 border-b border-border">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Data</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Produto</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400">Profissional</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-zinc-400">Qtd</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Total</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-zinc-400">Lucro</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-zinc-400">Ações</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Data</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Produto</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Profissional</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Qtd</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Total</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Lucro</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/50">
+                  <tbody className="divide-y divide-border">
                     {sales.map((sale) => {
                       const total = sale.sale_price_snapshot_cents * sale.quantity;
                       const profit = (sale.sale_price_snapshot_cents - sale.purchase_price_snapshot_cents) * sale.quantity;
                       const saleDate = new Date(sale.sale_date);
                       return (
-                        <tr key={sale.id} className="hover:bg-zinc-800/30">
-                          <td className="px-4 py-3 text-sm text-zinc-300">
+                        <tr key={sale.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {saleDate.toLocaleDateString('pt-BR')}
                           </td>
-                          <td className="px-4 py-3 text-sm text-zinc-100 font-medium">
+                          <td className="px-4 py-3 text-sm text-foreground font-medium">
                             {sale.product?.name || 'Produto'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-zinc-300">
+                          <td className="px-4 py-3 text-sm text-foreground">
                             {(sale as any).staff?.name || '—'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-zinc-300 text-center">
+                          <td className="px-4 py-3 text-sm text-foreground text-center">
                             {sale.quantity}
                           </td>
-                          <td className="px-4 py-3 text-sm text-zinc-100 text-right font-medium">
+                          <td className="px-4 py-3 text-sm text-foreground text-right font-medium">
                             R$ {(total / 100).toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-sm text-primary text-right font-medium">
@@ -610,10 +610,10 @@ const Products = () => {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => openSaleModal(sale)} className="h-8 w-8 p-0 text-zinc-400 hover:text-zinc-100">
+                              <Button variant="ghost" size="sm" onClick={() => openSaleModal(sale)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDeleteSale(sale)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300">
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteSale(sale)} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -631,22 +631,22 @@ const Products = () => {
 
       {/* Product Modal */}
       <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-zinc-100">
+            <DialogTitle>
               {editingProduct ? 'Editar Produto' : 'Novo Produto'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Foto do Produto</label>
+              <label className="block text-sm text-muted-foreground mb-2">Foto do Produto</label>
               <div className="flex items-center gap-4">
                 {productForm.photo_url ? (
                   <img src={productForm.photo_url} alt="Preview" className="w-20 h-20 rounded-lg object-cover" />
                 ) : (
-                  <div className="w-20 h-20 bg-zinc-800 rounded-lg flex items-center justify-center">
-                    <Package className="h-8 w-8 text-zinc-600" />
+                  <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
+                    <Package className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
                 <label className="cursor-pointer">
@@ -662,30 +662,27 @@ const Products = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Nome do Produto *</label>
+              <label className="block text-sm text-muted-foreground mb-2">Nome do Produto *</label>
               <Input
                 value={productForm.name}
                 onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Ex: Pomada Modeladora"
-                className="bg-zinc-800/50 border-zinc-700"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Valor de Compra *</label>
+                <label className="block text-sm text-muted-foreground mb-2">Valor de Compra *</label>
                 <CurrencyInput
                   value={productForm.purchase_price}
                   onChange={(v) => setProductForm(prev => ({ ...prev, purchase_price: v }))}
-                  className="bg-zinc-800/50 border-zinc-700"
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Valor de Venda *</label>
+                <label className="block text-sm text-muted-foreground mb-2">Valor de Venda *</label>
                 <CurrencyInput
                   value={productForm.sale_price}
                   onChange={(v) => setProductForm(prev => ({ ...prev, sale_price: v }))}
-                  className="bg-zinc-800/50 border-zinc-700"
                 />
               </div>
             </div>
@@ -711,24 +708,24 @@ const Products = () => {
 
       {/* Sale Modal */}
       <Dialog open={showSaleModal} onOpenChange={setShowSaleModal}>
-        <DialogContent className="bg-zinc-900 border-zinc-800">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-zinc-100">
+            <DialogTitle>
               {editingSale ? 'Editar Venda' : 'Registrar Venda'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Produto *</label>
+              <label className="block text-sm text-muted-foreground mb-2">Produto *</label>
               <Select
                 value={saleForm.product_id}
                 onValueChange={(value) => setSaleForm(prev => ({ ...prev, product_id: value }))}
               >
-                <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
+                <SelectTrigger>
                   <SelectValue placeholder="Selecione um produto" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectContent>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.name} - R$ {(product.sale_price_cents / 100).toFixed(2)}
@@ -739,15 +736,15 @@ const Products = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-2">Profissional que vendeu</label>
+              <label className="block text-sm text-muted-foreground mb-2">Profissional que vendeu</label>
               <Select
                 value={saleForm.staff_id}
                 onValueChange={(value) => setSaleForm(prev => ({ ...prev, staff_id: value }))}
               >
-                <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
+                <SelectTrigger>
                   <SelectValue placeholder="Selecione (opcional)" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectContent>
                   {staffList.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
@@ -759,28 +756,26 @@ const Products = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Quantidade *</label>
+                <label className="block text-sm text-muted-foreground mb-2">Quantidade *</label>
                 <Input
                   type="number"
                   min="1"
                   value={saleForm.quantity}
                   onChange={(e) => setSaleForm(prev => ({ ...prev, quantity: e.target.value }))}
-                  className="bg-zinc-800/50 border-zinc-700"
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-2">Data da Venda *</label>
+                <label className="block text-sm text-muted-foreground mb-2">Data da Venda *</label>
                 <Input
                   type="date"
                   value={saleForm.sale_date}
                   onChange={(e) => setSaleForm(prev => ({ ...prev, sale_date: e.target.value }))}
-                  className="bg-zinc-800/50 border-zinc-700"
                 />
               </div>
             </div>
 
             {saleForm.product_id && saleForm.quantity && (
-              <div className="p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg space-y-1">
+              <div className="p-3 bg-muted/50 border border-border rounded-lg space-y-1">
                 {(() => {
                   const product = products.find(p => p.id === saleForm.product_id);
                   if (!product) return null;
@@ -789,7 +784,7 @@ const Products = () => {
                   const profit = ((product.sale_price_cents - product.purchase_price_cents) * qty) / 100;
                   return (
                     <>
-                      <p className="text-sm text-zinc-300">
+                      <p className="text-sm text-foreground">
                         <strong>Total:</strong> R$ {total.toFixed(2)}
                       </p>
                       <p className="text-sm text-primary">

@@ -15,12 +15,12 @@ const WEEKDAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 8);
 
 function getIntensityStyle(value: number, max: number): string {
-  if (value === 0 || max === 0) return "bg-zinc-800/20";
+  if (value === 0 || max === 0) return "bg-muted/30";
   const ratio = value / max;
-  if (ratio <= 0.25) return "bg-amber-900/25 ring-1 ring-amber-800/15";
-  if (ratio <= 0.5) return "bg-amber-800/40 ring-1 ring-amber-700/20";
-  if (ratio <= 0.75) return "bg-amber-600/50 ring-1 ring-amber-500/25";
-  return "bg-amber-500/60 ring-1 ring-amber-400/30 shadow-sm shadow-amber-500/10";
+  if (ratio <= 0.25) return "bg-amber-500/25 ring-1 ring-amber-500/15";
+  if (ratio <= 0.5) return "bg-amber-500/40 ring-1 ring-amber-500/20";
+  if (ratio <= 0.75) return "bg-amber-500/60 ring-1 ring-amber-500/25";
+  return "bg-amber-500/80 ring-1 ring-amber-500/30 shadow-sm shadow-amber-500/10";
 }
 
 export function RevenueHeatmap({ bookings }: HeatmapProps) {
@@ -53,11 +53,11 @@ export function RevenueHeatmap({ bookings }: HeatmapProps) {
 
   return (
     <div className="rounded-2xl glass-panel overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-800/30">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-          <Flame className="h-4 w-4 text-amber-400" />
+          <Flame className="h-4 w-4 text-amber-500" />
         </div>
-        <h3 className="text-sm font-bold text-zinc-100 tracking-tight">
+        <h3 className="text-sm font-bold text-foreground tracking-tight">
           Mapa de Calor — Receita por Dia e Horário
         </h3>
       </div>
@@ -69,7 +69,7 @@ export function RevenueHeatmap({ bookings }: HeatmapProps) {
               <div className="flex items-center mb-2">
                 <div className="w-10 flex-shrink-0" />
                 {HOURS.map((h) => (
-                  <div key={h} className="flex-1 text-center text-[10px] font-bold text-zinc-600 tabular-nums">
+                  <div key={h} className="flex-1 text-center text-[10px] font-bold text-muted-foreground tabular-nums">
                     {h}h
                   </div>
                 ))}
@@ -78,7 +78,7 @@ export function RevenueHeatmap({ bookings }: HeatmapProps) {
               {/* Rows */}
               {activeWeekdays.map((d) => (
                 <div key={d} className="flex items-center gap-1.5 mb-1.5">
-                  <div className="w-10 flex-shrink-0 text-[11px] text-zinc-500 font-semibold">
+                  <div className="w-10 flex-shrink-0 text-[11px] text-muted-foreground font-semibold">
                     {WEEKDAY_LABELS[d]}
                   </div>
                   {HOURS.map((h) => {
@@ -89,10 +89,10 @@ export function RevenueHeatmap({ bookings }: HeatmapProps) {
                         <TooltipTrigger asChild>
                           <div className={`flex-1 h-8 md:h-10 rounded-lg cursor-default transition-all duration-300 hover:scale-[1.12] hover:z-10 ${style}`} />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs bg-zinc-900/95 backdrop-blur-xl border-zinc-800/50 shadow-xl">
-                          <p className="font-bold text-zinc-100">{WEEKDAY_LABELS[d]}, {h}h</p>
-                          <p className="text-zinc-400">Faturamento: R$ {(cell.revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                          <p className="text-zinc-400">Atendimentos: {cell.count}</p>
+                        <TooltipContent side="top" className="text-xs bg-card border-border shadow-xl">
+                          <p className="font-bold text-foreground">{WEEKDAY_LABELS[d]}, {h}h</p>
+                          <p className="text-muted-foreground">Faturamento: R$ {(cell.revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                          <p className="text-muted-foreground">Atendimentos: {cell.count}</p>
                         </TooltipContent>
                       </Tooltip>
                     );
@@ -104,13 +104,13 @@ export function RevenueHeatmap({ bookings }: HeatmapProps) {
 
           {/* Legend */}
           <div className="flex items-center gap-3 mt-5 justify-center">
-            <span className="text-[10px] text-zinc-600 font-medium">R$ 0</span>
+            <span className="text-[10px] text-muted-foreground font-medium">R$ 0</span>
             <div className="flex gap-1">
-              {["bg-zinc-800/20", "bg-amber-900/25", "bg-amber-800/40", "bg-amber-600/50", "bg-amber-500/60"].map((cls, i) => (
+              {["bg-muted/30", "bg-amber-500/25", "bg-amber-500/40", "bg-amber-500/60", "bg-amber-500/80"].map((cls, i) => (
                 <div key={i} className={`w-8 h-3.5 rounded-md ${cls}`} />
               ))}
             </div>
-            <span className="text-[10px] text-zinc-600 font-medium">R$ {(maxValue / 100).toFixed(0)}</span>
+            <span className="text-[10px] text-muted-foreground font-medium">R$ {(maxValue / 100).toFixed(0)}</span>
           </div>
         </TooltipProvider>
       </div>

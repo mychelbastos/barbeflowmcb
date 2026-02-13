@@ -498,495 +498,212 @@ export default function Customers() {
           </div>
           <Button onClick={() => setShowAddModal(true)} size="sm" className="shrink-0">
             <Plus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Novo Cliente</span>
-            <span className="sm:hidden">Novo</span>
+            Adicionar
           </Button>
         </div>
         
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar cliente..."
-            className="pl-10 w-full"
+            placeholder="Buscar por nome, telefone ou email..."
+            className="pl-10 h-11"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Total Clientes</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">
-                  {totalCount}
-                </p>
-              </div>
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Novos Este Mês</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">
-                  {customers.filter(c => {
-                    const created = new Date(c.created_at);
-                    const now = new Date();
-                    return created.getMonth() === now.getMonth() && 
-                           created.getFullYear() === now.getFullYear();
-                  }).length}
-                </p>
-              </div>
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-success/10 flex items-center justify-center">
-                <Plus className="h-5 w-5 md:h-6 md:w-6 text-success" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm text-muted-foreground">Clientes Ativos</p>
-                <p className="text-lg md:text-2xl font-bold text-foreground">
-                  {customers.filter(c => c.totalBookings > 0).length}
-                </p>
-              </div>
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-accent/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 md:h-6 md:w-6 text-accent" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* Customers - Mobile Cards / Desktop Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base md:text-lg">
-            Clientes ({totalCount})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Mobile: Card Layout */}
-          <div className="md:hidden space-y-3">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead className="hidden md:table-cell">Contatos</TableHead>
+              <TableHead className="hidden sm:table-cell">Última Visita</TableHead>
+              <TableHead className="hidden lg:table-cell text-right">Total Gasto</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {customers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-              </div>
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <User className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>Nenhum cliente encontrado</p>
+                </TableCell>
+              </TableRow>
             ) : (
               customers.map((customer) => (
-                <div key={customer.id} className="p-4 rounded-lg border border-border bg-card space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 text-primary" />
+                <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => loadCustomerDetails(customer)}>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <div className="font-medium text-foreground flex items-center gap-2">
+                        {customer.name}
+                        {customer.isRecurring && (
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-violet-500/10 text-violet-500 border-violet-200 dark:border-violet-500/30">
+                            Fixo
+                          </Badge>
+                        )}
+                        {customer.hasPackage && (
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-amber-500/10 text-amber-500 border-amber-200 dark:border-amber-500/30">
+                            Pacote
+                          </Badge>
+                        )}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-foreground truncate">{customer.name}</p>
-                          {customer.isRecurring && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary flex-shrink-0">Fixo</Badge>
-                          )}
-                          {customer.hasPackage && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary flex-shrink-0">Pacote</Badge>
-                          )}
+                      <div className="md:hidden text-xs text-muted-foreground mt-0.5">
+                        {customer.phone}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <div className="flex flex-col text-sm text-muted-foreground gap-1">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5" />
+                        {customer.phone}
+                      </div>
+                      {customer.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5" />
+                          {customer.email}
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
-                        </p>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {customer.phone}
-                    </div>
-                    {customer.email && (
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        <span className="truncate max-w-[120px]">{customer.email}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <div className="flex items-center gap-3 text-xs">
-                      <Badge variant="secondary" className="text-xs">
-                        {customer.totalBookings} agend.
-                      </Badge>
-                      <span className="font-medium text-primary">
-                        R$ {(customer.totalSpent / 100).toFixed(0)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => loadCustomerDetails(customer)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditClick(customer)}
-                        className="h-8 w-8 p-0"
-                      >
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                    {customer.lastVisit ? format(customer.lastVisit, "dd/MM/yyyy", { locale: ptBR }) : "Nunca"}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-right font-medium">
+                    R$ {(customer.totalSpent / 100).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => handleEditClick(customer)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(customer)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteClick(customer)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
-                </div>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </div>
+          </TableBody>
+        </Table>
+      </div>
 
-          {/* Desktop: Table Layout */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Agendamentos</TableHead>
-                  <TableHead>Total Gasto</TableHead>
-                  <TableHead>Última Visita</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  customers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{customer.name}</span>
-                              {customer.isRecurring && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary">Fixo</Badge>
-                              )}
-                              {customer.hasPackage && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/50 text-primary">Pacote</Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Cliente desde {format(parseISO(customer.created_at), "MMM yyyy", { locale: ptBR })}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm">
-                            <Phone className="h-3 w-3 mr-1 text-muted-foreground" />
-                            {customer.phone}
-                          </div>
-                          {customer.email && (
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {customer.email}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {customer.totalBookings} agendamentos
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-primary">
-                          R$ {(customer.totalSpent / 100).toFixed(2)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {customer.lastVisit ? (
-                          <div className="text-sm">
-                            {format(customer.lastVisit, "dd/MM/yyyy", { locale: ptBR })}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Nunca</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => loadCustomerDetails(customer)}
-                            title="Ver detalhes"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClick(customer)}
-                            title="Editar"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(customer)}
-                            title="Excluir"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? "Carregando..." : "Carregar mais"}
+          </Button>
+        </div>
+      )}
 
-          {/* Load More */}
-          {hasMore && customers.length > 0 && (
-            <div className="flex justify-center pt-4">
-              <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? "Carregando..." : `Carregar mais (${customers.length} de ${totalCount})`}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Customer Details Dialog */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+      {/* Add Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Detalhes do Cliente</DialogTitle>
-            <DialogDescription>
-              Informações e histórico de agendamentos
-            </DialogDescription>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>Cadastre um novo cliente manualmente.</DialogDescription>
           </DialogHeader>
-          
-          {selectedCustomer && (
-            <div className="space-y-4">
-              {/* Customer Info - Compact on mobile */}
-              <div className="flex items-center gap-3 pb-3 border-b border-border">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground">{selectedCustomer.name}</h3>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
-                    <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{selectedCustomer.phone}</span>
-                    {selectedCustomer.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{selectedCustomer.email}</span>}
-                  </div>
-                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Cliente desde {format(parseISO(selectedCustomer.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                  </p>
-                </div>
-              </div>
-
-              {selectedCustomer.notes && (
-                <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    <p className="text-xs font-medium text-muted-foreground">Observações / Anamnese</p>
-                  </div>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{selectedCustomer.notes}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
-                  <p className="text-xs text-muted-foreground">Agendamentos</p>
-                  <p className="text-lg font-bold">{selectedCustomer.totalBookings}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
-                  <p className="text-xs text-muted-foreground">Total Gasto</p>
-                  <p className="text-lg font-bold text-success">
-                    R$ {(selectedCustomer.totalSpent / 100).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Tabs: Histórico + Saldo */}
-              <Tabs defaultValue="history" className="space-y-3">
-                <TabsList>
-                  <TabsTrigger value="history">Histórico</TabsTrigger>
-                  <TabsTrigger value="packages">Pacotes</TabsTrigger>
-                  <TabsTrigger value="balance">Saldo</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="history">
-                  <h3 className="text-lg font-semibold mb-4">Histórico de Agendamentos</h3>
-                  {detailsLoading ? (
-                    <div className="h-64 bg-muted rounded animate-pulse" />
-                  ) : customerBookings.length === 0 ? (
-                    <Card>
-                      <CardContent className="text-center py-8">
-                        <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-muted-foreground">Nenhum agendamento encontrado</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {customerBookings.map((booking) => (
-                        <div key={booking.id} className="p-3 rounded-lg border border-border bg-card/50">
-                          <div className="flex items-start gap-3">
-                            <div 
-                              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                              style={{ 
-                                backgroundColor: `${booking.service?.color}20`,
-                                color: booking.service?.color 
-                              }}
-                            >
-                              <Calendar className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-medium text-sm truncate">{booking.service?.name}</h4>
-                                <Badge variant={getStatusVariant(booking.status)} className="text-[10px] flex-shrink-0">
-                                  {getStatusLabel(booking.status)}
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {format(parseISO(booking.starts_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                                </span>
-                                <span>{booking.staff?.name || 'Qualquer'}</span>
-                                <span className="font-medium text-success">
-                                  R$ {((booking.service?.price_cents || 0) / 100).toFixed(0)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="packages">
-                  <CustomerPackagesTab customerId={selectedCustomer.id} />
-                </TabsContent>
-
-                <TabsContent value="balance">
-                  <CustomerBalanceTab customerId={selectedCustomer.id} />
-                </TabsContent>
-              </Tabs>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome Completo *</Label>
+              <Input
+                placeholder="Ex: João Silva"
+                value={addForm.name}
+                onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+              />
             </div>
-          )}
-          
+            <div className="space-y-2">
+              <Label>Telefone (WhatsApp) *</Label>
+              <Input
+                placeholder="Ex: 11999999999"
+                value={addForm.phone}
+                onChange={(e) => setAddForm(prev => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                placeholder="Ex: joao@email.com"
+                value={addForm.email}
+                onChange={(e) => setAddForm(prev => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Nascimento</Label>
+              <Input
+                type="date"
+                value={addForm.birthday}
+                onChange={(e) => setAddForm(prev => ({ ...prev, birthday: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Preferências, alergias, etc."
+                value={addForm.notes}
+                onChange={(e) => setAddForm(prev => ({ ...prev, notes: e.target.value }))}
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetails(false)}>
-              Fechar
+            <Button variant="outline" onClick={() => setShowAddModal(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleAddCustomer} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Customer Modal */}
+      {/* Edit Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do cliente
-            </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Nome *</Label>
+              <Label>Nome Completo *</Label>
               <Input
-                id="edit-name"
                 value={editForm.name}
                 onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nome do cliente"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Telefone *</Label>
+              <Label>Telefone (WhatsApp) *</Label>
               <Input
-                id="edit-phone"
                 value={editForm.phone}
                 onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="(00) 00000-0000"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label>Email</Label>
               <Input
-                id="edit-email"
-                type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="email@exemplo.com"
               />
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="edit-birthday">Data de Nascimento</Label>
+              <Label>Data de Nascimento</Label>
               <Input
-                id="edit-birthday"
                 type="date"
                 value={editForm.birthday}
                 onChange={(e) => setEditForm(prev => ({ ...prev, birthday: e.target.value }))}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="edit-notes">Observações / Anamnese</Label>
+              <Label>Observações</Label>
               <Textarea
-                id="edit-notes"
                 value={editForm.notes}
                 onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Alergias, preferências, informações relevantes..."
-                className="resize-none"
-                rows={3}
               />
             </div>
           </div>
-          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModal(false)} disabled={saving}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setShowEditModal(false)} disabled={saving}>Cancelar</Button>
             <Button onClick={handleSaveEdit} disabled={saving}>
               {saving ? "Salvando..." : "Salvar"}
             </Button>
@@ -994,105 +711,114 @@ export default function Customers() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Cliente</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Cliente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o cliente <strong>{customerToDelete?.name}</strong>? 
+              Tem certeza que deseja excluir <strong>{customerToDelete?.name}</strong>? 
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete} 
-              disabled={saving}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleConfirmDelete} disabled={saving} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {saving ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Customer Modal */}
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="sm:max-w-md">
+      {/* Details Sheet/Dialog */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Cliente</DialogTitle>
-            <DialogDescription>
-              Cadastre um novo cliente no estabelecimento
-            </DialogDescription>
+            <DialogTitle>Detalhes do Cliente</DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="add-name">Nome *</Label>
-              <Input
-                id="add-name"
-                value={addForm.name}
-                onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nome do cliente"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="add-phone">WhatsApp *</Label>
-              <Input
-                id="add-phone"
-                value={addForm.phone}
-                onChange={(e) => setAddForm(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="add-email">Email</Label>
-              <Input
-                id="add-email"
-                type="email"
-                value={addForm.email}
-                onChange={(e) => setAddForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="email@exemplo.com"
-              />
-            </div>
+          {selectedCustomer && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{selectedCustomer.name}</h3>
+                    <div className="text-sm text-muted-foreground flex flex-col gap-1 mt-1">
+                      <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {selectedCustomer.phone}</div>
+                      {selectedCustomer.email && <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {selectedCustomer.email}</div>}
+                      {selectedCustomer.birthday && <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> {format(parseISO(selectedCustomer.birthday), "dd/MM/yyyy")}</div>}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <Card className="bg-muted/30">
+                      <CardContent className="p-3">
+                        <p className="text-xs text-muted-foreground">Total Gasto</p>
+                        <p className="text-lg font-bold text-primary">R$ {(selectedCustomer.totalSpent / 100).toFixed(2)}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-muted/30">
+                      <CardContent className="p-3">
+                        <p className="text-xs text-muted-foreground">Agendamentos</p>
+                        <p className="text-lg font-bold">{selectedCustomer.totalBookings}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="add-birthday">Data de Nascimento</Label>
-              <Input
-                id="add-birthday"
-                type="date"
-                value={addForm.birthday}
-                onChange={(e) => setAddForm(prev => ({ ...prev, birthday: e.target.value }))}
-              />
-            </div>
+                  {selectedCustomer.notes && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg">
+                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">Observações:</p>
+                      <p className="text-sm text-amber-800 dark:text-amber-200">{selectedCustomer.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="add-notes">Observações / Anamnese</Label>
-              <Textarea
-                id="add-notes"
-                value={addForm.notes}
-                onChange={(e) => setAddForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Alergias, preferências, informações relevantes..."
-                className="resize-none"
-                rows={3}
-              />
+              <Tabs defaultValue="bookings">
+                <TabsList className="w-full">
+                  <TabsTrigger value="bookings" className="flex-1">Histórico</TabsTrigger>
+                  <TabsTrigger value="packages" className="flex-1">Pacotes</TabsTrigger>
+                  <TabsTrigger value="balance" className="flex-1">Saldo</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="bookings" className="mt-4">
+                  {detailsLoading ? (
+                    <div className="h-32 bg-muted/30 rounded animate-pulse" />
+                  ) : customerBookings.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">Nenhum agendamento registrado</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {customerBookings.map((booking) => (
+                        <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+                          <div>
+                            <p className="font-medium text-sm">{booking.service?.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(parseISO(booking.starts_at), "dd/MM/yyyy HH:mm")} • {booking.staff?.name}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</p>
+                            <Badge variant={getStatusVariant(booking.status)} className="text-[10px] h-5">
+                              {getStatusLabel(booking.status)}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="packages" className="mt-4">
+                  <CustomerPackagesTab customerId={selectedCustomer.id} />
+                </TabsContent>
+
+                <TabsContent value="balance" className="mt-4">
+                  <CustomerBalanceTab customerId={selectedCustomer.id} customerName={selectedCustomer.name} />
+                </TabsContent>
+              </Tabs>
             </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddCustomer} disabled={saving}>
-              {saving ? "Salvando..." : "Cadastrar"}
-            </Button>
-          </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

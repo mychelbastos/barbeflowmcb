@@ -64,10 +64,10 @@ const sectionVariants = {
 
 // Premium tooltip style
 const tooltipStyle = {
-  backgroundColor: "hsl(240 6% 8% / 0.95)",
-  border: "1px solid hsl(240 4% 18%)",
+  backgroundColor: "hsl(var(--card))",
+  border: "1px solid hsl(var(--border))",
   borderRadius: 14,
-  boxShadow: "0 12px 40px -8px hsl(0 0% 0% / 0.6)",
+  boxShadow: "0 12px 40px -8px hsl(var(--foreground) / 0.1)",
   padding: "12px 16px",
   backdropFilter: "blur(12px)",
 };
@@ -83,8 +83,8 @@ function VariationBadge({ current, previous }: { current: number; previous: numb
       animate={{ opacity: 1, scale: 1 }}
       className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
         positive
-          ? "text-primary bg-primary/10 border border-primary/20"
-          : "text-red-400 bg-red-500/10 border border-red-500/20"
+          ? "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+          : "text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20"
       }`}
     >
       {positive ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
@@ -107,14 +107,14 @@ function KpiCard({
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
         <div className="relative p-4 md:p-5">
           <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-zinc-800/40 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center backdrop-blur-sm">
               <Icon className={`h-[18px] w-[18px] ${iconColor}`} />
             </div>
             {variation && <VariationBadge current={variation.current} previous={variation.previous} />}
           </div>
-          <p className="text-xl md:text-2xl font-bold text-zinc-100 tracking-tight leading-none mb-1">{value}</p>
-          <p className="text-[11px] text-zinc-500 font-medium">{label}</p>
-          {subtitle && <p className="text-[10px] text-zinc-600 mt-0.5">{subtitle}</p>}
+          <p className="text-xl md:text-2xl font-bold text-foreground tracking-tight leading-none mb-1">{value}</p>
+          <p className="text-[11px] text-muted-foreground font-medium">{label}</p>
+          {subtitle && <p className="text-[10px] text-muted-foreground/80 mt-0.5">{subtitle}</p>}
         </div>
       </div>
     </motion.div>
@@ -136,13 +136,13 @@ function ChartCard({ icon: Icon, iconColor, iconBg, title, description, children
 }) {
   return (
     <div className="rounded-2xl glass-panel overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-800/30">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <div className={`w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center`}>
           <Icon className={`h-4 w-4 ${iconColor}`} />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-zinc-100 tracking-tight">{title}</h3>
-          {description && <p className="text-[11px] text-zinc-600">{description}</p>}
+          <h3 className="text-sm font-bold text-foreground tracking-tight">{title}</h3>
+          {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
         </div>
       </div>
       <div className="p-4 md:p-5">{children}</div>
@@ -315,16 +315,16 @@ export default function Finance() {
     return (
       <div className="space-y-6 px-4 md:px-0">
         <div className="space-y-2">
-          <div className="h-8 w-48 bg-zinc-800/30 rounded-xl animate-pulse" />
-          <div className="h-4 w-72 bg-zinc-800/20 rounded-lg animate-pulse" />
+          <div className="h-8 w-48 bg-muted/30 rounded-xl animate-pulse" />
+          <div className="h-4 w-72 bg-muted/20 rounded-lg animate-pulse" />
         </div>
-        <div className="h-14 bg-zinc-800/20 rounded-2xl animate-pulse" />
+        <div className="h-14 bg-muted/20 rounded-2xl animate-pulse" />
         <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-5">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-28 bg-zinc-800/20 rounded-2xl animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+            <div key={i} className="h-28 bg-muted/20 rounded-2xl animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
           ))}
         </div>
-        <div className="h-72 bg-zinc-800/20 rounded-2xl animate-pulse" />
+        <div className="h-72 bg-muted/20 rounded-2xl animate-pulse" />
       </div>
     );
   }
@@ -341,8 +341,8 @@ export default function Finance() {
           <Activity className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-zinc-100 tracking-tight">Financeiro</h1>
-          <p className="text-xs md:text-sm text-zinc-600">Análise de receitas e performance</p>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">Financeiro</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Análise de receitas e performance</p>
         </div>
       </motion.div>
 
@@ -354,17 +354,17 @@ export default function Finance() {
       {/* KPI Cards */}
       <motion.div variants={stagger} className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
         <KpiCard label="Fat. Previsto" value={`R$ ${data ? (data.revenue_expected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Target} gradient="from-primary/15 to-primary/5" iconColor="text-primary" variation={prevData ? { current: data?.revenue_expected || 0, previous: prevData.revenue_expected } : undefined} />
-        <KpiCard label="Recebido" value={`R$ ${data ? (data.revenue_received / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={DollarSign} gradient="from-blue-500/15 to-blue-600/5" iconColor="text-blue-400" variation={prevData ? { current: data?.revenue_received || 0, previous: prevData.revenue_received } : undefined} />
-        <KpiCard label="Agendamentos" value={`${data?.bookings_count || 0}`} icon={Calendar} gradient="from-violet-500/15 to-violet-600/5" iconColor="text-violet-400" variation={prevData ? { current: data?.bookings_count || 0, previous: prevData.bookings_count } : undefined} />
-        <KpiCard label="Ticket Médio" value={`R$ ${data ? (data.avg_ticket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Wallet} gradient="from-amber-500/15 to-amber-600/5" iconColor="text-amber-400" variation={prevData ? { current: data?.avg_ticket || 0, previous: prevData.avg_ticket } : undefined} />
-        <KpiCard label="Média/Dia Útil" value={`R$ ${(avgPerWorkDay / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} subtitle="Dias com atendimento" icon={BarChart3} gradient="from-pink-500/15 to-pink-600/5" iconColor="text-pink-400" />
+        <KpiCard label="Recebido" value={`R$ ${data ? (data.revenue_received / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={DollarSign} gradient="from-blue-500/15 to-blue-600/5" iconColor="text-blue-500" variation={prevData ? { current: data?.revenue_received || 0, previous: prevData.revenue_received } : undefined} />
+        <KpiCard label="Agendamentos" value={`${data?.bookings_count || 0}`} icon={Calendar} gradient="from-violet-500/15 to-violet-600/5" iconColor="text-violet-500" variation={prevData ? { current: data?.bookings_count || 0, previous: prevData.bookings_count } : undefined} />
+        <KpiCard label="Ticket Médio" value={`R$ ${data ? (data.avg_ticket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Wallet} gradient="from-amber-500/15 to-amber-600/5" iconColor="text-amber-500" variation={prevData ? { current: data?.avg_ticket || 0, previous: prevData.avg_ticket } : undefined} />
+        <KpiCard label="Média/Dia Útil" value={`R$ ${(avgPerWorkDay / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} subtitle="Dias com atendimento" icon={BarChart3} gradient="from-pink-500/15 to-pink-600/5" iconColor="text-pink-500" />
       </motion.div>
 
       {/* Product KPIs */}
       {(data?.product_sales_revenue || 0) > 0 && (
         <Section>
           <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-            <KpiCard label="Fat. Produtos" value={`R$ ${(data!.product_sales_revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} icon={ShoppingCart} gradient="from-cyan-500/15 to-cyan-600/5" iconColor="text-cyan-400" />
+            <KpiCard label="Fat. Produtos" value={`R$ ${(data!.product_sales_revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} icon={ShoppingCart} gradient="from-cyan-500/15 to-cyan-600/5" iconColor="text-cyan-500" />
             <KpiCard label="Lucro Produtos" value={`R$ ${(data!.product_sales_profit / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} subtitle={data!.product_sales_revenue > 0 ? `${((data!.product_sales_profit / data!.product_sales_revenue) * 100).toFixed(0)}% margem` : "0%"} icon={TrendingUp} gradient="from-primary/15 to-primary/5" iconColor="text-primary" />
           </div>
         </Section>
@@ -385,11 +385,11 @@ export default function Finance() {
                   <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 4% 14%)" strokeOpacity={0.6} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(240 5% 40%)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "hsl(240 5% 40%)" }} width={50} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(240 5% 55%)", fontSize: 11, marginBottom: 4 }} formatter={(value: number, name: string) => [`R$ ${value.toFixed(2)}`, name === "expected" ? "Previsto" : "Recebido"]} />
-              {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke="hsl(240 5% 30%)" strokeDasharray="5 5" strokeOpacity={0.8} label={{ value: `Média: R$ ${dailyAvg.toFixed(0)}`, position: "insideTopRight", fill: "hsl(240 5% 45%)", fontSize: 10 }} />}
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.6} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={50} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(var(--muted-foreground))", fontSize: 11, marginBottom: 4 }} formatter={(value: number, name: string) => [`R$ ${value.toFixed(2)}`, name === "expected" ? "Previsto" : "Recebido"]} />
+              {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" strokeOpacity={0.8} label={{ value: `Média: R$ ${dailyAvg.toFixed(0)}`, position: "insideTopRight", fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />}
               <Area type="monotone" dataKey="expected" fill="url(#areaGrad)" stroke="transparent" />
               <Area type="monotone" dataKey="received" fill="url(#areaGradBlue)" stroke="transparent" />
               <Line type="monotone" dataKey="expected" stroke="#10b981" strokeWidth={2.5} dot={false} name="expected" />
@@ -412,22 +412,22 @@ export default function Finance() {
       {/* Top Services + Status */}
       <Section>
         <div className="grid gap-4 md:gap-5 grid-cols-1 lg:grid-cols-2">
-          <ChartCard icon={Sparkles} iconColor="text-violet-400" iconBg="bg-violet-500/10" title="Top Serviços" description="Por faturamento no período">
+          <ChartCard icon={Sparkles} iconColor="text-violet-500" iconBg="bg-violet-500/10" title="Top Serviços" description="Por faturamento no período">
             {/* Mobile */}
             <div className="md:hidden space-y-2">
               {(data?.top_services || []).map((service, index) => (
-                <motion.div key={index} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/20 hover:bg-zinc-800/30 transition-colors">
+                <motion.div key={index} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${COLORS[index % COLORS.length]}15`, color: COLORS[index % COLORS.length] }}>{index + 1}</div>
                     <div>
-                      <p className="font-semibold text-sm text-zinc-200">{service.name}</p>
-                      <p className="text-[10px] text-zinc-600">{service.count} agendamentos</p>
+                      <p className="font-semibold text-sm text-foreground">{service.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{service.count} agendamentos</p>
                     </div>
                   </div>
                   <span className="font-bold text-sm text-primary tabular-nums">R$ {(service.revenue / 100).toFixed(0)}</span>
                 </motion.div>
               ))}
-              {(!data?.top_services || data.top_services.length === 0) && <p className="text-sm text-zinc-600 text-center py-8">Nenhum dado</p>}
+              {(!data?.top_services || data.top_services.length === 0) && <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado</p>}
             </div>
             {/* Desktop */}
             <div className="hidden md:block">
@@ -441,10 +441,10 @@ export default function Finance() {
                       </linearGradient>
                     ))}
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 4% 14%)" strokeOpacity={0.6} />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11, fill: "hsl(240 5% 40%)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "hsl(240 5% 40%)" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(240 5% 55%)", fontSize: 11 }} itemStyle={{ color: "hsl(160 84% 60%)", fontSize: 12, fontWeight: 700 }} formatter={(value: number) => [`R$ ${(value / 100).toFixed(2)}`, "Faturamento"]} cursor={{ fill: "hsl(0 0% 100% / 0.06)" }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.6} />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(var(--muted-foreground))", fontSize: 11 }} itemStyle={{ color: "hsl(var(--primary))", fontSize: 12, fontWeight: 700 }} formatter={(value: number) => [`R$ ${(value / 100).toFixed(2)}`, "Faturamento"]} cursor={{ fill: "hsl(var(--muted) / 0.3)" }} />
                   <Bar dataKey="revenue" radius={[8, 8, 0, 0]}>
                     {(data?.top_services || []).map((_, index) => (
                       <Cell key={index} fill={`url(#barGrad${index % COLORS.length})`} />
@@ -461,60 +461,60 @@ export default function Finance() {
 
       {/* Staff Performance */}
       <Section>
-        <ChartCard icon={Users} iconColor="text-blue-400" iconBg="bg-blue-500/10" title="Performance da Equipe" description="Faturamento, ticket médio e comissão">
+        <ChartCard icon={Users} iconColor="text-blue-500" iconBg="bg-blue-500/10" title="Performance da Equipe" description="Faturamento, ticket médio e comissão">
           {/* Mobile */}
           <div className="md:hidden space-y-2">
             {staffWithCommission.map((sp, index) => (
               <motion.div key={index} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
-                className={`p-3.5 rounded-xl bg-zinc-800/20 hover:bg-zinc-800/30 transition-colors space-y-2.5 ${sp.isTop ? "border border-emerald-500/20 bg-emerald-500/[0.03]" : ""}`}>
+                className={`p-3.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors space-y-2.5 ${sp.isTop ? "border border-emerald-500/20 bg-emerald-500/[0.03]" : ""}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sp.isTop ? "bg-primary/10" : "bg-zinc-800/40"}`}>
-                      <Users className={`h-4 w-4 ${sp.isTop ? "text-primary" : "text-zinc-500"}`} />
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sp.isTop ? "bg-primary/10" : "bg-muted"}`}>
+                      <Users className={`h-4 w-4 ${sp.isTop ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-zinc-200">{sp.name}</p>
-                      <p className="text-[10px] text-zinc-600">{sp.bookings} agendamentos</p>
+                      <p className="font-semibold text-sm text-foreground">{sp.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{sp.bookings} agendamentos</p>
                     </div>
                   </div>
                   <span className="font-bold text-sm text-primary tabular-nums">R$ {(sp.revenue / 100).toFixed(0)}</span>
                 </div>
                 <Progress value={sp.progressPct} className="h-1.5" />
-                <div className="flex justify-between text-[10px] text-zinc-600">
+                <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span>Ticket: R$ {(sp.ticketMedio / 100).toFixed(0)}</span>
                   <span>Comissão ({sp.commPct}%): R$ {(sp.comissao / 100).toFixed(0)}</span>
                 </div>
               </motion.div>
             ))}
-            {staffWithCommission.length === 0 && <p className="text-sm text-zinc-600 text-center py-8">Nenhum dado</p>}
+            {staffWithCommission.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado</p>}
           </div>
           {/* Desktop */}
           <div className="hidden md:block">
             <Table>
               <TableHeader>
-                <TableRow className="border-zinc-800/30 hover:bg-transparent">
-                  <TableHead className="text-[11px] uppercase tracking-wider text-zinc-600">Profissional</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Agendamentos</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Faturamento</TableHead>
-                  <TableHead className="w-36 text-[11px] uppercase tracking-wider text-zinc-600">Progresso</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Ticket Médio</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Comissão Est.</TableHead>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground">Profissional</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Agendamentos</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Faturamento</TableHead>
+                  <TableHead className="w-36 text-[11px] uppercase tracking-wider text-muted-foreground">Progresso</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Ticket Médio</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Comissão Est.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {staffWithCommission.map((sp, index) => (
-                  <TableRow key={index} className={`border-zinc-800/20 hover:bg-zinc-800/20 transition-colors ${sp.isTop ? "bg-emerald-500/[0.03]" : ""}`}>
+                  <TableRow key={index} className={`border-border/50 hover:bg-muted/30 transition-colors ${sp.isTop ? "bg-emerald-500/[0.03]" : ""}`}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2.5">
-                        {sp.isTop && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-                        <span className="text-zinc-200">{sp.name}</span>
+                        {sp.isTop && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                        <span className="text-foreground">{sp.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-300">{sp.bookings}</TableCell>
-                    <TableCell className="text-right font-bold tabular-nums text-zinc-100">R$ {(sp.revenue / 100).toFixed(2)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-foreground/80">{sp.bookings}</TableCell>
+                    <TableCell className="text-right font-bold tabular-nums text-foreground">R$ {(sp.revenue / 100).toFixed(2)}</TableCell>
                     <TableCell><Progress value={sp.progressPct} className="h-1.5" /></TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-300">R$ {(sp.ticketMedio / 100).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-zinc-500 tabular-nums">R$ {(sp.comissao / 100).toFixed(2)} <span className="text-[10px] text-zinc-600">({sp.commPct}%)</span></TableCell>
+                    <TableCell className="text-right tabular-nums text-foreground/80">R$ {(sp.ticketMedio / 100).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">R$ {(sp.comissao / 100).toFixed(2)} <span className="text-[10px] text-muted-foreground/70">({sp.commPct}%)</span></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -526,19 +526,19 @@ export default function Finance() {
       {/* Top Products */}
       {data?.top_products && data.top_products.length > 0 && (
         <Section>
-          <ChartCard icon={Package} iconColor="text-amber-400" iconBg="bg-amber-500/10" title="Produtos Mais Vendidos" description="Por quantidade no período">
+          <ChartCard icon={Package} iconColor="text-amber-500" iconBg="bg-amber-500/10" title="Produtos Mais Vendidos" description="Por quantidade no período">
             <div className="md:hidden space-y-2">
               {data.top_products.map((product, index) => (
-                <motion.div key={index} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/20 hover:bg-zinc-800/30 transition-colors">
+                <motion.div key={index} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${COLORS[index % COLORS.length]}15`, color: COLORS[index % COLORS.length] }}>{index + 1}</div>
                     <div>
-                      <p className="font-semibold text-sm text-zinc-200">{product.name}</p>
-                      <p className="text-[10px] text-zinc-600">{product.quantity} unidades</p>
+                      <p className="font-semibold text-sm text-foreground">{product.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{product.quantity} unidades</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-sm text-zinc-200 block tabular-nums">R$ {(product.revenue / 100).toFixed(0)}</span>
+                    <span className="font-bold text-sm text-foreground block tabular-nums">R$ {(product.revenue / 100).toFixed(0)}</span>
                     <span className="text-[10px] text-primary font-medium">+R$ {(product.profit / 100).toFixed(0)}</span>
                   </div>
                 </motion.div>
@@ -547,19 +547,19 @@ export default function Finance() {
             <div className="hidden md:block">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-zinc-800/30 hover:bg-transparent">
-                    <TableHead className="text-[11px] uppercase tracking-wider text-zinc-600">Produto</TableHead>
-                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Quantidade</TableHead>
-                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Faturamento</TableHead>
-                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Lucro</TableHead>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground">Produto</TableHead>
+                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Quantidade</TableHead>
+                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Faturamento</TableHead>
+                    <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Lucro</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.top_products.map((product, index) => (
-                    <TableRow key={index} className="border-zinc-800/20 hover:bg-zinc-800/20 transition-colors">
-                      <TableCell className="font-medium text-zinc-200">{product.name}</TableCell>
-                      <TableCell className="text-right tabular-nums text-zinc-300">{product.quantity}</TableCell>
-                      <TableCell className="text-right tabular-nums text-zinc-300">R$ {(product.revenue / 100).toFixed(2)}</TableCell>
+                    <TableRow key={index} className="border-border/50 hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-medium text-foreground">{product.name}</TableCell>
+                      <TableCell className="text-right tabular-nums text-foreground/80">{product.quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums text-foreground/80">R$ {(product.revenue / 100).toFixed(2)}</TableCell>
                       <TableCell className="text-right text-primary font-medium tabular-nums">R$ {(product.profit / 100).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
@@ -572,20 +572,20 @@ export default function Finance() {
 
       {/* Recent Bookings */}
       <Section>
-        <ChartCard icon={Calendar} iconColor="text-blue-400" iconBg="bg-blue-500/10" title="Últimos Agendamentos" description="Agendamentos recentes do período">
+        <ChartCard icon={Calendar} iconColor="text-blue-500" iconBg="bg-blue-500/10" title="Últimos Agendamentos" description="Agendamentos recentes do período">
           <div className="md:hidden space-y-2">
             {bookings.slice(0, 5).map((booking, i) => (
-              <motion.div key={booking.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="p-3 rounded-xl bg-zinc-800/20 hover:bg-zinc-800/30 transition-colors space-y-2">
+              <motion.div key={booking.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-sm text-zinc-200">{booking.customer?.name}</p>
-                    <p className="text-[10px] text-zinc-600">{booking.service?.name}</p>
+                    <p className="font-semibold text-sm text-foreground">{booking.customer?.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{booking.service?.name}</p>
                   </div>
                   <Badge variant={booking.status === "confirmed" ? "default" : booking.status === "cancelled" ? "destructive" : "secondary"} className="text-[10px] px-2 py-0.5">{statusLabel(booking.status)}</Badge>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-600 tabular-nums">{format(new Date(booking.starts_at), "dd/MM/yyyy HH:mm")}</span>
-                  <span className="font-bold text-emerald-400 tabular-nums">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</span>
+                  <span className="text-muted-foreground tabular-nums">{format(new Date(booking.starts_at), "dd/MM/yyyy HH:mm")}</span>
+                  <span className="font-bold text-emerald-500 tabular-nums">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</span>
                 </div>
               </motion.div>
             ))}
@@ -593,27 +593,24 @@ export default function Finance() {
           <div className="hidden md:block">
             <Table>
               <TableHeader>
-                <TableRow className="border-zinc-800/30 hover:bg-transparent">
-                  <TableHead className="text-[11px] uppercase tracking-wider text-zinc-600">Cliente</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-zinc-600">Data/Hora</TableHead>
-                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-zinc-600">Valor</TableHead>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground">Cliente</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground">Serviço</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground">Profissional</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-muted-foreground">Data/Hora</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Valor</TableHead>
+                  <TableHead className="text-right text-[11px] uppercase tracking-wider text-muted-foreground">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookings.slice(0, 5).map((booking) => (
-                  <TableRow key={booking.id} className="border-zinc-800/20 hover:bg-zinc-800/20 transition-colors">
-                    <TableCell>
-                      <p className="font-medium text-zinc-200">{booking.customer?.name}</p>
-                      <p className="text-xs text-zinc-600">{booking.service?.name}</p>
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      <p className="text-zinc-300">{format(new Date(booking.starts_at), "dd/MM/yyyy")}</p>
-                      <p className="text-zinc-600 text-xs">{format(new Date(booking.starts_at), "HH:mm")}</p>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <p className="font-bold tabular-nums text-zinc-100">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</p>
-                      <Badge variant={booking.status === "confirmed" ? "default" : booking.status === "cancelled" ? "destructive" : "secondary"} className="text-[10px] px-2 py-0.5">{statusLabel(booking.status)}</Badge>
-                    </TableCell>
+                {bookings.slice(0, 5).map((booking, i) => (
+                  <TableRow key={booking.id} className="border-border/50 hover:bg-muted/30 transition-colors">
+                    <TableCell className="font-medium text-foreground">{booking.customer?.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{booking.service?.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{booking.staff?.name}</TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">{format(new Date(booking.starts_at), "dd/MM HH:mm")}</TableCell>
+                    <TableCell className="text-right font-bold text-foreground tabular-nums">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</TableCell>
+                    <TableCell className="text-right"><Badge variant="outline" className="text-[10px]">{statusLabel(booking.status)}</Badge></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

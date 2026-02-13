@@ -328,7 +328,7 @@ export function ServicePackagesTab() {
                       size="sm"
                       onClick={() => handleEnhanceImage(pkg)}
                       disabled={enhancingId === pkg.id}
-                      className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+                      className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/10"
                       title="Melhorar imagem com IA"
                     >
                       {enhancingId === pkg.id ? (
@@ -433,31 +433,26 @@ export function ServicePackagesTab() {
               ) : (
                 <Button type="button" variant="outline" className="w-full h-20 border-dashed"
                   onClick={() => fileInputRef.current?.click()} disabled={uploadingImage}>
-                  <div className="flex flex-col items-center gap-1">
-                    {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5 text-muted-foreground" />}
-                    <span className="text-xs text-muted-foreground">{uploadingImage ? "Enviando..." : "Clique para enviar foto"}</span>
-                  </div>
+                  {uploadingImage ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="flex flex-col items-center"><Upload className="h-6 w-6 mb-1" /><span className="text-xs">Upload</span></div>}
                 </Button>
               )}
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border px-4 py-3">
-              <div>
-                <Label className="text-sm">Visível para clientes</Label>
-                <p className="text-xs text-muted-foreground">Exibir na página pública de agendamento</p>
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <div className="space-y-0.5">
+                <Label>Visível no catálogo público?</Label>
+                <p className="text-xs text-muted-foreground">Se desligado, apenas você poderá vender.</p>
               </div>
               <Switch
                 checked={formData.isPublic}
-                onCheckedChange={(v) => setFormData(p => ({ ...p, isPublic: v }))}
+                onCheckedChange={(c) => setFormData(p => ({ ...p, isPublic: c }))}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowForm(false); setEditingId(null); }}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : editingId ? "Salvar" : "Criar"}
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Salvando...</> : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>
