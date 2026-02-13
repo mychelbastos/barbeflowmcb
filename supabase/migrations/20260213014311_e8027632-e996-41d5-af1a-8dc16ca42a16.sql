@@ -1,0 +1,1 @@
+UPDATE tenants SET subscription_status = 'active' WHERE slug = 'barberflow';
