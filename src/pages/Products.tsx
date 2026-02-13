@@ -437,7 +437,7 @@ const Products = () => {
         {/* Products Tab */}
         <TabsContent value="products" className="space-y-6">
           <div className="flex justify-end">
-            <Button onClick={() => openProductModal()} className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950">
+            <Button onClick={() => openProductModal()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="h-4 w-4 mr-2" />
               Novo Produto
             </Button>
@@ -552,7 +552,7 @@ const Products = () => {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={() => openSaleModal()} disabled={products.length === 0} className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950">
+            <Button onClick={() => openSaleModal()} disabled={products.length === 0} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="h-4 w-4 mr-2" />
               Registrar Venda
             </Button>
@@ -701,7 +701,7 @@ const Products = () => {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowProductModal(false)}>Cancelar</Button>
-            <Button onClick={handleSaveProduct} disabled={savingProduct} className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950">
+            <Button onClick={handleSaveProduct} disabled={savingProduct} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {savingProduct ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editingProduct ? 'Salvar' : 'Cadastrar'}
             </Button>
@@ -804,7 +804,7 @@ const Products = () => {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowSaleModal(false)}>Cancelar</Button>
-            <Button onClick={handleSaveSale} disabled={savingSale} className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950">
+            <Button onClick={handleSaveSale} disabled={savingSale} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {savingSale ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editingSale ? 'Salvar' : 'Registrar'}
             </Button>
