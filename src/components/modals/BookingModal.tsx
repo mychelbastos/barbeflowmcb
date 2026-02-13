@@ -63,6 +63,14 @@ interface AvailableSlot {
   staff_name: string;
 }
 
+interface DetectedBenefit {
+  type: 'subscription' | 'package';
+  name: string;
+  id: string;
+  remaining?: number;
+  validUntil?: string;
+}
+
 export function BookingModal() {
   const { currentTenant } = useTenant();
   const { isOpen, closeBookingModal, initialStaffId, initialDate, initialTime, customerPackageId, customerSubscriptionId, allowedServiceIds, preselectedCustomerId } = useBookingModal();
@@ -82,6 +90,10 @@ export function BookingModal() {
   // Available slots state
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Benefit detection state
+  const [detectedBenefits, setDetectedBenefits] = useState<DetectedBenefit[]>([]);
+  const [loadingBenefits, setLoadingBenefits] = useState(false);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -116,6 +128,7 @@ export function BookingModal() {
       setCustomerSuggestions([]);
       setSelectedCustomerId(null);
       setAvailableSlots([]);
+      setDetectedBenefits([]);
     }
   }, [isOpen, currentTenant]);
 
@@ -138,6 +151,88 @@ export function BookingModal() {
       loadPreselectedCustomer();
     }
   }, [isOpen, preselectedCustomerId, currentTenant]);
+
+  // Detect benefits when customer + service are selected
+  useEffect(() => {
+    if (!selectedCustomerId || !watchedServiceId || !currentTenant) {
+      setDetectedBenefits([]);
+      return;
+    }
+    const detectBenefits = async () => {
+      setLoadingBenefits(true);
+      const benefits: DetectedBenefit[] = [];
+      try {
+        // 1. Check active subscriptions
+        const { data: subs } = await supabase
+          .from('customer_subscriptions')
+          .select('id, status, plan_id, started_at, current_period_start, current_period_end, plan:subscription_plans(name)')
+          .eq('customer_id', selectedCustomerId)
+          .eq('tenant_id', currentTenant.id)
+          .in('status', ['active', 'authorized']);
+
+        if (subs) {
+          const now = new Date();
+          for (const sub of subs) {
+            const startDate = sub.current_period_start ? new Date(sub.current_period_start) : (sub.started_at ? new Date(sub.started_at) : null);
+            if (!startDate) continue;
+            const endDate = sub.current_period_end ? new Date(sub.current_period_end) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            if (now > endDate) continue;
+
+            const { data: planSvc } = await supabase
+              .from('subscription_plan_services')
+              .select('sessions_per_cycle')
+              .eq('plan_id', sub.plan_id)
+              .eq('service_id', watchedServiceId)
+              .maybeSingle();
+
+            if (planSvc) {
+              benefits.push({
+                type: 'subscription',
+                name: (sub.plan as any)?.name || 'Assinatura',
+                id: sub.id,
+                validUntil: endDate.toLocaleDateString('pt-BR'),
+              });
+            }
+          }
+        }
+
+        // 2. Check active packages
+        const { data: pkgs } = await supabase
+          .from('customer_packages')
+          .select('id, status, payment_status, package:service_packages(name)')
+          .eq('customer_id', selectedCustomerId)
+          .eq('tenant_id', currentTenant.id)
+          .eq('status', 'active')
+          .eq('payment_status', 'confirmed');
+
+        if (pkgs) {
+          for (const pkg of pkgs) {
+            const { data: pkgSvc } = await supabase
+              .from('customer_package_services')
+              .select('sessions_used, sessions_total')
+              .eq('customer_package_id', pkg.id)
+              .eq('service_id', watchedServiceId)
+              .maybeSingle();
+
+            if (pkgSvc && pkgSvc.sessions_used < pkgSvc.sessions_total) {
+              benefits.push({
+                type: 'package',
+                name: (pkg.package as any)?.name || 'Pacote',
+                id: pkg.id,
+                remaining: pkgSvc.sessions_total - pkgSvc.sessions_used,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error detecting benefits:', err);
+      } finally {
+        setDetectedBenefits(benefits);
+        setLoadingBenefits(false);
+      }
+    };
+    detectBenefits();
+  }, [selectedCustomerId, watchedServiceId, currentTenant]);
 
   // Fetch available slots when date/service/staff changes
   useEffect(() => {
@@ -479,6 +574,42 @@ export function BookingModal() {
                 )}
               />
             </div>
+
+            {/* Benefit detection banner */}
+            {selectedCustomerId && watchedServiceId && (
+              loadingBenefits ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verificando benefícios do cliente...
+                </div>
+              ) : detectedBenefits.length > 0 ? (
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg space-y-1.5">
+                  {detectedBenefits.map((b, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      {b.type === 'subscription' ? (
+                        <>
+                          <Repeat className="h-4 w-4 text-emerald-500 shrink-0" />
+                          <span className="text-foreground">
+                            🔓 Assinatura <strong>{b.name}</strong> ativa até {b.validUntil} — será R$ 0,00
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Package className="h-4 w-4 text-amber-500 shrink-0" />
+                          <span className="text-foreground">
+                            ✅ <strong>{b.remaining}</strong> sessão(ões) disponível(eis) no pacote <strong>{b.name}</strong> — será R$ 0,00
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">❌ Nenhum pacote ou assinatura ativa para este serviço</span>
+                </div>
+              )
+            )}
 
             {/* Date */}
             <FormField
