@@ -106,7 +106,7 @@ export function SubscriptionPlanCard({ plan, onEdit, onDelete, onToggleActive, o
               size="sm"
               onClick={handleEnhance}
               disabled={enhancing}
-              className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+              className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/10"
               title="Melhorar imagem com IA"
             >
               {enhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}

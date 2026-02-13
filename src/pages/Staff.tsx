@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   Form,
   FormControl,
@@ -501,240 +501,110 @@ export default function Staff() {
             </Card>
           );
         })}
-        
-        {staff.length === 0 && (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardContent className="text-center py-12">
-              <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                Nenhum profissional cadastrado
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Adicione o primeiro profissional da sua equipe
-              </p>
-              <Button
-                onClick={() => {
-                  setEditingStaff(null);
-                  form.reset();
-                  setSelectedServices([]);
-                  setPhotoFile(null);
-                  setPhotoPreview(null);
-                  setShowForm(true);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Profissional
-              </Button>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
-      {/* Schedule Management Dialog */}
-      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Horários de Trabalho - {selectedStaffForSchedule?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Configure os horários de trabalho do profissional
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedStaffForSchedule && (
-            <StaffScheduleManager 
-              staffId={selectedStaffForSchedule.id}
-              staffName={selectedStaffForSchedule.name}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Staff Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingStaff ? 'Editar Profissional' : 'Novo Profissional'}
-            </DialogTitle>
+            <DialogTitle>{editingStaff ? "Editar Profissional" : "Adicionar Profissional"}</DialogTitle>
             <DialogDescription>
-              {editingStaff ? 'Atualize as informações do profissional' : 'Adicione um novo membro à equipe'}
+              Preencha os dados do profissional e os serviços que ele realiza.
             </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              {/* Photo Upload */}
-              <div className="flex flex-col items-center gap-3">
-                <div 
-                  className="relative w-20 h-20 rounded-full overflow-hidden cursor-pointer group"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {photoPreview ? (
-                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <User className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="h-5 w-5 text-white" />
-                  </div>
+              <div className="flex flex-col items-center gap-4 py-2">
+                <div className="relative">
+                  <Avatar className="w-24 h-24 border-2 border-border">
+                    <AvatarImage src={photoPreview || undefined} />
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      <Camera className="h-8 w-8" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handlePhotoChange}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoChange}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {photoPreview ? 'Alterar foto' : 'Adicionar foto'}
-                </button>
+                <p className="text-xs text-muted-foreground">Foto do profissional (opcional)</p>
               </div>
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Completo *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: João Silva" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do profissional" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cor na Agenda</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Input type="color" {...field} className="w-12 h-10 p-1" />
+                          <Input {...field} placeholder="#000000" className="flex-1" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
                 name="bio"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bio</FormLabel>
+                    <FormLabel>Bio (opcional)</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Especialidades, experiência..." 
-                        className="resize-none"
-                        {...field} 
-                      />
+                      <Textarea placeholder="Breve descrição..." className="resize-none" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="color"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cor do Perfil</FormLabel>
-                    <div className="flex space-x-2">
-                      <FormControl>
-                        <Input type="color" className="w-16 h-10" {...field} />
-                      </FormControl>
-                      <Input 
-                        placeholder="#10B981" 
-                        className="flex-1"
-                        {...field}
-                      />
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Services Selection */}
-              <div>
-                <Label className="text-sm font-medium">Serviços</Label>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Selecione os serviços que este profissional pode realizar
-                </p>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {services.map((service) => (
-                    <div key={service.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={service.id}
-                        checked={selectedServices.includes(service.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedServices([...selectedServices, service.id]);
-                          } else {
-                            setSelectedServices(selectedServices.filter(id => id !== service.id));
-                          }
-                        }}
-                      />
-                      <label 
-                        htmlFor={service.id}
-                        className="text-sm cursor-pointer flex items-center"
-                      >
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2"
-                          style={{ backgroundColor: service.color }}
-                        />
-                        {service.name}
-                      </label>
-                    </div>
-                  ))}
-                  {services.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum serviço cadastrado. Cadastre serviços primeiro.
-                    </p>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Se nenhum serviço for selecionado, o profissional poderá realizar todos os serviços
-                </p>
-              </div>
-
-              {/* Owner Toggle */}
-              <FormField
-                control={form.control}
-                name="is_owner"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between">
-                    <div>
-                      <FormLabel>Profissional Principal (Dono)</FormLabel>
-                      <p className="text-xs text-muted-foreground">
-                        O dono não recebe comissão — ele distribui para os outros
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {/* Commission fields - only if not owner */}
-              {!form.watch("is_owner") && (
-                <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/30">
-                  <Label className="text-sm font-medium">Comissões</Label>
+              <div className="space-y-3 pt-2 border-t border-border">
+                <h4 className="text-sm font-medium">Comissões (opcional)</h4>
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="default_commission_percent"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Comissão de Serviços (%)</FormLabel>
+                        <FormLabel>Serviços (%)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            placeholder="0"
-                            value={field.value}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="100" 
+                            {...field} 
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
                           />
                         </FormControl>
                         <FormMessage />
@@ -746,16 +616,14 @@ export default function Staff() {
                     name="product_commission_percent"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Comissão de Produtos (%)</FormLabel>
+                        <FormLabel>Produtos (%)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            placeholder="0"
-                            value={field.value}
-                            onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="100" 
+                            {...field} 
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)} 
                           />
                         </FormControl>
                         <FormMessage />
@@ -763,45 +631,80 @@ export default function Staff() {
                     )}
                   />
                 </div>
-              )}
+              </div>
 
-              <FormField
-                control={form.control}
-                name="active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between">
-                    <div>
-                      <FormLabel>Profissional Ativo</FormLabel>
-                      <p className="text-xs text-muted-foreground">
-                        Profissionais ativos ficam disponíveis para agendamento
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
+              <div className="space-y-3 pt-2 border-t border-border">
+                <h4 className="text-sm font-medium">Serviços Realizados</h4>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2">
+                  {services.map((service) => (
+                    <div key={service.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`service-${service.id}`}
+                        checked={selectedServices.includes(service.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedServices([...selectedServices, service.id]);
+                          } else {
+                            setSelectedServices(selectedServices.filter(id => id !== service.id));
+                          }
+                        }}
                       />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                      <label 
+                        htmlFor={`service-${service.id}`} 
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {service.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-border">
+                <FormField
+                  control={form.control}
+                  name="is_owner"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Dono/Gerente</FormLabel>
+                        <p className="text-[11px] text-muted-foreground">
+                          Pode acessar todas as configurações
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowForm(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={formLoading}>
-                  {formLoading ? "Salvando..." : editingStaff ? "Atualizar" : "Adicionar"}
+                  {formLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      {selectedStaffForSchedule && (
+        <StaffScheduleManager
+          staffId={selectedStaffForSchedule.id}
+          staffName={selectedStaffForSchedule.name}
+          open={showScheduleDialog}
+          onOpenChange={setShowScheduleDialog}
+        />
+      )}
     </div>
   );
 }
