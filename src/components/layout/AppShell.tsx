@@ -67,6 +67,7 @@ import {
   Sparkles,
   Crown,
   Palette,
+  Banknote,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -115,6 +116,7 @@ const baseNavigationItems: NavItem[] = [
     icon: Wallet,
     children: [
       { title: "Visão Geral", url: "/app/finance", icon: BarChart3 },
+      { title: "Caixa", url: "/app/caixa", icon: Banknote },
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
     ]
   },

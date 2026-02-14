@@ -223,11 +223,15 @@ export type Database = {
       cash_entries: {
         Row: {
           amount_cents: number
+          booking_id: string | null
           created_at: string | null
           id: string
           kind: string
           notes: string | null
           occurred_at: string
+          payment_id: string | null
+          payment_method: string | null
+          session_id: string | null
           source: string | null
           staff_id: string | null
           tenant_id: string
@@ -235,11 +239,15 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          booking_id?: string | null
           created_at?: string | null
           id?: string
           kind: string
           notes?: string | null
           occurred_at?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          session_id?: string | null
           source?: string | null
           staff_id?: string | null
           tenant_id: string
@@ -247,17 +255,49 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          booking_id?: string | null
           created_at?: string | null
           id?: string
           kind?: string
           notes?: string | null
           occurred_at?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          session_id?: string | null
           source?: string | null
           staff_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cash_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_entries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_daily_cash_summary"
+            referencedColumns: ["session_id"]
+          },
           {
             foreignKeyName: "cash_entries_staff_id_fkey"
             columns: ["staff_id"]
@@ -267,6 +307,65 @@ export type Database = {
           },
           {
             foreignKeyName: "cash_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_amount_cents: number | null
+          created_at: string
+          difference_cents: number | null
+          difference_reason: string | null
+          expected_amount_cents: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string | null
+          opening_amount_cents: number
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount_cents?: number | null
+          created_at?: string
+          difference_cents?: number | null
+          difference_reason?: string | null
+          expected_amount_cents?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          opening_amount_cents?: number
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount_cents?: number | null
+          created_at?: string
+          difference_cents?: number | null
+          difference_reason?: string | null
+          expected_amount_cents?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          opening_amount_cents?: number
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1938,7 +2037,84 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_daily_cash_summary: {
+        Row: {
+          closing_amount_cents: number | null
+          difference_cents: number | null
+          entries_count: number | null
+          expected_amount_cents: number | null
+          opening_amount_cents: number | null
+          session_date: string | null
+          session_id: string | null
+          status: string | null
+          tenant_id: string | null
+          total_in: number | null
+          total_out: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_open_balances: {
+        Row: {
+          balance_cents: number | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          tenant_id: string | null
+          total_credits: number | null
+          total_debits: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_balance_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_balance_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_revenue_received: {
+        Row: {
+          amount_cents: number | null
+          booking_id: string | null
+          payment_method: string | null
+          received_date: string | null
+          reference_id: string | null
+          source: string | null
+          staff_id: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
+      v_revenue_theoretical: {
+        Row: {
+          amount_cents: number | null
+          customer_id: string | null
+          customer_package_id: string | null
+          customer_subscription_id: string | null
+          reference_id: string | null
+          revenue_date: string | null
+          revenue_type: string | null
+          staff_id: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cancel_booking_with_refund: {

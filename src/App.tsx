@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Finance from "./pages/Finance";
 import CommissionsPage from "./pages/CommissionsPage";
+import CashRegister from "./pages/CashRegister";
 import PackagesPage from "./pages/PackagesPage";
 import SubscriptionPlansPage from "./pages/SubscriptionPlansPage";
 import SubscriptionCallback from "./pages/SubscriptionCallback";
@@ -93,6 +94,7 @@ const App = () => (
                   <Route path="recurring-clients" element={<RecurringClients />} />
                   <Route path="finance" element={<Finance />} />
                   <Route path="commissions" element={<CommissionsPage />} />
+                  <Route path="caixa" element={<CashRegister />} />
                   <Route path="products" element={<Products />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>
