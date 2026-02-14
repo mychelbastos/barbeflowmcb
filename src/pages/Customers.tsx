@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerBalanceTab } from "@/components/CustomerBalanceTab";
 import { CustomerPackagesTab } from "@/components/CustomerPackagesTab";
 import { NoTenantState } from "@/components/NoTenantState";
+import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -777,6 +778,10 @@ export default function Customers() {
                       </CardContent>
                     </Card>
                   </div>
+
+                  {currentTenant && (
+                    <CustomerBalanceAlert customerId={selectedCustomer.id} tenantId={currentTenant.id} />
+                  )}
 
                   {selectedCustomer.notes && (
                     <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg">

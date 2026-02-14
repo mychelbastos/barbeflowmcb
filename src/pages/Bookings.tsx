@@ -58,6 +58,7 @@ import { ScheduleGrid } from "@/components/calendar/ScheduleGrid";
 import { BlockDialog } from "@/components/calendar/BlockDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
 import {
   Sheet,
   SheetContent,
@@ -661,6 +662,9 @@ export default function Bookings() {
                   <div className="mt-1"><Badge variant={getStatusVariant(selectedBooking.status)}>{getStatusLabel(selectedBooking.status)}</Badge></div>
                 </div>
               </div>
+              {currentTenant && (
+                <CustomerBalanceAlert customerId={selectedBooking.customer_id} tenantId={currentTenant.id} />
+              )}
               {customerNotes && (
                 <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
                   <Label className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">

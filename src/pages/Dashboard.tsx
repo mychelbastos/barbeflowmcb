@@ -26,6 +26,7 @@ import { WeeklyScheduleGrid } from "@/components/dashboard/WeeklyScheduleGrid";
 import { WeeklyBarChart } from "@/components/dashboard/WeeklyBarChart";
 import { RevenueLineChart } from "@/components/dashboard/RevenueLineChart";
 import { ClientRevenuePanel } from "@/components/dashboard/ClientRevenuePanel";
+import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
 
 const spring = { type: "spring" as const, stiffness: 200, damping: 26, mass: 0.6 };
 const gentleSpring = { type: "spring" as const, stiffness: 120, damping: 20, mass: 0.8 };
@@ -388,6 +389,9 @@ const Dashboard = () => {
                     })()}
                   </div>
                 )}
+              {currentTenant && selectedBooking?.customer_id && (
+                <CustomerBalanceAlert customerId={selectedBooking.customer_id} tenantId={currentTenant.id} />
+              )}
               {customerNotes && (
                   <div className="pt-3 border-t border-border">
                     <div className="p-2.5 bg-amber-500/5 border border-amber-500/20 rounded-lg">
