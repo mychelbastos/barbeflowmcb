@@ -164,45 +164,73 @@ serve(async (req) => {
         }
       }
 
-      // Cash entry (idempotent by external_id match — no ilike)
-      const { data: existingCashEntry } = await supabase.from('cash_entries').select('id')
-        .eq('tenant_id', payment.tenant_id).eq('source', 'booking')
-        .ilike('notes', `%booking:${payment.booking_id}%`).maybeSingle();
-      if (!existingCashEntry) {
-        await supabase.from('cash_entries').insert({
-          tenant_id: payment.tenant_id, staff_id: payment.booking?.staff_id || null,
-          amount_cents: payment.amount_cents, kind: 'income', source: 'booking',
-          notes: `booking:${payment.booking_id} | MP payment: ${mpPaymentId}`, occurred_at: new Date().toISOString(),
-        });
+      // ========== AUTO-CLOSE COMANDA: debit + credit + cash_entry (all idempotent) ==========
+      const customerId = payment.booking?.customer_id;
+      const bookingId = payment.booking_id;
+      const staffIdForEntry = payment.booking?.staff_id || null;
+
+      // 1) Idempotent DEBIT for service consumption
+      if (customerId) {
+        const { data: existingDebit } = await supabase
+          .from('customer_balance_entries').select('id')
+          .eq('tenant_id', payment.tenant_id).eq('booking_id', bookingId)
+          .eq('type', 'debit').eq('description', 'Serviço realizado').maybeSingle();
+
+        if (!existingDebit) {
+          // Get service price from booking
+          const { data: bookingWithService } = await supabase
+            .from('bookings').select('service:services(price_cents), customer_package_id, customer_subscription_id')
+            .eq('id', bookingId).single();
+
+          const isBenefit = !!(bookingWithService?.customer_package_id || bookingWithService?.customer_subscription_id);
+          const svcPrice = isBenefit ? 0 : (bookingWithService?.service?.price_cents || 0);
+
+          if (svcPrice > 0) {
+            await supabase.from('customer_balance_entries').insert({
+              tenant_id: payment.tenant_id, customer_id: customerId,
+              type: 'debit', amount_cents: svcPrice,
+              description: 'Serviço realizado', booking_id: bookingId, staff_id: staffIdForEntry,
+            });
+            console.log(`[LEDGER] Created debit ${svcPrice} cents for booking ${bookingId}`);
+          }
+        } else {
+          console.log(`[LEDGER] Debit already exists for booking ${bookingId}, skipping`);
+        }
       }
 
-      // ✅ ETAPA 1: Crédito idempotente na comanda do cliente
-      // Só cria crédito se amount > 0 (não gerar crédito para pacote/assinatura com valor 0)
-      if (payment.amount_cents > 0 && payment.booking?.customer_id) {
+      // 2) Idempotent CREDIT for payment received
+      if (payment.amount_cents > 0 && customerId) {
         const dedupKey = `mp_payment_${paymentId}`;
         const { data: existingCredit } = await supabase
-          .from('customer_balance_entries')
-          .select('id')
-          .eq('tenant_id', payment.tenant_id)
-          .eq('booking_id', payment.booking_id)
-          .eq('type', 'credit')
-          .eq('description', dedupKey)
-          .maybeSingle();
+          .from('customer_balance_entries').select('id')
+          .eq('tenant_id', payment.tenant_id).eq('booking_id', bookingId)
+          .eq('type', 'credit').eq('description', dedupKey).maybeSingle();
 
         if (!existingCredit) {
           await supabase.from('customer_balance_entries').insert({
-            tenant_id: payment.tenant_id,
-            customer_id: payment.booking.customer_id,
-            type: 'credit',
-            amount_cents: payment.amount_cents,
-            description: dedupKey,
-            booking_id: payment.booking_id,
-            staff_id: payment.booking.staff_id || null,
+            tenant_id: payment.tenant_id, customer_id: customerId,
+            type: 'credit', amount_cents: payment.amount_cents,
+            description: dedupKey, booking_id: bookingId, staff_id: staffIdForEntry,
           });
-          console.log(`[LEDGER] Created credit ${payment.amount_cents} cents for customer ${payment.booking.customer_id}, booking ${payment.booking_id}`);
+          console.log(`[LEDGER] Created credit ${payment.amount_cents} cents for booking ${bookingId}`);
         } else {
-          console.log(`[LEDGER] Credit already exists for booking ${payment.booking_id}, skipping (idempotent)`);
+          console.log(`[LEDGER] Credit already exists for booking ${bookingId}, skipping`);
         }
+      }
+
+      // 3) Idempotent CASH ENTRY for online income
+      const { data: existingCashEntry } = await supabase.from('cash_entries').select('id')
+        .eq('tenant_id', payment.tenant_id).eq('source', 'online')
+        .eq('booking_id', bookingId).eq('payment_id', paymentId).maybeSingle();
+
+      if (!existingCashEntry) {
+        await supabase.from('cash_entries').insert({
+          tenant_id: payment.tenant_id, staff_id: staffIdForEntry,
+          amount_cents: payment.amount_cents, kind: 'income', source: 'online',
+          payment_method: 'online', booking_id: bookingId, payment_id: paymentId,
+          notes: `Pagamento online MP #${mpPaymentId}`, occurred_at: new Date().toISOString(),
+        });
+        console.log(`[CASH] Created online cash entry for booking ${bookingId}`);
       }
 
       if (customerPackageId) {

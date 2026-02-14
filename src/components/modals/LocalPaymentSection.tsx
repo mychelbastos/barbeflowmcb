@@ -147,16 +147,7 @@ export function LocalPaymentSection({
     }
   };
 
-  if (hasPaidOnline) {
-    return (
-      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-        <p className="text-sm font-medium text-emerald-500">✅ Pago online</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Pagamento já registrado via plataforma de pagamento online.
-        </p>
-      </div>
-    );
-  }
+  // hasPaidOnline is now handled by the parent modal — this component only renders for local payments
 
   const fmt = (cents: number) => `R$ ${(Math.abs(cents) / 100).toFixed(2)}`;
 

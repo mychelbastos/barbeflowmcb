@@ -44,6 +44,7 @@ export function BookingDetailsModal({
   const [customerNotes, setCustomerNotes] = useState<string | null>(null);
   const [customerBalance, setCustomerBalance] = useState<number>(0);
   const [hasPaidOnline, setHasPaidOnline] = useState(false);
+  const [onlinePaymentInfo, setOnlinePaymentInfo] = useState<{ amount_cents: number; updated_at: string; external_id: string | null } | null>(null);
   const [paymentRecorded, setPaymentRecorded] = useState(false);
   const [balanceKey, setBalanceKey] = useState(0);
 
@@ -86,13 +87,23 @@ export function BookingDetailsModal({
     if (!booking.is_recurring) {
       const { data: payData } = await supabase
         .from("payments")
-        .select("status")
+        .select("status, amount_cents, updated_at, external_id")
         .eq("booking_id", booking.id)
         .eq("status", "paid")
         .limit(1);
-      setHasPaidOnline((payData || []).length > 0);
+      const paidOnline = (payData || []).length > 0;
+      setHasPaidOnline(paidOnline);
+      if (paidOnline && payData?.[0]) {
+        setOnlinePaymentInfo({
+          amount_cents: payData[0].amount_cents,
+          updated_at: payData[0].updated_at,
+          external_id: payData[0].external_id,
+        });
+      } else {
+        setOnlinePaymentInfo(null);
+      }
 
-      // Check if local payment already recorded (debit from RPC or credit)
+      // Check if local payment already recorded
       const { data: localPayData } = await supabase
         .from("customer_balance_entries")
         .select("id")
@@ -237,8 +248,26 @@ export function BookingDetailsModal({
             </div>
           )}
 
-          {/* Payment section - only for completed bookings without benefits */}
-          {isCompleted && !isBenefitBooking && !paymentRecorded && booking.customer_id && (
+          {/* Payment status banners */}
+          {hasPaidOnline && onlinePaymentInfo && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 space-y-1">
+              <p className="text-sm font-medium text-emerald-500">✅ Pago online</p>
+              <div className="text-xs text-muted-foreground space-y-0.5">
+                <p>Valor: R$ {(onlinePaymentInfo.amount_cents / 100).toFixed(2)}</p>
+                <p>Data: {format(parseISO(onlinePaymentInfo.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                {onlinePaymentInfo.external_id && <p>ID MP: #{onlinePaymentInfo.external_id}</p>}
+              </div>
+            </div>
+          )}
+
+          {paymentRecorded && !hasPaidOnline && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <p className="text-sm font-medium text-emerald-500">✅ Pago no balcão</p>
+            </div>
+          )}
+
+          {/* Payment section - only for completed bookings without benefits, not yet paid */}
+          {isCompleted && !isBenefitBooking && !paymentRecorded && !hasPaidOnline && booking.customer_id && (
             <LocalPaymentSection
               bookingId={booking.id}
               customerId={booking.customer_id}
@@ -246,14 +275,15 @@ export function BookingDetailsModal({
               staffId={booking.staff_id || null}
               servicePriceCents={servicePriceCents}
               customerBalance={customerBalance}
-              hasPaidOnline={hasPaidOnline}
+              hasPaidOnline={false}
               onPaymentRecorded={handlePaymentRecorded}
             />
           )}
 
-          {paymentRecorded && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <p className="text-sm font-medium text-emerald-500">✅ Pagamento registrado com sucesso</p>
+          {/* Pending warning for completed but unpaid */}
+          {isCompleted && !isBenefitBooking && !paymentRecorded && !hasPaidOnline && !booking.customer_id && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-sm font-medium text-amber-500">⚠️ Pendente</p>
             </div>
           )}
 
