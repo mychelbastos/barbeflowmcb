@@ -192,8 +192,15 @@ serve(async (req) => {
 
     // If authorized via card token, mark as active immediately
     if (card_token_id && mpData.status === 'authorized') {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
       updateData.status = 'active';
-      updateData.started_at = new Date().toISOString();
+      updateData.started_at = now.toISOString();
+      updateData.current_period_start = now.toISOString();
+      updateData.current_period_end = periodEnd.toISOString();
+      updateData.next_payment_date = mpData.next_payment_date || periodEnd.toISOString();
       console.log('Subscription activated immediately via card token');
     } else {
       updateData.checkout_url = mpData.init_point;
@@ -203,6 +210,41 @@ serve(async (req) => {
       .from('customer_subscriptions')
       .update(updateData)
       .eq('id', subscription.id);
+
+    // Initialize usage for inline card activation (Etapa 3)
+    if (card_token_id && mpData.status === 'authorized') {
+      try {
+        const { data: planServices } = await supabase
+          .from('subscription_plan_services')
+          .select('service_id, sessions_per_cycle')
+          .eq('plan_id', plan_id);
+
+        if (planServices?.length) {
+          const now = new Date();
+          const periodEnd = new Date(now);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+          const periodStartStr = now.toISOString().split('T')[0];
+          const periodEndStr = periodEnd.toISOString().split('T')[0];
+
+          for (const ps of planServices) {
+            await supabase.from('subscription_usage').upsert({
+              subscription_id: subscription.id,
+              service_id: ps.service_id,
+              period_start: periodStartStr,
+              period_end: periodEndStr,
+              sessions_used: 0,
+              sessions_limit: ps.sessions_per_cycle,
+              booking_ids: [],
+            }, {
+              onConflict: 'subscription_id,service_id,period_start',
+            });
+          }
+          console.log('Usage records initialized for inline card activation');
+        }
+      } catch (usageErr) {
+        console.error('Error initializing usage for card activation:', usageErr);
+      }
+    }
 
     // Send WhatsApp notification if subscription was activated
     if (card_token_id && mpData.status === 'authorized') {

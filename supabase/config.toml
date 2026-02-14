@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.mp-pause-subscription]
 verify_jwt = false
 
+[functions.mp-resume-subscription]
+verify_jwt = false
+
 [functions.mp-webhook]
 verify_jwt = false
 

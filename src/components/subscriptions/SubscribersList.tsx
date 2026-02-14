@@ -5,7 +5,7 @@ import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pause, XCircle, UserPlus, Calendar, Trash2 } from "lucide-react";
+import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -94,6 +94,23 @@ export function SubscribersList() {
       loadData();
     } catch (err) {
       toast({ title: "Erro ao pausar", variant: "destructive" });
+    }
+  };
+
+  const handleResume = async (sub: any) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('mp-resume-subscription', {
+        body: { subscription_id: sub.id },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro ao reativar", description: data.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Assinatura reativada" });
+      loadData();
+    } catch (err) {
+      toast({ title: "Erro ao reativar", variant: "destructive" });
     }
   };
 
@@ -197,13 +214,18 @@ export function SubscribersList() {
                 )}
                 {sub.status === 'active' && (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => handlePause(sub)}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePause(sub)} title="Pausar">
                       <Pause className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleCancel(sub)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleCancel(sub)} title="Cancelar">
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </>
+                )}
+                {sub.status === 'paused' && (
+                  <Button variant="ghost" size="sm" onClick={() => handleResume(sub)} title="Reativar">
+                    <Play className="h-3.5 w-3.5 text-emerald-400" />
+                  </Button>
                 )}
                 {(sub.status === 'pending' || sub.status === 'cancelled') && (
                   <Button variant="ghost" size="sm" title="Excluir assinatura" onClick={() => handleDelete(sub)}>
