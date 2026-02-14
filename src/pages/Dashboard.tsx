@@ -47,6 +47,7 @@ const Dashboard = () => {
   const [staff, setStaff] = useState<any[]>([]);
   const [recurringClients, setRecurringClients] = useState<any[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [customerNotes, setCustomerNotes] = useState<string | null>(null);
   const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -290,7 +291,14 @@ const Dashboard = () => {
             <WeeklyScheduleGrid
               bookings={allBookings}
               dateRange={dateRange}
-              onSelectBooking={setSelectedBooking}
+              onSelectBooking={async (booking: any) => {
+                setSelectedBooking(booking);
+                setCustomerNotes(null);
+                if (booking?.customer_id) {
+                  const { data } = await supabase.from("customers").select("notes").eq("id", booking.customer_id).single();
+                  setCustomerNotes(data?.notes || null);
+                }
+              }}
             />
           )}
           {loading && (
@@ -316,7 +324,7 @@ const Dashboard = () => {
       )}
 
       {/* Booking Detail Modal */}
-      <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+      <Dialog open={!!selectedBooking} onOpenChange={(open) => { if (!open) { setSelectedBooking(null); setCustomerNotes(null); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-foreground text-base font-bold tracking-tight">Detalhes do Agendamento</DialogTitle>
@@ -380,9 +388,17 @@ const Dashboard = () => {
                     })()}
                   </div>
                 )}
+              {customerNotes && (
+                  <div className="pt-3 border-t border-border">
+                    <div className="p-2.5 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-1 font-semibold">📋 Observações / Anamnese</p>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">{customerNotes}</p>
+                    </div>
+                  </div>
+                )}
                 {selectedBooking.notes && (
                   <div className="pt-3 border-t border-border">
-                    <p className="text-[11px] text-muted-foreground mb-1 font-medium">Observações</p>
+                    <p className="text-[11px] text-muted-foreground mb-1 font-medium">Observações do Agendamento</p>
                     <p className="text-sm text-foreground/80">{selectedBooking.notes}</p>
                   </div>
                 )}
