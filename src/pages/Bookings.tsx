@@ -181,62 +181,41 @@ export default function Bookings() {
     }
 
     try {
-      // If cancelling, check for benefit-linked booking and refund session
-      if (newStatus === "cancelled") {
-        const { data: bookingData } = await supabase
-          .from("bookings")
-          .select("customer_package_id, customer_subscription_id, service_id")
-          .eq("id", realId)
-          .single();
-
-        if (bookingData?.customer_package_id) {
-          // Refund package session
-          const { data: cpSvc } = await supabase
-            .from("customer_package_services")
-            .select("id, sessions_used")
-            .eq("customer_package_id", bookingData.customer_package_id)
-            .eq("service_id", bookingData.service_id)
-            .single();
-          if (cpSvc && cpSvc.sessions_used > 0) {
-            await supabase.from("customer_package_services")
-              .update({ sessions_used: cpSvc.sessions_used - 1 })
-              .eq("id", cpSvc.id);
-            // Also update the parent customer_packages counter
-            const { data: cp } = await supabase
-              .from("customer_packages")
-              .select("id, sessions_used, status")
-              .eq("id", bookingData.customer_package_id)
-              .single();
-            if (cp) {
-              const updates: any = { sessions_used: Math.max(0, cp.sessions_used - 1) };
-              if (cp.status === "completed") updates.status = "active";
-              await supabase.from("customer_packages").update(updates).eq("id", cp.id);
-            }
-          }
+      // Use atomic DB functions for cancellation and no_show
+      if (newStatus === "cancelled" && currentTenant) {
+        const cancellationMinHours = currentTenant.settings?.cancellation_min_hours ?? 4;
+        const { data: result, error: rpcError } = await supabase.rpc("cancel_booking_with_refund", {
+          p_booking_id: realId,
+          p_tenant_id: currentTenant.id,
+          p_cancellation_min_hours: cancellationMinHours,
+        });
+        if (rpcError) throw rpcError;
+        const res = result as any;
+        if (!res?.success) throw new Error(res?.error || "Erro ao cancelar");
+        
+        // Show appropriate message based on session outcome
+        if (res.session_outcome === 'refunded') {
+          toast({ title: "Sessão devolvida", description: `Cancelado com ${res.hours_until_start}h de antecedência. Sessão devolvida ao cliente.` });
+        } else if (res.session_outcome === 'forfeited') {
+          toast({ title: "Sessão consumida", description: `Cancelamento tardio (menos de ${cancellationMinHours}h). Sessão não devolvida.`, variant: "destructive" });
         }
-
-        if (bookingData?.customer_subscription_id) {
-          // Refund subscription session
-          const todayStr = new Date().toISOString().split("T")[0];
-          const { data: usage } = await supabase
-            .from("subscription_usage")
-            .select("id, sessions_used, booking_ids")
-            .eq("subscription_id", bookingData.customer_subscription_id)
-            .eq("service_id", bookingData.service_id)
-            .lte("period_start", todayStr)
-            .gte("period_end", todayStr)
-            .maybeSingle();
-          if (usage && usage.sessions_used > 0) {
-            const newBookingIds = (usage.booking_ids || []).filter((id: string) => id !== realId);
-            await supabase.from("subscription_usage")
-              .update({ sessions_used: usage.sessions_used - 1, booking_ids: newBookingIds })
-              .eq("id", usage.id);
-          }
-        }
+      } else if (newStatus === "no_show" && currentTenant) {
+        const { data: result, error: rpcError } = await supabase.rpc("mark_booking_no_show", {
+          p_booking_id: realId,
+          p_tenant_id: currentTenant.id,
+        });
+        if (rpcError) throw rpcError;
+        const res = result as any;
+        if (!res?.success) throw new Error(res?.error || "Erro ao marcar falta");
+      } else {
+        const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", realId);
+        if (error) throw error;
       }
 
-      const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", realId);
-      if (error) throw error;
+      // Mark completed bookings with benefits as consumed
+      if (newStatus === "completed") {
+        await supabase.from("bookings").update({ session_outcome: "consumed" }).eq("id", realId).not("customer_package_id", "is", null).or("customer_subscription_id.not.is.null");
+      }
 
       const notificationTypeMap: Record<string, string | null> = {
         cancelled: "booking_cancelled",

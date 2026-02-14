@@ -58,18 +58,35 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // --- Cancel booking ---
+    // --- Cancel booking (now uses atomic DB function with refund policy) ---
     if (action === "cancel" && booking_id && tenant_id) {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled", updated_at: new Date().toISOString() })
-        .eq("id", booking_id)
-        .eq("tenant_id", tenant_id);
-      if (error) throw error;
+      // Get tenant's cancellation_min_hours setting
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("settings")
+        .eq("id", tenant_id)
+        .single();
+      
+      const cancellationMinHours = tenant?.settings?.cancellation_min_hours ?? 4;
+
+      // Call atomic cancellation function
+      const { data: result, error: rpcError } = await supabase.rpc("cancel_booking_with_refund", {
+        p_booking_id: booking_id,
+        p_tenant_id: tenant_id,
+        p_cancellation_min_hours: cancellationMinHours,
+      });
+
+      if (rpcError) throw rpcError;
+
+      if (!result?.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: result?.error }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       // Send WhatsApp cancellation notification
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
           method: "POST",
           headers: {
@@ -83,7 +100,12 @@ Deno.serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ 
+          success: true, 
+          session_outcome: result.session_outcome,
+          refunded: result.refunded,
+          hours_until_start: result.hours_until_start,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -123,7 +145,6 @@ Deno.serve(async (req) => {
       const canonical = canonicalPhone(phone);
       const existing = await findCustomerByPhone(supabase, tenant_id, phone);
       if (existing) {
-        // Update name/email if provided
         const updates: any = { name: name.trim() };
         if (email) updates.email = email;
         await supabase.from("customers").update(updates).eq("id", existing.id);

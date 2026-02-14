@@ -132,6 +132,7 @@ export type Database = {
           notes: string | null
           reminder_sent: boolean | null
           service_id: string
+          session_outcome: string | null
           staff_id: string | null
           starts_at: string
           status: string
@@ -149,6 +150,7 @@ export type Database = {
           notes?: string | null
           reminder_sent?: boolean | null
           service_id: string
+          session_outcome?: string | null
           staff_id?: string | null
           starts_at: string
           status?: string
@@ -166,6 +168,7 @@ export type Database = {
           notes?: string | null
           reminder_sent?: boolean | null
           service_id?: string
+          session_outcome?: string | null
           staff_id?: string | null
           starts_at?: string
           status?: string
@@ -1864,6 +1867,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_booking_with_refund: {
+        Args: {
+          p_booking_id: string
+          p_cancellation_min_hours?: number
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       check_booking_rate_limit: {
         Args: { customer_phone: string; tenant_uuid: string }
         Returns: boolean
@@ -1895,6 +1906,10 @@ export type Database = {
         }[]
       }
       is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }
+      mark_booking_no_show: {
+        Args: { p_booking_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       user_belongs_to_tenant: {
         Args: { tenant_uuid: string }
         Returns: boolean
