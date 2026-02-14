@@ -2237,34 +2237,20 @@ export type Database = {
         Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
       }
-      record_local_payment_for_booking:
-        | {
-            Args: {
-              p_booking_id: string
-              p_cash_session_id?: string
-              p_customer_id: string
-              p_keep_change_as_credit?: boolean
-              p_payments: Json
-              p_receipt_id: string
-              p_staff_id?: string
-              p_tenant_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_booking_id: string
-              p_cash_session_id?: string
-              p_customer_id: string
-              p_extra_items?: Json
-              p_keep_change_as_credit?: boolean
-              p_payments: Json
-              p_receipt_id: string
-              p_staff_id?: string
-              p_tenant_id: string
-            }
-            Returns: Json
-          }
+      record_local_payment_for_booking: {
+        Args: {
+          p_booking_id: string
+          p_cash_session_id?: string
+          p_customer_id: string
+          p_extra_items?: Json
+          p_keep_change_as_credit?: boolean
+          p_payments: Json
+          p_receipt_id: string
+          p_staff_id?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       user_belongs_to_tenant: {
         Args: { tenant_uuid: string }
         Returns: boolean
