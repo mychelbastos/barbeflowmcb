@@ -47,11 +47,9 @@ export function LocalPaymentSection({
   const [keepChangeAsCredit, setKeepChangeAsCredit] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // The trigger auto_create_balance_entry_on_complete already debited the service price
-  // from the customer's balance when the booking was completed.
-  // So totalToCharge = only what the customer owes (negative balance).
-  // If balance >= 0, nothing to collect (service already covered by existing credit).
-  const totalToCharge = Math.max(0, -customerBalance);
+  // Total a cobrar = preço do serviço + dívida anterior (saldo negativo)
+  // Se cliente tem crédito (saldo positivo), abate do total
+  const totalToCharge = Math.max(0, servicePriceCents - customerBalance);
 
   const totalReceived = useMemo(() =>
     lines.reduce((sum, l) => sum + Math.round(parseFloat(l.amount || "0") * 100), 0),
