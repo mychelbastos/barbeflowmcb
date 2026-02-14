@@ -530,8 +530,10 @@ export type Database = {
       customers: {
         Row: {
           birthday: string | null
+          cancellation_streak: number
           created_at: string
           email: string | null
+          forced_online_payment: boolean
           id: string
           name: string
           notes: string | null
@@ -541,8 +543,10 @@ export type Database = {
         }
         Insert: {
           birthday?: string | null
+          cancellation_streak?: number
           created_at?: string
           email?: string | null
+          forced_online_payment?: boolean
           id?: string
           name: string
           notes?: string | null
@@ -552,8 +556,10 @@ export type Database = {
         }
         Update: {
           birthday?: string | null
+          cancellation_streak?: number
           created_at?: string
           email?: string | null
+          forced_online_payment?: boolean
           id?: string
           name?: string
           notes?: string | null

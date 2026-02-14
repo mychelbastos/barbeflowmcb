@@ -107,6 +107,7 @@ const BookingPublic = () => {
   const [earlyIdentified, setEarlyIdentified] = useState(false);
   const [earlyIdentifiedName, setEarlyIdentifiedName] = useState('');
   const [earlyLoading, setEarlyLoading] = useState(false);
+  const [forcedOnlinePayment, setForcedOnlinePayment] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -543,6 +544,21 @@ const BookingPublic = () => {
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
+    
+    // If covered by benefit, skip payment entirely
+    if (packageCoveredService || subscriptionCoveredService) {
+      setPaymentMethod('on_site');
+      setStep(5);
+      return;
+    }
+    
+    // If forced online payment (risk policy), force online
+    if (forcedOnlinePayment && allowOnlinePayment) {
+      setPaymentMethod('online');
+      setStep(5);
+      return;
+    }
+    
     // If online payment is enabled and not required, show payment method selection
     if (allowOnlinePayment && !requirePrepayment) {
       setStep(4); // Payment method selection step
@@ -600,6 +616,7 @@ const BookingPublic = () => {
     setEarlyIdentified(false);
     setEarlyIdentifiedName('');
     setBenefitsMap(new Map());
+    setForcedOnlinePayment(false);
     setStep(1);
   };
 
@@ -625,6 +642,7 @@ const BookingPublic = () => {
         setCustomerEmail(data.customer.email || '');
         setCustomerBirthday(data.customer.birthday || '');
         setCustomerFound(true);
+        setForcedOnlinePayment(data.customer.forced_online_payment || false);
         // Fetch benefits to show badges
         await fetchCustomerBenefits(digits);
       } else {
@@ -668,6 +686,7 @@ const BookingPublic = () => {
         setCustomerEmail(data.customer.email || '');
         setCustomerBirthday(data.customer.birthday || '');
         setCustomerFound(true);
+        setForcedOnlinePayment(data.customer.forced_online_payment || false);
       } else {
         setCustomerFound(false);
       }
@@ -1451,20 +1470,22 @@ END:VCALENDAR`;
             </div>
             
             <div className="space-y-3">
-              <button
-                onClick={() => handlePaymentMethodSelect('on_site')}
-                className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center">
-                    <Banknote className="h-5 w-5 text-amber-400" />
+              {!forcedOnlinePayment && (
+                <button
+                  onClick={() => handlePaymentMethodSelect('on_site')}
+                  className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center">
+                      <Banknote className="h-5 w-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium group-hover:text-white transition-colors">Pagar no local</h3>
+                      <p className="text-zinc-500 text-sm">Pague ao chegar no estabelecimento</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium group-hover:text-white transition-colors">Pagar no local</h3>
-                    <p className="text-zinc-500 text-sm">Pague ao chegar no estabelecimento</p>
-                  </div>
-                </div>
-              </button>
+                </button>
+              )}
 
               <button
                 onClick={() => handlePaymentMethodSelect('online')}
@@ -1480,6 +1501,12 @@ END:VCALENDAR`;
                   </div>
                 </div>
               </button>
+              
+              {forcedOnlinePayment && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                  <p className="text-amber-400 text-xs text-center">⚠️ Pagamento antecipado obrigatório para este cliente.</p>
+                </div>
+              )}
             </div>
             
             <button

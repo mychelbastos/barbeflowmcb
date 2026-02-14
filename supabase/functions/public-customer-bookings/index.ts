@@ -37,7 +37,7 @@ async function findCustomerByPhone(supabase: any, tenantId: string, phone: strin
   const uniqueVariants = buildPhoneVariants(phone);
   const { data: customer, error } = await supabase
     .from("customers")
-    .select("id, name, email, phone, birthday")
+    .select("id, name, email, phone, birthday, forced_online_payment, cancellation_streak")
     .eq("tenant_id", tenantId)
     .or(uniqueVariants.map((p: string) => `phone.eq.${p}`).join(","))
     .order("updated_at", { ascending: false })
@@ -127,6 +127,8 @@ Deno.serve(async (req) => {
             name: customer.name,
             email: customer.email || "",
             birthday: customer.birthday || "",
+            forced_online_payment: customer.forced_online_payment || false,
+            cancellation_streak: customer.cancellation_streak || 0,
           },
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

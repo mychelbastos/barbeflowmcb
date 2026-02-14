@@ -21,6 +21,7 @@ enum ErrorType {
   BOOKING_CREATE_FAILED = 'BOOKING_CREATE_FAILED',
   PACKAGE_INVALID = 'PACKAGE_INVALID',
   SUBSCRIPTION_INVALID = 'SUBSCRIPTION_INVALID',
+  FORCED_ONLINE_PAYMENT = 'FORCED_ONLINE_PAYMENT',
 }
 
 interface CreateBookingRequest {
@@ -66,6 +67,11 @@ function normalizePhone(phone: string): string {
   if (digits.startsWith('55') && digits.length >= 12) digits = digits.slice(2);
   if (digits.length === 10) digits = digits.slice(0, 2) + '9' + digits.slice(2);
   return digits;
+}
+
+function COALESCE_bool(val: any, fallback: boolean): boolean {
+  if (typeof val === 'boolean') return val;
+  return fallback;
 }
 
 function validatePayload(payload: any): { isValid: boolean; errors: string[] } {
@@ -371,7 +377,7 @@ serve(async (req) => {
     const normalizedPhone = normalizePhone(customer_phone);
     let { data: existingCustomer } = await supabase
       .from('customers')
-      .select('id')
+      .select('id, forced_online_payment')
       .eq('tenant_id', tenant_id)
       .eq('phone', normalizedPhone)
       .maybeSingle();
@@ -401,6 +407,12 @@ serve(async (req) => {
         return createErrorResponse(ErrorType.CUSTOMER_CREATE_FAILED, 'Failed to create customer', 500, { custError });
       }
       customerId = newCustomer.id;
+    }
+
+    // 6b. Enforce risk policy: if customer has forced_online_payment and is not using benefit
+    const riskEnabled = COALESCE_bool((tenantSettings as any)?.enable_risk_policy, true);
+    if (riskEnabled && existingCustomer?.forced_online_payment && !customer_package_id && !customer_subscription_id && payment_method !== 'online') {
+      return createErrorResponse(ErrorType.FORCED_ONLINE_PAYMENT, 'Este cliente precisa pagar online antecipadamente.', 403);
     }
 
     // 7. Auto-detect benefits if not explicitly provided
