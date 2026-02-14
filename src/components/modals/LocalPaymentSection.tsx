@@ -49,7 +49,8 @@ export function LocalPaymentSection({
 
   // Total a cobrar = service price + debt (if negative balance)
   // If customer has credit, reduce total
-  const totalToCharge = Math.max(0, servicePriceCents + Math.max(0, -customerBalance));
+  // credit (positive balance) reduces total; debt (negative balance) increases total
+  const totalToCharge = Math.max(0, servicePriceCents - customerBalance);
 
   const totalReceived = useMemo(() =>
     lines.reduce((sum, l) => sum + Math.round(parseFloat(l.amount || "0") * 100), 0),
