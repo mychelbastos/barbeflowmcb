@@ -73,7 +73,7 @@ export function LocalPaymentSection({
   };
 
   const handleSubmit = async () => {
-    if (totalReceived <= 0) {
+    if (totalToCharge > 0 && totalReceived <= 0) {
       toast.error("Informe o valor recebido");
       return;
     }
@@ -170,41 +170,51 @@ export function LocalPaymentSection({
         <p className="font-bold text-lg">{fmt(totalToCharge)}</p>
       </div>
 
-      {/* Payment lines */}
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">Formas de pagamento</Label>
-        {lines.map((line, i) => (
-          <div key={line.id} className="flex items-center gap-2">
-            <Select value={line.method} onValueChange={(v) => updateLine(line.id, "method", v)}>
-              <SelectTrigger className="w-36 h-9 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {METHODS.map(m => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <span className="flex items-center gap-1.5">
-                      <m.icon className="h-3 w-3" /> {m.label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <CurrencyInput
-              value={line.amount}
-              onChange={(v) => updateLine(line.id, "amount", v)}
-              className="flex-1 h-9"
-            />
-            {lines.length > 1 && (
-              <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => removeLine(line.id)}>
-                <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-            )}
-          </div>
-        ))}
-        <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={addLine}>
-          <Plus className="h-3 w-3 mr-1" /> Adicionar forma
-        </Button>
-      </div>
+      {/* Payment lines - only show if there's something to pay */}
+      {totalToCharge > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Formas de pagamento</Label>
+          {lines.map((line, i) => (
+            <div key={line.id} className="flex items-center gap-2">
+              <Select value={line.method} onValueChange={(v) => updateLine(line.id, "method", v)}>
+                <SelectTrigger className="w-36 h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {METHODS.map(m => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <span className="flex items-center gap-1.5">
+                        <m.icon className="h-3 w-3" /> {m.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <CurrencyInput
+                value={line.amount}
+                onChange={(v) => updateLine(line.id, "amount", v)}
+                className="flex-1 h-9"
+              />
+              {lines.length > 1 && (
+                <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => removeLine(line.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={addLine}>
+            <Plus className="h-3 w-3 mr-1" /> Adicionar forma
+          </Button>
+        </div>
+      )}
+
+      {totalToCharge === 0 && (
+        <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <p className="text-xs text-emerald-500">
+            ✅ O crédito do cliente cobre o valor total. Nenhum pagamento adicional necessário.
+          </p>
+        </div>
+      )}
 
       {/* Change / remaining */}
       {totalReceived > 0 && (
@@ -241,10 +251,10 @@ export function LocalPaymentSection({
       <Button
         className="w-full"
         onClick={handleSubmit}
-        disabled={saving || totalReceived <= 0}
+        disabled={saving || (totalToCharge > 0 && totalReceived <= 0)}
       >
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        Registrar Pagamento {totalReceived > 0 ? `(${fmt(totalReceived)})` : ""}
+        {totalToCharge === 0 ? "Registrar (coberto pelo crédito)" : `Registrar Pagamento ${totalReceived > 0 ? `(${fmt(totalReceived)})` : ""}`}
       </Button>
     </div>
   );
