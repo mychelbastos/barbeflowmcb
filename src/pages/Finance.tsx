@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import {
   Wallet, TrendingUp, TrendingDown, Calendar, Users, DollarSign, Target,
-  Package, ShoppingCart, ArrowUp, ArrowDown, BarChart3, Sparkles, Activity, Zap,
+  Package, ShoppingCart, ArrowUp, ArrowDown, BarChart3, Sparkles, Activity, Zap, AlertTriangle,
 } from "lucide-react";
 import { format, subDays, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +30,8 @@ import { BookingStatusChart } from "@/components/finance/BookingStatusChart";
 interface FinanceData {
   revenue_expected: number;
   revenue_received: number;
+  revenue_received_real: number; // actual payments received
+  open_balance: number; // total pending customer balances
   bookings_count: number;
   no_show_rate: number;
   avg_ticket: number;
@@ -246,7 +248,20 @@ export default function Finance() {
     revenueExpected += productRevenue; revenueReceived += productRevenue;
     const avgTicket = bookingsCount > 0 ? revenueExpected / bookingsCount : 0;
 
-    setData({ revenue_expected: revenueExpected, revenue_received: revenueReceived, bookings_count: bookingsCount, no_show_rate: 0, avg_ticket: avgTicket, daily_revenue: dailyRevenue, top_services: topServices as any, staff_performance: staffPerformance as any, product_sales_revenue: productRevenue, product_sales_profit: productProfit, top_products: topProducts as any });
+    // Calculate real received (from payments table)
+    const { data: paidPayments } = await supabase.from("payments").select("amount_cents")
+      .eq("tenant_id", currentTenant!.id).eq("status", "paid")
+      .gte("updated_at", dateRange.from.toISOString()).lte("updated_at", dateRange.to.toISOString());
+    const realReceived = (paidPayments || []).reduce((s: number, p: any) => s + p.amount_cents, 0);
+
+    // Calculate open balances
+    const { data: balances } = await supabase.from("customer_balance_entries").select("type, amount_cents")
+      .eq("tenant_id", currentTenant!.id);
+    const totalCredits = (balances || []).filter((b: any) => b.type === "credit").reduce((s: number, b: any) => s + b.amount_cents, 0);
+    const totalDebits = (balances || []).filter((b: any) => b.type === "debit").reduce((s: number, b: any) => s + b.amount_cents, 0);
+    const openBalance = totalDebits - totalCredits; // positive = customers owe money
+
+    setData({ revenue_expected: revenueExpected, revenue_received: revenueReceived, revenue_received_real: realReceived, open_balance: openBalance, bookings_count: bookingsCount, no_show_rate: 0, avg_ticket: avgTicket, daily_revenue: dailyRevenue, top_services: topServices as any, staff_performance: staffPerformance as any, product_sales_revenue: productRevenue, product_sales_profit: productProfit, top_products: topProducts as any });
 
     const prevRevExpected = prevBookingsData.reduce((s, b) => s + (b.service?.price_cents || 0), 0);
     const prevCompleted = prevBookingsData.filter((b) => b.status === "completed");
@@ -354,10 +369,10 @@ export default function Finance() {
       {/* KPI Cards */}
       <motion.div variants={stagger} className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
         <KpiCard label="Fat. Previsto" value={`R$ ${data ? (data.revenue_expected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Target} gradient="from-primary/15 to-primary/5" iconColor="text-primary" variation={prevData ? { current: data?.revenue_expected || 0, previous: prevData.revenue_expected } : undefined} />
-        <KpiCard label="Recebido" value={`R$ ${data ? (data.revenue_received / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={DollarSign} gradient="from-blue-500/15 to-blue-600/5" iconColor="text-blue-500" variation={prevData ? { current: data?.revenue_received || 0, previous: prevData.revenue_received } : undefined} />
+        <KpiCard label="Recebido Real" value={`R$ ${data ? (data.revenue_received_real / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} subtitle="Pagamentos confirmados" icon={DollarSign} gradient="from-blue-500/15 to-blue-600/5" iconColor="text-blue-500" variation={prevData ? { current: data?.revenue_received_real || 0, previous: prevData.revenue_received } : undefined} />
         <KpiCard label="Agendamentos" value={`${data?.bookings_count || 0}`} icon={Calendar} gradient="from-violet-500/15 to-violet-600/5" iconColor="text-violet-500" variation={prevData ? { current: data?.bookings_count || 0, previous: prevData.bookings_count } : undefined} />
         <KpiCard label="Ticket Médio" value={`R$ ${data ? (data.avg_ticket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Wallet} gradient="from-amber-500/15 to-amber-600/5" iconColor="text-amber-500" variation={prevData ? { current: data?.avg_ticket || 0, previous: prevData.avg_ticket } : undefined} />
-        <KpiCard label="Média/Dia Útil" value={`R$ ${(avgPerWorkDay / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} subtitle="Dias com atendimento" icon={BarChart3} gradient="from-pink-500/15 to-pink-600/5" iconColor="text-pink-500" />
+        <KpiCard label="Em Aberto" value={`R$ ${data ? (data.open_balance / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} subtitle="Saldo pendente clientes" icon={AlertTriangle} gradient="from-red-500/15 to-red-600/5" iconColor="text-red-500" />
       </motion.div>
 
       {/* Product KPIs */}
