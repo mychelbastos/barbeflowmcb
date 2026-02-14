@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getValidMpToken } from "../_shared/mp-token.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,17 +65,13 @@ serve(async (req) => {
       );
     }
 
-    // Get MP connection
-    const { data: mpConnection, error: mpError } = await supabase
-      .from('mercadopago_connections')
-      .select('access_token')
-      .eq('tenant_id', booking.tenant_id)
-      .single();
+    // Get valid MP token (auto-refreshes if needed)
+    const mpToken = await getValidMpToken(supabase, booking.tenant_id);
 
-    if (mpError || !mpConnection?.access_token) {
-      console.error('MP connection not found:', mpError);
+    if (!mpToken) {
+      console.error('MP connection not found or token invalid for tenant:', booking.tenant_id);
       return new Response(
-        JSON.stringify({ error: 'Mercado Pago not connected' }),
+        JSON.stringify({ error: 'Mercado Pago not connected or token expired' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -180,7 +177,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${mpConnection.access_token}`,
+        'Authorization': `Bearer ${mpToken.access_token}`,
         'X-Idempotency-Key': `${booking_id}-${payment_type}-${Date.now()}`,
       },
       body: JSON.stringify(mpPaymentBody),

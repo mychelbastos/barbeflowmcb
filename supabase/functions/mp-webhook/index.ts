@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAllValidMpTokens } from "../_shared/mp-token.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,18 +22,19 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Shared: fetch all MP connections upfront
-    const { data: connections, error: connError } = await supabase
-      .from('mercadopago_connections')
-      .select('tenant_id, access_token');
+    // Get all valid MP tokens (auto-refreshes expired ones)
+    const validTokens = await getAllValidMpTokens(supabase);
 
-    if (connError || !connections?.length) {
-      console.error('No MP connections found');
+    if (!validTokens.length) {
+      console.error('No valid MP connections found');
       return new Response(
         JSON.stringify({ error: 'No connections' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Convert to connection-like objects for compatibility
+    const connections = validTokens.map(t => ({ tenant_id: t.tenant_id, access_token: t.access_token }));
 
     // =============================================
     // SUBSCRIPTION PREAPPROVAL NOTIFICATIONS

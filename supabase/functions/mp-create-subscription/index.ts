@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getValidMpToken } from "../_shared/mp-token.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -112,38 +113,16 @@ serve(async (req) => {
 
     console.log('Created pending subscription:', subscription.id);
 
-    // --- Get MP connection ---
-    console.log('Looking for MP connection for tenant:', tenant_id);
-    const { data: mpConn, error: mpError } = await supabase
-      .from('mercadopago_connections')
-      .select('access_token, token_expires_at')
-      .eq('tenant_id', tenant_id)
-      .single();
+    // --- Get valid MP token (auto-refreshes if needed) ---
+    console.log('Getting valid MP token for tenant:', tenant_id);
+    const mpToken = await getValidMpToken(supabase, tenant_id);
 
-    if (mpError || !mpConn) {
-      console.error('MP connection error:', mpError, 'tenant_id:', tenant_id);
+    if (!mpToken) {
+      console.error('MP connection not found or token invalid for tenant:', tenant_id);
       return new Response(JSON.stringify({ 
-        error: 'Mercado Pago não está conectado. Conecte nas configurações.' 
+        error: 'Mercado Pago não está conectado ou token expirado. Reconecte nas configurações.' 
       }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!mpConn.access_token) {
-      console.error('MP access_token is empty for tenant:', tenant_id);
-      return new Response(JSON.stringify({ 
-        error: 'Token do Mercado Pago inválido. Reconecte nas configurações.' 
-      }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (mpConn.token_expires_at && new Date(mpConn.token_expires_at) < new Date()) {
-      console.error('MP access_token expired for tenant:', tenant_id, 'expires_at:', mpConn.token_expires_at);
-      return new Response(JSON.stringify({ 
-        error: 'Token do Mercado Pago expirado. Reconecte nas configurações.' 
-      }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -180,7 +159,7 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${mpConn.access_token}`,
+        'Authorization': `Bearer ${mpToken.access_token}`,
       },
       body: JSON.stringify(mpBody),
     });

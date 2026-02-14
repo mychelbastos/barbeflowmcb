@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getValidMpToken } from "../_shared/mp-token.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,20 +39,16 @@ serve(async (req) => {
 
     // If has MP preapproval, cancel on MP side
     if (subscription.mp_preapproval_id) {
-      const { data: mpConn } = await supabase
-        .from('mercadopago_connections')
-        .select('access_token')
-        .eq('tenant_id', subscription.tenant_id)
-        .single();
+      const mpToken = await getValidMpToken(supabase, subscription.tenant_id);
 
-      if (mpConn) {
+      if (mpToken) {
         const mpResponse = await fetch(
           `https://api.mercadopago.com/preapproval/${subscription.mp_preapproval_id}`,
           {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${mpConn.access_token}`,
+              'Authorization': `Bearer ${mpToken.access_token}`,
             },
             body: JSON.stringify({ status: 'cancelled' }),
           }
@@ -60,6 +57,8 @@ serve(async (req) => {
         if (!mpResponse.ok) {
           console.error('MP cancel error:', await mpResponse.text());
         }
+      } else {
+        console.error('Could not get valid MP token for cancel, tenant:', subscription.tenant_id);
       }
     }
 
