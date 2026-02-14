@@ -10,15 +10,24 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Users, DollarSign, ChevronRight } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Users, DollarSign, ChevronRight, Info } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+type CommissionBasis = "theoretical" | "received";
 
 interface BookingDetail {
   id: string;
   starts_at: string;
   service_name: string;
   price_cents: number;
+  received_cents: number;
   commission_cents: number;
 }
 
@@ -46,35 +55,55 @@ interface StaffCommission {
 }
 
 export function CommissionsTab() {
-  const { currentTenant } = useTenant();
+  const { currentTenant, setCurrentTenant } = useTenant();
   const { dateRange } = useDateRange();
   const [commissions, setCommissions] = useState<StaffCommission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStaff, setSelectedStaff] = useState<StaffCommission | null>(null);
 
+  const commissionBasis: CommissionBasis =
+    (currentTenant?.settings as any)?.commission_basis || "theoretical";
+
   useEffect(() => {
     if (currentTenant) calculateCommissions();
   }, [currentTenant, dateRange]);
+
+  const handleBasisChange = async (value: CommissionBasis) => {
+    if (!currentTenant) return;
+    const newSettings = { ...(currentTenant.settings as any), commission_basis: value };
+    const { error } = await supabase
+      .from("tenants")
+      .update({ settings: newSettings })
+      .eq("id", currentTenant.id);
+    if (!error) {
+      setCurrentTenant({ ...currentTenant, settings: newSettings });
+    }
+  };
 
   const calculateCommissions = async () => {
     if (!currentTenant) return;
     try {
       setLoading(true);
+      const basis: CommissionBasis =
+        (currentTenant.settings as any)?.commission_basis || "theoretical";
 
+      // 1) Staff with their commission config
       const { data: staffData } = await supabase
         .from("staff")
         .select("id, name, default_commission_percent, product_commission_percent, is_owner, staff_services(service_id, commission_percent)")
         .eq("tenant_id", currentTenant.id)
         .eq("active", true);
 
+      // 2) Completed bookings in period
       const { data: bookings } = await supabase
         .from("bookings")
-        .select("id, staff_id, service_id, starts_at, service:services(name, price_cents)")
+        .select("id, staff_id, service_id, starts_at, customer_package_id, customer_subscription_id, service:services(name, price_cents)")
         .eq("tenant_id", currentTenant.id)
-        .in("status", ["confirmed", "completed"])
+        .eq("status", "completed")
         .gte("starts_at", dateRange.from.toISOString())
         .lte("starts_at", dateRange.to.toISOString());
 
+      // 3) Product sales
       const { data: productSales } = await supabase
         .from("product_sales")
         .select("id, staff_id, sale_price_snapshot_cents, quantity, sale_date, product:products(name)")
@@ -82,10 +111,48 @@ export function CommissionsTab() {
         .gte("sale_date", dateRange.from.toISOString())
         .lte("sale_date", dateRange.to.toISOString());
 
+      // 4) If "received", build received map per booking
+      let receivedByBooking: Record<string, number> = {};
+
+      if (basis === "received") {
+        // Online payments (primary source for online)
+        const { data: paidPayments } = await supabase
+          .from("payments")
+          .select("booking_id, amount_cents")
+          .eq("tenant_id", currentTenant.id)
+          .eq("status", "paid");
+
+        // Local cash entries (only non-online sources to avoid double-counting)
+        // mp-webhook creates cash_entries with source='booking' for online payments,
+        // so we EXCLUDE source='booking' here to avoid counting them twice
+        const { data: localEntries } = await supabase
+          .from("cash_entries")
+          .select("booking_id, amount_cents")
+          .eq("tenant_id", currentTenant.id)
+          .eq("kind", "income")
+          .not("booking_id", "is", null)
+          .neq("source", "booking");
+
+        // Build map: online first
+        (paidPayments || []).forEach((p: any) => {
+          if (p.booking_id) {
+            receivedByBooking[p.booking_id] = (receivedByBooking[p.booking_id] || 0) + p.amount_cents;
+          }
+        });
+
+        // Local entries (only if not already covered by online)
+        (localEntries || []).forEach((e: any) => {
+          if (e.booking_id && !receivedByBooking[e.booking_id]) {
+            receivedByBooking[e.booking_id] = (receivedByBooking[e.booking_id] || 0) + e.amount_cents;
+          }
+        });
+      }
+
+      // 5) Calculate commissions per staff
       const commissionMap: Record<string, StaffCommission> = {};
 
       (staffData || []).forEach((s: any) => {
-        if (s.is_owner) return; // Owner doesn't get commission
+        if (s.is_owner) return;
 
         const servicePercent = s.default_commission_percent ?? 0;
         const productPercent = s.product_commission_percent ?? 0;
@@ -105,27 +172,37 @@ export function CommissionsTab() {
           productDetails: [],
         };
 
-        // Calculate service commissions
+        // Service commissions
         const staffBookings = (bookings || []).filter((b: any) => b.staff_id === s.id);
         staffBookings.forEach((b: any) => {
-          const price = b.service?.price_cents || 0;
-          commissionMap[s.id].serviceRevenue += price;
+          const theoreticalPrice = b.service?.price_cents || 0;
+
+          // Determine base for commission
+          let commissionBase: number;
+          if (basis === "received") {
+            commissionBase = receivedByBooking[b.id] ?? 0;
+          } else {
+            commissionBase = theoreticalPrice;
+          }
+
+          commissionMap[s.id].serviceRevenue += commissionBase;
 
           const staffService = s.staff_services?.find((ss: any) => ss.service_id === b.service_id);
           const commPercent = staffService?.commission_percent ?? servicePercent;
-          const commCents = Math.round(price * commPercent / 100);
+          const commCents = Math.round(commissionBase * commPercent / 100);
           commissionMap[s.id].serviceCommission += commCents;
 
           commissionMap[s.id].bookingDetails.push({
             id: b.id,
             starts_at: b.starts_at,
             service_name: b.service?.name || "Serviço",
-            price_cents: price,
+            price_cents: theoreticalPrice,
+            received_cents: basis === "received" ? (receivedByBooking[b.id] ?? 0) : theoreticalPrice,
             commission_cents: commCents,
           });
         });
 
-        // Calculate product commissions
+        // Product commissions (always theoretical — no received tracking per product yet)
         const staffSales = (productSales || []).filter((ps: any) => ps.staff_id === s.id);
         staffSales.forEach((ps: any) => {
           const revenue = ps.sale_price_snapshot_cents * ps.quantity;
@@ -156,10 +233,45 @@ export function CommissionsTab() {
 
   const totalCommission = commissions.reduce((s, c) => s + c.totalCommission, 0);
 
-  if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-zinc-500" /></div>;
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-4">
+      {/* Mode Selector */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-sm font-medium">Base de cálculo:</span>
+              <Select value={commissionBasis} onValueChange={(v) => handleBasisChange(v as CommissionBasis)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="theoretical">Teórico (preço tabela)</SelectItem>
+                  <SelectItem value="received">Recebido (valor pago)</SelectItem>
+                </SelectContent>
+              </Select>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p><strong>Teórico:</strong> comissão sobre o preço do serviço na tabela.</p>
+                    <p><strong>Recebido:</strong> comissão sobre o valor efetivamente pago (online ou local).</p>
+                    <p className="text-xs text-muted-foreground mt-1">Produtos sempre usam valor teórico.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Badge variant={commissionBasis === "received" ? "success" : "secondary"} className="self-start">
+              {commissionBasis === "received" ? "💰 Recebido" : "📋 Teórico"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3">
         <Card>
@@ -195,16 +307,16 @@ export function CommissionsTab() {
           Nenhuma comissão calculada no período. Configure os percentuais de comissão nos profissionais.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-800/50">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Profissional</TableHead>
                 <TableHead>Serviços (R$)</TableHead>
-                <TableHead>Com. Serv. ({`%`})</TableHead>
+                <TableHead>Com. Serv.</TableHead>
                 <TableHead>Produtos (R$)</TableHead>
-                <TableHead>Com. Prod. ({`%`})</TableHead>
-                <TableHead>Total Comissão</TableHead>
+                <TableHead>Com. Prod.</TableHead>
+                <TableHead>Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -242,18 +354,20 @@ export function CommissionsTab() {
         </div>
       )}
 
-      {/* Detail Breakdown Modal */}
+      {/* Detail Modal */}
       <Dialog open={!!selectedStaff} onOpenChange={() => setSelectedStaff(null)}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
               Detalhes — {selectedStaff?.staffName}
+              <Badge variant="secondary" className="text-xs">
+                {commissionBasis === "received" ? "Recebido" : "Teórico"}
+              </Badge>
             </DialogTitle>
           </DialogHeader>
 
           {selectedStaff && (
             <div className="space-y-6">
-              {/* Summary */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
                   <p className="text-xs text-muted-foreground">Serviços</p>
@@ -271,10 +385,9 @@ export function CommissionsTab() {
                 </div>
               </div>
 
-              {/* Services breakdown */}
               {selectedStaff.bookingDetails.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold mb-2">Serviços Realizados ({selectedStaff.bookingDetails.length})</h4>
+                  <h4 className="text-sm font-semibold mb-2">Serviços ({selectedStaff.bookingDetails.length})</h4>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {selectedStaff.bookingDetails.map((b) => (
                       <div key={b.id} className="flex items-center justify-between py-2 px-3 text-sm rounded-lg bg-muted/20">
@@ -285,7 +398,12 @@ export function CommissionsTab() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span>R$ {(b.price_cents / 100).toFixed(2)}</span>
+                          {commissionBasis === "received" && b.received_cents !== b.price_cents && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              R$ {(b.price_cents / 100).toFixed(2)}
+                            </span>
+                          )}
+                          <span>R$ {(b.received_cents / 100).toFixed(2)}</span>
                           <span className="text-emerald-400 text-xs">+R$ {(b.commission_cents / 100).toFixed(2)}</span>
                         </div>
                       </div>
@@ -294,10 +412,9 @@ export function CommissionsTab() {
                 </div>
               )}
 
-              {/* Products breakdown */}
               {selectedStaff.productDetails.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold mb-2">Produtos Vendidos ({selectedStaff.productDetails.length})</h4>
+                  <h4 className="text-sm font-semibold mb-2">Produtos ({selectedStaff.productDetails.length})</h4>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {selectedStaff.productDetails.map((p) => (
                       <div key={p.id} className="flex items-center justify-between py-2 px-3 text-sm rounded-lg bg-muted/20">
@@ -314,6 +431,11 @@ export function CommissionsTab() {
                       </div>
                     ))}
                   </div>
+                  {commissionBasis === "received" && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ⚠️ Produtos usam valor teórico (sem rastreio de recebimento por venda).
+                    </p>
+                  )}
                 </div>
               )}
             </div>
