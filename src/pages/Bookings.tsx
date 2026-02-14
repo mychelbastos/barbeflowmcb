@@ -221,7 +221,7 @@ export default function Bookings() {
         cancelled: "booking_cancelled",
         confirmed: "booking_confirmed",
         completed: null,
-        no_show: null,
+        no_show: "booking_no_show",
       };
       const notificationType = notificationTypeMap[newStatus];
       if (notificationType && currentTenant) {

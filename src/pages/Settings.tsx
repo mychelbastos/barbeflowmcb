@@ -87,6 +87,8 @@ const settingsSchema = z.object({
   cycle_reminder_3d: z.boolean(),
   cycle_reminder_1d: z.boolean(),
   cycle_reminder_0d: z.boolean(),
+  weekly_summary_enabled: z.boolean(),
+  recurring_reminder_enabled: z.boolean(),
   whatsapp_enabled: z.boolean(),
   email_notifications: z.boolean(),
   allow_online_payment: z.boolean(),
@@ -169,6 +171,8 @@ export default function Settings() {
       cycle_reminder_3d: true,
       cycle_reminder_1d: true,
       cycle_reminder_0d: true,
+      weekly_summary_enabled: true,
+      recurring_reminder_enabled: true,
       whatsapp_enabled: false,
       email_notifications: true,
       allow_online_payment: false,
@@ -338,6 +342,8 @@ export default function Settings() {
       cycle_reminder_3d: reminderDays.includes(3),
       cycle_reminder_1d: reminderDays.includes(1),
       cycle_reminder_0d: reminderDays.includes(0),
+      weekly_summary_enabled: settings.weekly_summary_enabled !== false,
+      recurring_reminder_enabled: settings.recurring_reminder_enabled !== false,
       whatsapp_enabled: settings.whatsapp_enabled ?? false,
       email_notifications: settings.email_notifications !== false,
       allow_online_payment: settings.allow_online_payment ?? false,
@@ -516,7 +522,7 @@ export default function Settings() {
       if (values.cycle_reminder_1d) cycleReminderDays.push(1);
       if (values.cycle_reminder_0d) cycleReminderDays.push(0);
 
-      const { cycle_reminder_3d, cycle_reminder_1d, cycle_reminder_0d, ...restValues } = values;
+      const { cycle_reminder_3d, cycle_reminder_1d, cycle_reminder_0d, weekly_summary_enabled, recurring_reminder_enabled, ...restValues } = values;
 
       const { error } = await supabase
         .from('tenants')
@@ -525,6 +531,8 @@ export default function Settings() {
             ...currentTenant.settings,
             ...restValues,
             cycle_reminder_days: cycleReminderDays,
+            weekly_summary_enabled,
+            recurring_reminder_enabled,
           }
         })
         .eq('id', currentTenant.id);
@@ -1150,6 +1158,45 @@ export default function Settings() {
                   />
 
                   <WhatsAppNotificationStatus />
+
+                  <Separator className="my-4" />
+
+                  <h3 className="text-sm font-medium mb-3">Clientes Fixos (Recorrentes)</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Configure como clientes com horários fixos recebem notificações.
+                  </p>
+
+                  <FormField
+                    control={settingsForm.control}
+                    name="weekly_summary_enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4 mb-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Resumo semanal</FormLabel>
+                          <FormDescription>Envia 1 mensagem por semana com todos os horários fixos do cliente</FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={settingsForm.control}
+                    name="recurring_reminder_enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Lembretes individuais</FormLabel>
+                          <FormDescription>Envia lembrete automático antes de cada horário fixo (como para agendamentos normais)</FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="flex justify-end">
                     <Button type="submit" disabled={loading}>

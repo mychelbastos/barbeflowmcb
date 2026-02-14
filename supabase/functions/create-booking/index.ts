@@ -536,8 +536,9 @@ serve(async (req) => {
       }
     }
 
-    // 11. Send WhatsApp notification for confirmed bookings
-    if (bookingStatus === 'confirmed') {
+    // 11. Send WhatsApp notification for confirmed bookings (skip recurring — they get weekly summaries)
+    const createdVia = payload.created_via || 'public';
+    if (bookingStatus === 'confirmed' && createdVia !== 'recurring') {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {

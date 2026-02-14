@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.subscription-cycle-reminders]
 verify_jwt = false
+
+[functions.send-recurring-weekly-summaries]
+verify_jwt = false
