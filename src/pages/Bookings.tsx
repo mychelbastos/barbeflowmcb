@@ -87,6 +87,7 @@ export default function Bookings() {
   const [editLoading, setEditLoading] = useState(false);
   const [editServices, setEditServices] = useState<any[]>([]);
   const [editStaff, setEditStaff] = useState<any[]>([]);
+  const [customerNotes, setCustomerNotes] = useState<string | null>(null);
 
   // List view state
   const [searchTerm, setSearchTerm] = useState("");
@@ -270,10 +271,20 @@ export default function Bookings() {
     );
   };
 
-  const handleBookingClick = (booking: BookingData) => {
+  const handleBookingClick = async (booking: BookingData) => {
     setSelectedBooking(booking);
     setEditMode(false);
+    setCustomerNotes(null);
     setShowDetails(true);
+    // Fetch customer notes/anamnese
+    if (booking.customer_id) {
+      const { data } = await supabase
+        .from("customers")
+        .select("notes")
+        .eq("id", booking.customer_id)
+        .single();
+      setCustomerNotes(data?.notes || null);
+    }
   };
 
   const startEditMode = async () => {
@@ -650,9 +661,17 @@ export default function Bookings() {
                   <div className="mt-1"><Badge variant={getStatusVariant(selectedBooking.status)}>{getStatusLabel(selectedBooking.status)}</Badge></div>
                 </div>
               </div>
+              {customerNotes && (
+                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                  <Label className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    📋 Observações / Anamnese do Cliente
+                  </Label>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">{customerNotes}</p>
+                </div>
+              )}
               {selectedBooking.notes && (
                 <div>
-                  <Label className="text-sm font-medium">Observações</Label>
+                  <Label className="text-sm font-medium">Observações do Agendamento</Label>
                   <p className="text-sm">{selectedBooking.notes}</p>
                 </div>
               )}
