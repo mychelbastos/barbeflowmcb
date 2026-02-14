@@ -335,6 +335,14 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
     default: newStatus = subscription.status;
   }
 
+  // ⛔ GUARD: cancelled is a TERMINAL state — never revive via webhook
+  if (subscription.status === 'cancelled' && newStatus !== 'cancelled') {
+    console.log(`[GUARD] Ignored webhook event (${mpSubData.status}) for cancelled subscription ${subscription.id}. Cancelled is terminal.`);
+    return new Response(JSON.stringify({ received: true, ignored: true, reason: 'cancelled_is_terminal' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const updateData: any = {
     status: newStatus,
     mp_preapproval_id: mpPreapprovalId,
@@ -380,6 +388,7 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
 
   if (newStatus === 'cancelled') {
     updateData.cancelled_at = new Date().toISOString();
+    updateData.cancellation_reason = 'mp_automatic';
   }
 
   await supabase.from('customer_subscriptions').update(updateData).eq('id', subscription.id);
@@ -455,6 +464,32 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
   if (!subscription) {
     console.log('No subscription found for payment, may be a regular payment');
     return new Response(JSON.stringify({ received: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // ⛔ GUARD: cancelled is a TERMINAL state — never revive via payment webhook
+  if (subscription.status === 'cancelled') {
+    console.log(`[GUARD] Ignored payment event for cancelled subscription ${subscription.id}. Cancelled is terminal.`);
+    // Still record the payment for audit trail
+    const { data: existingPayment } = await supabase
+      .from('subscription_payments')
+      .select('id')
+      .eq('mp_payment_id', mpPaymentId.toString())
+      .maybeSingle();
+    if (!existingPayment) {
+      await supabase.from('subscription_payments').insert({
+        subscription_id: subscription.id,
+        tenant_id: subscription.tenant_id,
+        amount_cents: Math.round((mpPaymentData.transaction_amount || 0) * 100),
+        status: mpPaymentData.status === 'approved' ? 'paid' : 'failed',
+        mp_payment_id: mpPaymentId.toString(),
+        period_start: new Date().toISOString().split('T')[0],
+        period_end: new Date().toISOString().split('T')[0],
+        paid_at: mpPaymentData.status === 'approved' ? new Date().toISOString() : null,
+      });
+    }
+    return new Response(JSON.stringify({ received: true, ignored: true, reason: 'cancelled_is_terminal' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

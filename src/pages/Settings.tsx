@@ -82,6 +82,7 @@ const settingsSchema = z.object({
   extra_slot_duration: z.number().min(5).max(60),
   cancellation_hours: z.number().min(0).max(48),
   max_advance_days: z.number().min(0).max(365),
+  subscription_grace_hours: z.number().min(0).max(168),
   whatsapp_enabled: z.boolean(),
   email_notifications: z.boolean(),
   allow_online_payment: z.boolean(),
@@ -323,6 +324,7 @@ export default function Settings() {
       extra_slot_duration: settings.extra_slot_duration ?? 5,
       cancellation_hours: settings.cancellation_hours ?? 2,
       max_advance_days: settings.max_advance_days ?? 30,
+      subscription_grace_hours: settings.subscription_grace_hours ?? 48,
       whatsapp_enabled: settings.whatsapp_enabled ?? false,
       email_notifications: settings.email_notifications !== false,
       allow_online_payment: settings.allow_online_payment ?? false,
@@ -973,6 +975,34 @@ export default function Settings() {
                       </FormItem>
                     )}
                   />
+
+                  <Separator className="my-4" />
+
+                  <h3 className="text-sm font-medium mb-3">Assinaturas</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={settingsForm.control}
+                      name="subscription_grace_hours"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tolerância de Pagamento (horas)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0} 
+                              max={168}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Após falha de cobrança, o cliente ainda pode agendar por este período. Depois disso a assinatura é suspensa automaticamente. (Padrão: 48h)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <div className="flex justify-end">
                     <Button type="submit" disabled={loading}>
