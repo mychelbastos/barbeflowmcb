@@ -33,7 +33,6 @@ serve(async (req) => {
       );
     }
 
-    // Convert to connection-like objects for compatibility
     const connections = validTokens.map(t => ({ tenant_id: t.tenant_id, access_token: t.access_token }));
 
     // =============================================
@@ -283,7 +282,6 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
   console.log('Processing subscription notification:', mpPreapprovalId);
 
   let mpSubData: any = null;
-  let usedConnection: any = null;
 
   for (const conn of connections) {
     try {
@@ -293,7 +291,6 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
       );
       if (mpResponse.ok) {
         mpSubData = await mpResponse.json();
-        usedConnection = conn;
         break;
       }
     } catch (e) {
@@ -328,7 +325,7 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
     });
   }
 
-  // Map MP status
+  // Map MP status to internal status
   let newStatus: string;
   switch (mpSubData.status) {
     case 'authorized': newStatus = 'active'; break;
@@ -355,9 +352,30 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
     updateData.current_period_start = now.toISOString();
     updateData.current_period_end = periodEnd.toISOString();
     updateData.next_payment_date = mpSubData.next_payment_date || periodEnd.toISOString();
+    updateData.failed_at = null; // Clear any previous failure
 
-    // Initialize subscription_usage
     await initializeUsage(supabase, subscription.id, subscription.plan_id, now, periodEnd);
+  }
+
+  // Recovery: if was past_due/suspended and now active again
+  if (newStatus === 'active' && (subscription.status === 'past_due' || subscription.status === 'suspended')) {
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+    updateData.current_period_start = now.toISOString();
+    updateData.current_period_end = periodEnd.toISOString();
+    updateData.next_payment_date = mpSubData.next_payment_date || periodEnd.toISOString();
+    updateData.failed_at = null;
+
+    await initializeUsage(supabase, subscription.id, subscription.plan_id, now, periodEnd);
+
+    console.log(`[RECOVERY] Subscription ${subscription.id} recovered from ${subscription.status} to active`);
+
+    // Send recovery WhatsApp
+    await sendSubscriptionWhatsApp(supabase, subscription, 'subscription_recovered', (customer: any, plan: any, tenantName: string) => {
+      return `✅ *Pagamento Regularizado!*\n\nOlá ${customer.name}!\n\nSeu pagamento do plano *${plan.name}* foi processado com sucesso.\n\nSua assinatura está ativa novamente e você já pode agendar normalmente.\n\n${tenantName} agradece! 🙏`;
+    });
   }
 
   if (newStatus === 'cancelled') {
@@ -366,8 +384,8 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
 
   await supabase.from('customer_subscriptions').update(updateData).eq('id', subscription.id);
 
-  // Send WhatsApp notification for activation via redirect
-  if (newStatus === 'active' && subscription.status !== 'active') {
+  // Send WhatsApp for new activation
+  if (newStatus === 'active' && subscription.status !== 'active' && subscription.status !== 'past_due' && subscription.status !== 'suspended') {
     await sendSubscriptionWhatsApp(supabase, subscription, 'subscription_activated_redirect', (customer: any, plan: any, tenantName: string) => {
       const validityEnd = new Date();
       validityEnd.setDate(validityEnd.getDate() + 30);
@@ -412,7 +430,6 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
     });
   }
 
-  // Find subscription by preapproval_id from the payment metadata
   const preapprovalId = mpPaymentData.metadata?.preapproval_id || mpPaymentData.point_of_interaction?.subscription_id || mpPaymentData.preapproval_id;
   console.log('Looking for subscription with preapproval_id:', preapprovalId);
   
@@ -427,7 +444,6 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
   }
 
   if (!subscription) {
-    // Try via external_reference
     const { data } = await supabase
       .from('customer_subscriptions')
       .select('*, customer:customers(name, phone), plan:subscription_plans(name, price_cents, tenant:tenants(name, slug))')
@@ -443,61 +459,123 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
     });
   }
 
-  // Record subscription payment (idempotent)
-  const { data: existingPayment } = await supabase
-    .from('subscription_payments')
-    .select('id')
-    .eq('mp_payment_id', mpPaymentId.toString())
-    .maybeSingle();
+  // =============================================
+  // PAYMENT APPROVED → Renew or Recover
+  // =============================================
+  if (mpPaymentData.status === 'approved') {
+    // Record payment (idempotent)
+    const { data: existingPayment } = await supabase
+      .from('subscription_payments')
+      .select('id')
+      .eq('mp_payment_id', mpPaymentId.toString())
+      .maybeSingle();
 
-  if (!existingPayment && mpPaymentData.status === 'approved') {
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    if (!existingPayment) {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-    await supabase.from('subscription_payments').insert({
-      subscription_id: subscription.id,
-      tenant_id: subscription.tenant_id,
-      amount_cents: Math.round(mpPaymentData.transaction_amount * 100),
-      status: 'paid',
-      mp_payment_id: mpPaymentId.toString(),
-      period_start: now.toISOString().split('T')[0],
-      period_end: periodEnd.toISOString().split('T')[0],
-      paid_at: new Date().toISOString(),
-    });
+      await supabase.from('subscription_payments').insert({
+        subscription_id: subscription.id,
+        tenant_id: subscription.tenant_id,
+        amount_cents: Math.round(mpPaymentData.transaction_amount * 100),
+        status: 'paid',
+        mp_payment_id: mpPaymentId.toString(),
+        period_start: now.toISOString().split('T')[0],
+        period_end: periodEnd.toISOString().split('T')[0],
+        paid_at: new Date().toISOString(),
+      });
 
-    // Create cash_entry
-    await supabase.from('cash_entries').insert({
-      tenant_id: subscription.tenant_id,
-      amount_cents: Math.round(mpPaymentData.transaction_amount * 100),
-      kind: 'income',
-      source: 'subscription',
-      notes: `subscription:${subscription.id} | MP payment: ${mpPaymentId}`,
-      occurred_at: new Date().toISOString(),
-    });
+      // Cash entry
+      await supabase.from('cash_entries').insert({
+        tenant_id: subscription.tenant_id,
+        amount_cents: Math.round(mpPaymentData.transaction_amount * 100),
+        kind: 'income',
+        source: 'subscription',
+        notes: `subscription:${subscription.id} | MP payment: ${mpPaymentId}`,
+        occurred_at: new Date().toISOString(),
+      });
 
-    // Update subscription period and reset usage
-    const updateData: any = {
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      status: 'active',
-      updated_at: new Date().toISOString(),
-    };
+      // Update subscription period + reset usage
+      const previousStatus = subscription.status;
+      const updateData: any = {
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        status: 'active',
+        failed_at: null, // Clear failure flag on successful payment
+        updated_at: new Date().toISOString(),
+      };
 
-    await supabase.from('customer_subscriptions').update(updateData).eq('id', subscription.id);
+      await supabase.from('customer_subscriptions').update(updateData).eq('id', subscription.id);
+      await initializeUsage(supabase, subscription.id, subscription.plan_id, now, periodEnd);
 
-    // Reset usage for new cycle
-    await initializeUsage(supabase, subscription.id, subscription.plan_id, now, periodEnd);
+      // Recovery notification if was past_due or suspended
+      if (previousStatus === 'past_due' || previousStatus === 'suspended') {
+        console.log(`[RECOVERY] Subscription ${subscription.id} recovered from ${previousStatus} via payment`);
+        await sendSubscriptionWhatsApp(supabase, subscription, 'subscription_recovered', (customer: any, plan: any, tenantName: string) => {
+          return `✅ *Pagamento Regularizado!*\n\nOlá ${customer.name}!\n\nSeu pagamento do plano *${plan.name}* foi processado com sucesso.\n\nSua assinatura está ativa novamente e você já pode agendar normalmente.\n\n${tenantName} agradece! 🙏`;
+        });
+      } else {
+        // Normal renewal notification
+        const amountPaid = mpPaymentData.transaction_amount;
+        await sendSubscriptionWhatsApp(supabase, subscription, 'subscription_renewed', (customer: any, plan: any, tenantName: string) => {
+          const validityEnd = new Date();
+          validityEnd.setDate(validityEnd.getDate() + 30);
+          const formattedEnd = validityEnd.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
+          const formattedPrice = `R$ ${amountPaid.toFixed(2)}`;
+          return `🔄 *Assinatura Renovada!*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi renovada automaticamente.\n\n💰 *Valor cobrado:* ${formattedPrice}\n📅 *Nova validade:* ${formattedEnd}\n\nContinue agendando normalmente pelo nosso link.\n\n${tenantName} agradece! 🙏`;
+        });
+      }
+    }
+  }
 
-    // Send WhatsApp renewal notification
-    const amountPaid = mpPaymentData.transaction_amount;
-    await sendSubscriptionWhatsApp(supabase, subscription, 'subscription_renewed', (customer: any, plan: any, tenantName: string) => {
-      const validityEnd = new Date();
-      validityEnd.setDate(validityEnd.getDate() + 30);
-      const formattedEnd = validityEnd.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
-      const formattedPrice = `R$ ${amountPaid.toFixed(2)}`;
-      return `🔄 *Assinatura Renovada!*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi renovada automaticamente.\n\n💰 *Valor cobrado:* ${formattedPrice}\n📅 *Nova validade:* ${formattedEnd}\n\nContinue agendando normalmente pelo nosso link.\n\n${tenantName} agradece! 🙏`;
-    });
+  // =============================================
+  // PAYMENT REJECTED/FAILED → Mark past_due
+  // =============================================
+  if (mpPaymentData.status === 'rejected' || mpPaymentData.status === 'cancelled') {
+    // Only transition to past_due if currently active (don't overwrite suspended/cancelled)
+    if (subscription.status === 'active') {
+      const now = new Date();
+      console.log(`[PAYMENT_FAILED] Subscription ${subscription.id} marking as past_due, payment status: ${mpPaymentData.status}`);
+
+      await supabase.from('customer_subscriptions').update({
+        status: 'past_due',
+        failed_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      }).eq('id', subscription.id);
+
+      // Record failed payment
+      const { data: existingPayment } = await supabase
+        .from('subscription_payments')
+        .select('id')
+        .eq('mp_payment_id', mpPaymentId.toString())
+        .maybeSingle();
+
+      if (!existingPayment) {
+        await supabase.from('subscription_payments').insert({
+          subscription_id: subscription.id,
+          tenant_id: subscription.tenant_id,
+          amount_cents: Math.round((mpPaymentData.transaction_amount || 0) * 100),
+          status: 'failed',
+          mp_payment_id: mpPaymentId.toString(),
+          period_start: now.toISOString().split('T')[0],
+          period_end: now.toISOString().split('T')[0],
+        });
+      }
+
+      // Get tenant grace hours for notification
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', subscription.tenant_id)
+        .single();
+      const graceHours = (tenant?.settings as any)?.subscription_grace_hours ?? 48;
+
+      // WhatsApp: payment failure notification
+      await sendSubscriptionWhatsApp(supabase, subscription, 'subscription_payment_failed', (customer: any, plan: any, tenantName: string) => {
+        return `⚠️ *Falha no Pagamento*\n\nOlá ${customer.name}!\n\nNão conseguimos processar o pagamento da sua assinatura *${plan.name}*.\n\nSua assinatura continuará ativa por mais *${graceHours} horas*. Após esse prazo, o acesso aos benefícios será suspenso.\n\nPor favor, verifique seu método de pagamento.\n\n${tenantName}`;
+      });
+    }
   }
 
   return new Response(JSON.stringify({ received: true }), {
