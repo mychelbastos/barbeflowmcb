@@ -79,9 +79,11 @@ export function DateRangeProvider({ children }: { children: ReactNode }) {
     setDateRange(newRange);
   };
 
+  const isValidDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+
   const handleSetCustomStartDate = (date: string) => {
     setCustomStartDate(date);
-    if (preset === 'custom' && customEndDate) {
+    if (preset === 'custom' && isValidDate(date) && isValidDate(customEndDate)) {
       const newRange = getDateRangeFromPreset('custom', date, customEndDate);
       setDateRange(newRange);
     }
@@ -89,7 +91,7 @@ export function DateRangeProvider({ children }: { children: ReactNode }) {
 
   const handleSetCustomEndDate = (date: string) => {
     setCustomEndDate(date);
-    if (preset === 'custom' && customStartDate) {
+    if (preset === 'custom' && isValidDate(customStartDate) && isValidDate(date)) {
       const newRange = getDateRangeFromPreset('custom', customStartDate, date);
       setDateRange(newRange);
     }
