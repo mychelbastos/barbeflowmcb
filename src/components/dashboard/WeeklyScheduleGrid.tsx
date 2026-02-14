@@ -49,14 +49,16 @@ const ease = [0.16, 1, 0.3, 1] as const;
 function MobileScheduleList({ bookings, dateRange, onSelectBooking }: WeeklyScheduleGridProps) {
   const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
 
+  const activeBookings = useMemo(() => bookings.filter(b => b.status !== 'cancelled' && b.status !== 'no_show'), [bookings]);
+
   const daysWithBookings = useMemo(() => {
     return days.map(day => ({
       day,
-      bookings: bookings
+      bookings: activeBookings
         .filter(b => isSameDay(new Date(b.starts_at), day))
         .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
     }));
-  }, [bookings, days]);
+  }, [activeBookings, days]);
 
   const hasAny = daysWithBookings.some(d => d.bookings.length > 0);
 
@@ -142,14 +144,16 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
   const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
   const days = allDays.length > MAX_DAYS ? allDays.slice(-MAX_DAYS) : allDays;
 
+  const activeBookings = useMemo(() => bookings.filter(b => b.status !== 'cancelled' && b.status !== 'no_show'), [bookings]);
+
   const bookingsByDay = useMemo(() => {
     const map = new Map<string, Booking[]>();
     days.forEach(day => {
       const key = format(day, "yyyy-MM-dd");
-      map.set(key, bookings.filter(b => isSameDay(new Date(b.starts_at), day)));
+      map.set(key, activeBookings.filter(b => isSameDay(new Date(b.starts_at), day)));
     });
     return map;
-  }, [bookings, days]);
+  }, [activeBookings, days]);
 
   const getBookingStyle = (booking: Booking) => {
     const start = new Date(booking.starts_at);
