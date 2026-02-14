@@ -34,8 +34,10 @@ export function CustomerBalanceTab({ customerId }: Props) {
   const [description, setDescription] = useState("");
 
   useEffect(() => {
-    loadEntries();
-  }, [customerId]);
+    if (currentTenant) {
+      loadEntries();
+    }
+  }, [customerId, currentTenant]);
 
   const loadEntries = async () => {
     if (!currentTenant) return;
