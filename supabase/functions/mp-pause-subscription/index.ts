@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidMpToken } from "../_shared/mp-token.ts";
+import { sendSubscriptionNotification } from "../_shared/whatsapp-notify.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,23 +40,13 @@ serve(async (req) => {
 
     if (subscription.mp_preapproval_id) {
       const mpToken = await getValidMpToken(supabase, subscription.tenant_id);
-
       if (mpToken) {
         const mpResponse = await fetch(
           `https://api.mercadopago.com/preapproval/${subscription.mp_preapproval_id}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${mpToken.access_token}`,
-            },
-            body: JSON.stringify({ status: 'paused' }),
-          }
+          { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mpToken.access_token}` },
+            body: JSON.stringify({ status: 'paused' }) }
         );
-
-        if (!mpResponse.ok) {
-          console.error('MP pause error:', await mpResponse.text());
-        }
+        if (!mpResponse.ok) console.error('MP pause error:', await mpResponse.text());
       } else {
         console.error('Could not get valid MP token for pause, tenant:', subscription.tenant_id);
       }
@@ -63,10 +54,7 @@ serve(async (req) => {
 
     const { error: updateError } = await supabase
       .from('customer_subscriptions')
-      .update({
-        status: 'paused',
-        updated_at: new Date().toISOString(),
-      })
+      .update({ status: 'paused', updated_at: new Date().toISOString() })
       .eq('id', subscription_id);
 
     if (updateError) {
@@ -75,47 +63,15 @@ serve(async (req) => {
       });
     }
 
-    // Send WhatsApp notification
-    try {
-      const customer = subscription.customer as any;
-      const plan = subscription.plan as any;
-      const tenantName = plan?.tenant?.name || 'modoGESTOR';
-      const tenantSlug = plan?.tenant?.slug || '';
+    // WhatsApp notification via shared helper
+    const customer = subscription.customer as any;
+    const plan = subscription.plan as any;
+    const tenantName = plan?.tenant?.name || 'modoGESTOR';
 
-      if (customer?.phone && plan) {
-        const { data: whatsappConn } = await supabase
-          .from('whatsapp_connections')
-          .select('evolution_instance_name, whatsapp_connected')
-          .eq('tenant_id', subscription.tenant_id)
-          .eq('whatsapp_connected', true)
-          .maybeSingle();
-
-        if (whatsappConn) {
-          let phone = customer.phone.replace(/\D/g, '');
-          if (!phone.startsWith('55')) phone = '55' + phone;
-
-          const message = `⏸️ *Assinatura Pausada*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi pausada temporariamente.\n\nA cobrança automática está suspensa. Quando desejar reativar, entre em contato conosco.\n\n${tenantName} 🙏`;
-
-          const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
-          if (n8nWebhookUrl) {
-            const resp = await fetch(n8nWebhookUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'subscription_paused',
-                phone,
-                message,
-                evolution_instance: whatsappConn.evolution_instance_name,
-                tenant_id: subscription.tenant_id,
-                tenant_slug: tenantSlug,
-              }),
-            });
-            console.log('WhatsApp pause notification sent, status:', resp.status);
-          }
-        }
-      }
-    } catch (notifErr) {
-      console.error('Error sending pause WhatsApp notification:', notifErr);
+    if (customer?.phone && plan) {
+      await sendSubscriptionNotification(supabase, subscription, 'subscription_paused',
+        `⏸️ *Assinatura Pausada*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi pausada temporariamente.\n\nA cobrança automática está suspensa. Quando desejar reativar, entre em contato conosco.\n\n${tenantName} 🙏`
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {

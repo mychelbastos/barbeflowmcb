@@ -615,6 +615,71 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          customer_id: string | null
+          dedup_key: string
+          event_type: string
+          id: string
+          sent_at: string
+          subscription_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          dedup_key: string
+          event_type: string
+          id?: string
+          sent_at?: string
+          subscription_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          dedup_key?: string
+          event_type?: string
+          id?: string
+          sent_at?: string
+          subscription_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_services: {
         Row: {
           created_at: string

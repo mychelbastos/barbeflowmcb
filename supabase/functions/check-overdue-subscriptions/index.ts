@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSubscriptionNotification } from "../_shared/whatsapp-notify.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,10 +20,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Find all past_due subscriptions with failed_at set
     const { data: pastDueSubs, error } = await supabase
       .from('customer_subscriptions')
-      .select('id, failed_at, tenant_id, customer:customers(name, phone), plan:subscription_plans(name, price_cents, tenant:tenants(name, slug))')
+      .select('id, failed_at, tenant_id, customer_id, customer:customers(name, phone), plan:subscription_plans(name, price_cents, tenant:tenants(name, slug))')
       .eq('status', 'past_due')
       .not('failed_at', 'is', null);
 
@@ -42,19 +42,14 @@ serve(async (req) => {
 
     console.log(`[CHECK-OVERDUE] Found ${pastDueSubs.length} past_due subscriptions`);
 
-    // Cache tenant grace hours
     const tenantGraceCache: Record<string, number> = {};
     let suspendedCount = 0;
     let warningCount = 0;
 
     for (const sub of pastDueSubs) {
-      // Get grace hours for this tenant
       if (!(sub.tenant_id in tenantGraceCache)) {
         const { data: tenant } = await supabase
-          .from('tenants')
-          .select('settings')
-          .eq('id', sub.tenant_id)
-          .single();
+          .from('tenants').select('settings').eq('id', sub.tenant_id).single();
         tenantGraceCache[sub.tenant_id] = (tenant?.settings as any)?.subscription_grace_hours ?? 48;
       }
 
@@ -71,34 +66,41 @@ serve(async (req) => {
         console.log(`[SUSPEND] Subscription ${sub.id} grace period expired, suspending`);
 
         await supabase.from('customer_subscriptions').update({
-          status: 'suspended',
-          updated_at: now.toISOString(),
+          status: 'suspended', updated_at: now.toISOString(),
         }).eq('id', sub.id);
-
         suspendedCount++;
 
-        // WhatsApp: blocked notification
-        await sendNotification(supabase, sub, 'subscription_suspended', (customer: any, plan: any, tenantName: string) => {
-          return `🚫 *Assinatura Suspensa*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi suspensa por falta de pagamento.\n\nOs benefícios da assinatura estão temporariamente indisponíveis.\n\nPara reativar, regularize seu pagamento ou entre em contato conosco.\n\n${tenantName}`;
-        });
+        const customer = (sub as any).customer;
+        const plan = (sub as any).plan;
+        const tenantName = plan?.tenant?.name || 'modoGESTOR';
+
+        // Dedup: one suspension notification per subscription
+        await sendSubscriptionNotification(supabase, sub, 'subscription_suspended',
+          `🚫 *Assinatura Suspensa*\n\nOlá ${customer?.name}!\n\nSua assinatura do plano *${plan?.name}* foi suspensa por falta de pagamento.\n\nOs benefícios da assinatura estão temporariamente indisponíveis.\n\nPara reativar, regularize seu pagamento ou entre em contato conosco.\n\n${tenantName}`,
+          `suspended_${sub.id}_${failedAt.toISOString().split('T')[0]}`
+        );
       }
-      // Warning: less than 6 hours remaining
+      // Warning: less than 6 hours remaining — DEDUPED per cycle
       else if (hoursRemaining <= 6 && hoursRemaining > 0) {
         warningCount++;
 
-        await sendNotification(supabase, sub, 'subscription_near_block', (customer: any, plan: any, tenantName: string) => {
-          const hoursLeft = Math.ceil(hoursRemaining);
-          return `⏰ *Atenção: Assinatura será suspensa em breve*\n\nOlá ${customer.name}!\n\nSeu pagamento do plano *${plan.name}* ainda não foi processado.\n\nSua assinatura será suspensa em *${hoursLeft} hora${hoursLeft > 1 ? 's' : ''}*.\n\nPor favor, verifique seu método de pagamento urgentemente.\n\n${tenantName}`;
-        });
+        const customer = (sub as any).customer;
+        const plan = (sub as any).plan;
+        const tenantName = plan?.tenant?.name || 'modoGESTOR';
+        const hoursLeft = Math.ceil(hoursRemaining);
+
+        // Dedup key: near_block per subscription per failed_at date
+        await sendSubscriptionNotification(supabase, sub, 'subscription_near_block',
+          `⏰ *Atenção: Assinatura será suspensa em breve*\n\nOlá ${customer?.name}!\n\nSeu pagamento do plano *${plan?.name}* ainda não foi processado.\n\nSua assinatura será suspensa em *${hoursLeft} hora${hoursLeft > 1 ? 's' : ''}*.\n\nPor favor, verifique seu método de pagamento urgentemente.\n\n${tenantName}`,
+          `near_block_${sub.id}_${failedAt.toISOString().split('T')[0]}`
+        );
       }
     }
 
     console.log(`[CHECK-OVERDUE] Done. Suspended: ${suspendedCount}, Warnings: ${warningCount}`);
 
     return new Response(JSON.stringify({
-      processed: pastDueSubs.length,
-      suspended: suspendedCount,
-      warnings: warningCount,
+      processed: pastDueSubs.length, suspended: suspendedCount, warnings: warningCount,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -110,52 +112,3 @@ serve(async (req) => {
     });
   }
 });
-
-async function sendNotification(
-  supabase: any,
-  sub: any,
-  eventType: string,
-  buildMessage: (customer: any, plan: any, tenantName: string) => string
-) {
-  try {
-    const customer = sub.customer;
-    const plan = sub.plan;
-    const tenantName = plan?.tenant?.name || 'modoGESTOR';
-    const tenantSlug = plan?.tenant?.slug || '';
-
-    if (!customer?.phone || !plan) return;
-
-    const { data: whatsappConn } = await supabase
-      .from('whatsapp_connections')
-      .select('evolution_instance_name, whatsapp_connected')
-      .eq('tenant_id', sub.tenant_id)
-      .eq('whatsapp_connected', true)
-      .maybeSingle();
-
-    if (!whatsappConn) return;
-
-    let phone = customer.phone.replace(/\D/g, '');
-    if (!phone.startsWith('55')) phone = '55' + phone;
-
-    const message = buildMessage(customer, plan, tenantName);
-
-    const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
-    if (n8nWebhookUrl) {
-      const resp = await fetch(n8nWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: eventType,
-          phone,
-          message,
-          evolution_instance: whatsappConn.evolution_instance_name,
-          tenant_id: sub.tenant_id,
-          tenant_slug: tenantSlug,
-        }),
-      });
-      console.log(`WhatsApp ${eventType} notification sent, status:`, resp.status);
-    }
-  } catch (err) {
-    console.error(`Error sending ${eventType} notification:`, err);
-  }
-}

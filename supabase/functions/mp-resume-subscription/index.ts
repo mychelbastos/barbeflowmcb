@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidMpToken } from "../_shared/mp-token.ts";
+import { sendSubscriptionNotification, formatBRL } from "../_shared/whatsapp-notify.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,12 +44,9 @@ serve(async (req) => {
       });
     }
 
-    // Resume on Mercado Pago
     if (subscription.mp_preapproval_id) {
       const mpToken = await getValidMpToken(supabase, subscription.tenant_id);
-
       if (!mpToken) {
-        console.error('Could not get valid MP token for resume, tenant:', subscription.tenant_id);
         return new Response(JSON.stringify({ error: 'Mercado Pago não está conectado ou token expirado.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -56,106 +54,47 @@ serve(async (req) => {
 
       const mpResponse = await fetch(
         `https://api.mercadopago.com/preapproval/${subscription.mp_preapproval_id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mpToken.access_token}`,
-          },
-          body: JSON.stringify({ status: 'authorized' }),
-        }
+        { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mpToken.access_token}` },
+          body: JSON.stringify({ status: 'authorized' }) }
       );
-
       const mpData = await mpResponse.json();
-
       if (!mpResponse.ok) {
         console.error('MP resume error:', JSON.stringify(mpData));
-        const mpErrorMsg = mpData?.message || mpData?.error || 'Mercado Pago não permitiu a reativação.';
-        return new Response(JSON.stringify({ error: mpErrorMsg, details: mpData }), {
+        return new Response(JSON.stringify({ error: mpData?.message || 'Mercado Pago não permitiu a reativação.', details: mpData }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      console.log('MP preapproval resumed:', mpData.id, 'status:', mpData.status);
-
-      // Update with MP data
       const now = new Date();
       const periodEnd = new Date(now);
       periodEnd.setMonth(periodEnd.getMonth() + 1);
-
       const updateData: any = {
-        status: 'active',
-        updated_at: now.toISOString(),
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
+        status: 'active', updated_at: now.toISOString(),
+        current_period_start: now.toISOString(), current_period_end: periodEnd.toISOString(),
       };
-
-      if (mpData.next_payment_date) {
-        updateData.next_payment_date = mpData.next_payment_date;
-      }
-
+      if (mpData.next_payment_date) updateData.next_payment_date = mpData.next_payment_date;
       await supabase.from('customer_subscriptions').update(updateData).eq('id', subscription.id);
-
-      // Initialize usage for resumed subscription
       await initializeUsage(supabase, subscription.id, subscription.plan_id, now, periodEnd);
     } else {
-      // Manual subscription (no MP), just reactivate
       const now = new Date();
       const periodEnd = new Date(now);
       periodEnd.setMonth(periodEnd.getMonth() + 1);
-
       await supabase.from('customer_subscriptions').update({
-        status: 'active',
-        updated_at: now.toISOString(),
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
+        status: 'active', updated_at: now.toISOString(),
+        current_period_start: now.toISOString(), current_period_end: periodEnd.toISOString(),
       }).eq('id', subscription.id);
-
       await initializeUsage(supabase, subscription.id, subscription.plan_id, now, periodEnd);
     }
 
-    // Send WhatsApp notification
-    try {
-      const customer = subscription.customer as any;
-      const plan = subscription.plan as any;
-      const tenantName = plan?.tenant?.name || 'modoGESTOR';
-      const tenantSlug = plan?.tenant?.slug || '';
+    // WhatsApp notification via shared helper
+    const customer = subscription.customer as any;
+    const plan = subscription.plan as any;
+    const tenantName = plan?.tenant?.name || 'modoGESTOR';
 
-      if (customer?.phone && plan) {
-        const { data: whatsappConn } = await supabase
-          .from('whatsapp_connections')
-          .select('evolution_instance_name, whatsapp_connected')
-          .eq('tenant_id', subscription.tenant_id)
-          .eq('whatsapp_connected', true)
-          .maybeSingle();
-
-        if (whatsappConn) {
-          let phone = customer.phone.replace(/\D/g, '');
-          if (!phone.startsWith('55')) phone = '55' + phone;
-
-          const formattedPrice = `R$ ${(plan.price_cents / 100).toFixed(2)}`;
-          const message = `▶️ *Assinatura Reativada!*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi reativada com sucesso.\n\n💰 *Valor:* ${formattedPrice}/mês\n\nA cobrança automática foi retomada. Continue agendando normalmente.\n\n${tenantName} agradece! 🙏`;
-
-          const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
-          if (n8nWebhookUrl) {
-            const resp = await fetch(n8nWebhookUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'subscription_resumed',
-                phone,
-                message,
-                evolution_instance: whatsappConn.evolution_instance_name,
-                tenant_id: subscription.tenant_id,
-                tenant_slug: tenantSlug,
-              }),
-            });
-            console.log('WhatsApp resume notification sent, status:', resp.status);
-          }
-        }
-      }
-    } catch (notifErr) {
-      console.error('Error sending resume WhatsApp notification:', notifErr);
+    if (customer?.phone && plan) {
+      await sendSubscriptionNotification(supabase, subscription, 'subscription_resumed',
+        `▶️ *Assinatura Reativada!*\n\nOlá ${customer.name}!\n\nSua assinatura do plano *${plan.name}* foi reativada com sucesso.\n\n💰 *Valor:* ${formatBRL(plan.price_cents)}/mês\n\nA cobrança automática foi retomada. Continue agendando normalmente.\n\n${tenantName} agradece! 🙏`
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -172,26 +111,15 @@ serve(async (req) => {
 
 async function initializeUsage(supabase: any, subscriptionId: string, planId: string, periodStart: Date, periodEnd: Date) {
   const { data: planServices } = await supabase
-    .from('subscription_plan_services')
-    .select('service_id, sessions_per_cycle')
-    .eq('plan_id', planId);
-
+    .from('subscription_plan_services').select('service_id, sessions_per_cycle').eq('plan_id', planId);
   if (!planServices?.length) return;
-
   const periodStartStr = periodStart.toISOString().split('T')[0];
   const periodEndStr = periodEnd.toISOString().split('T')[0];
-
   for (const ps of planServices) {
     await supabase.from('subscription_usage').upsert({
-      subscription_id: subscriptionId,
-      service_id: ps.service_id,
-      period_start: periodStartStr,
-      period_end: periodEndStr,
-      sessions_used: 0,
-      sessions_limit: ps.sessions_per_cycle,
-      booking_ids: [],
-    }, {
-      onConflict: 'subscription_id,service_id,period_start',
-    });
+      subscription_id: subscriptionId, service_id: ps.service_id,
+      period_start: periodStartStr, period_end: periodEndStr,
+      sessions_used: 0, sessions_limit: ps.sessions_per_cycle, booking_ids: [],
+    }, { onConflict: 'subscription_id,service_id,period_start' });
   }
 }

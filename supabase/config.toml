@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.check-overdue-subscriptions]
 verify_jwt = false
+
+[functions.subscription-cycle-reminders]
+verify_jwt = false

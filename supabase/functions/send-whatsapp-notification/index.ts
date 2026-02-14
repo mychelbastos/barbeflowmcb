@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface NotificationPayload {
-  type: "booking_confirmed" | "booking_reminder" | "booking_cancelled" | "booking_expired" | "payment_received";
+  type: "booking_confirmed" | "booking_reminder" | "booking_cancelled" | "booking_expired" | "payment_received" | "booking_no_show";
   booking_id: string;
   tenant_id: string;
 }
@@ -187,6 +187,24 @@ Recebemos seu pagamento de ${price}.
 Seu agendamento está confirmado! ✅
 
 Até lá! 👋
+${booking.tenant.name}`;
+
+    case "booking_no_show":
+      return `⚠️ *Falta Registrada*
+
+Olá ${booking.customer.name},
+
+Identificamos que você não compareceu ao seu agendamento.
+
+📅 *Data:* ${dateTime}
+💇 *Serviço:* ${booking.service.name}
+👤 *Profissional:* ${staffName}
+
+Caso o agendamento tenha sido feito via pacote ou assinatura, a sessão foi contabilizada como utilizada.
+
+Para reagendar, acesse nosso site.
+
+Atenciosamente,
 ${booking.tenant.name}`;
 
     default:

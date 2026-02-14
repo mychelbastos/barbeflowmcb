@@ -83,6 +83,10 @@ const settingsSchema = z.object({
   cancellation_hours: z.number().min(0).max(48),
   max_advance_days: z.number().min(0).max(365),
   subscription_grace_hours: z.number().min(0).max(168),
+  cycle_reminders_enabled: z.boolean(),
+  cycle_reminder_3d: z.boolean(),
+  cycle_reminder_1d: z.boolean(),
+  cycle_reminder_0d: z.boolean(),
   whatsapp_enabled: z.boolean(),
   email_notifications: z.boolean(),
   allow_online_payment: z.boolean(),
@@ -161,6 +165,10 @@ export default function Settings() {
       extra_slot_duration: 5,
       cancellation_hours: 2,
       max_advance_days: 30,
+      cycle_reminders_enabled: true,
+      cycle_reminder_3d: true,
+      cycle_reminder_1d: true,
+      cycle_reminder_0d: true,
       whatsapp_enabled: false,
       email_notifications: true,
       allow_online_payment: false,
@@ -317,6 +325,7 @@ export default function Settings() {
     });
 
     const settings = currentTenant.settings || {};
+    const reminderDays: number[] = settings.cycle_reminder_days || [3, 1, 0];
     settingsForm.reset({
       timezone: settings.timezone ?? "America/Bahia",
       buffer_time: settings.buffer_time ?? 10,
@@ -325,6 +334,10 @@ export default function Settings() {
       cancellation_hours: settings.cancellation_hours ?? 2,
       max_advance_days: settings.max_advance_days ?? 30,
       subscription_grace_hours: settings.subscription_grace_hours ?? 48,
+      cycle_reminders_enabled: settings.cycle_reminders_enabled !== false,
+      cycle_reminder_3d: reminderDays.includes(3),
+      cycle_reminder_1d: reminderDays.includes(1),
+      cycle_reminder_0d: reminderDays.includes(0),
       whatsapp_enabled: settings.whatsapp_enabled ?? false,
       email_notifications: settings.email_notifications !== false,
       allow_online_payment: settings.allow_online_payment ?? false,
@@ -497,12 +510,21 @@ export default function Settings() {
     try {
       setLoading(true);
 
+      // Build cycle_reminder_days array from checkboxes
+      const cycleReminderDays: number[] = [];
+      if (values.cycle_reminder_3d) cycleReminderDays.push(3);
+      if (values.cycle_reminder_1d) cycleReminderDays.push(1);
+      if (values.cycle_reminder_0d) cycleReminderDays.push(0);
+
+      const { cycle_reminder_3d, cycle_reminder_1d, cycle_reminder_0d, ...restValues } = values;
+
       const { error } = await supabase
         .from('tenants')
         .update({ 
           settings: {
             ...currentTenant.settings,
-            ...values
+            ...restValues,
+            cycle_reminder_days: cycleReminderDays,
           }
         })
         .eq('id', currentTenant.id);
@@ -1003,6 +1025,70 @@ export default function Settings() {
                       )}
                     />
                   </div>
+
+                  <Separator className="my-4" />
+
+                  <h3 className="text-sm font-medium mb-3">Lembretes de Ciclo da Assinatura</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Envie notificações automáticas avisando o cliente antes do fim do ciclo da assinatura.
+                  </p>
+
+                  <FormField
+                    control={settingsForm.control}
+                    name="cycle_reminders_enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4 mb-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Ativar lembretes de ciclo</FormLabel>
+                          <FormDescription>Envia WhatsApp automático antes do fim do período da assinatura</FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {settingsForm.watch('cycle_reminders_enabled') && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-4">
+                      <FormField
+                        control={settingsForm.control}
+                        name="cycle_reminder_3d"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 rounded-lg border p-3">
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <FormLabel className="!mt-0">3 dias antes</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={settingsForm.control}
+                        name="cycle_reminder_1d"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 rounded-lg border p-3">
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <FormLabel className="!mt-0">1 dia antes</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={settingsForm.control}
+                        name="cycle_reminder_0d"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 rounded-lg border p-3">
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <FormLabel className="!mt-0">No dia</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex justify-end">
                     <Button type="submit" disabled={loading}>
