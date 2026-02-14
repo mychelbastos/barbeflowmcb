@@ -278,6 +278,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
+          },
+          {
             foreignKeyName: "cash_entries_payment_id_fkey"
             columns: ["payment_id"]
             isOneToOne: false
@@ -414,6 +421,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_balance_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "customer_balance_entries_customer_id_fkey"
@@ -763,6 +777,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "notification_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
+          },
+          {
             foreignKeyName: "notification_log_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -877,6 +898,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "payments_customer_package_id_fkey"
@@ -2037,6 +2065,55 @@ export type Database = {
       }
     }
     Views: {
+      v_booking_received_amount: {
+        Row: {
+          booking_id: string | null
+          customer_package_id: string | null
+          customer_subscription_id: string | null
+          received_cents: number | null
+          service_id: string | null
+          staff_id: string | null
+          starts_at: string | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_customer_package_id_fkey"
+            columns: ["customer_package_id"]
+            isOneToOne: false
+            referencedRelation: "customer_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_customer_subscription_id_fkey"
+            columns: ["customer_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_daily_cash_summary: {
         Row: {
           closing_amount_cents: number | null

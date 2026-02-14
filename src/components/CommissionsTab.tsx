@@ -87,6 +87,9 @@ export function CommissionsTab() {
       const basis: CommissionBasis =
         (currentTenant.settings as any)?.commission_basis || "theoretical";
 
+      const fromISO = dateRange.from.toISOString();
+      const toISO = dateRange.to.toISOString();
+
       // 1) Staff with their commission config
       const { data: staffData } = await supabase
         .from("staff")
@@ -100,51 +103,30 @@ export function CommissionsTab() {
         .select("id, staff_id, service_id, starts_at, customer_package_id, customer_subscription_id, service:services(name, price_cents)")
         .eq("tenant_id", currentTenant.id)
         .eq("status", "completed")
-        .gte("starts_at", dateRange.from.toISOString())
-        .lte("starts_at", dateRange.to.toISOString());
+        .gte("starts_at", fromISO)
+        .lte("starts_at", toISO);
 
-      // 3) Product sales
+      // 3) Product sales (always theoretical)
       const { data: productSales } = await supabase
         .from("product_sales")
         .select("id, staff_id, sale_price_snapshot_cents, quantity, sale_date, product:products(name)")
         .eq("tenant_id", currentTenant.id)
-        .gte("sale_date", dateRange.from.toISOString())
-        .lte("sale_date", dateRange.to.toISOString());
+        .gte("sale_date", fromISO)
+        .lte("sale_date", toISO);
 
-      // 4) If "received", build received map per booking
+      // 4) If "received", use the consolidated SQL view filtered by same period
       let receivedByBooking: Record<string, number> = {};
 
       if (basis === "received") {
-        // Online payments (primary source for online)
-        const { data: paidPayments } = await supabase
-          .from("payments")
-          .select("booking_id, amount_cents")
+        const { data: receivedData } = await supabase
+          .from("v_booking_received_amount")
+          .select("booking_id, received_cents")
           .eq("tenant_id", currentTenant.id)
-          .eq("status", "paid");
+          .gte("starts_at", fromISO)
+          .lte("starts_at", toISO);
 
-        // Local cash entries (only non-online sources to avoid double-counting)
-        // mp-webhook creates cash_entries with source='booking' for online payments,
-        // so we EXCLUDE source='booking' here to avoid counting them twice
-        const { data: localEntries } = await supabase
-          .from("cash_entries")
-          .select("booking_id, amount_cents")
-          .eq("tenant_id", currentTenant.id)
-          .eq("kind", "income")
-          .not("booking_id", "is", null)
-          .neq("source", "booking");
-
-        // Build map: online first
-        (paidPayments || []).forEach((p: any) => {
-          if (p.booking_id) {
-            receivedByBooking[p.booking_id] = (receivedByBooking[p.booking_id] || 0) + p.amount_cents;
-          }
-        });
-
-        // Local entries (only if not already covered by online)
-        (localEntries || []).forEach((e: any) => {
-          if (e.booking_id && !receivedByBooking[e.booking_id]) {
-            receivedByBooking[e.booking_id] = (receivedByBooking[e.booking_id] || 0) + e.amount_cents;
-          }
+        (receivedData || []).forEach((r: any) => {
+          receivedByBooking[r.booking_id] = r.received_cents ?? 0;
         });
       }
 
@@ -177,7 +159,6 @@ export function CommissionsTab() {
         staffBookings.forEach((b: any) => {
           const theoreticalPrice = b.service?.price_cents || 0;
 
-          // Determine base for commission
           let commissionBase: number;
           if (basis === "received") {
             commissionBase = receivedByBooking[b.id] ?? 0;
