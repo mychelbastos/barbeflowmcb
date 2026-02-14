@@ -146,17 +146,28 @@ async function handlePackageSession(customerPackageId: string, serviceId: string
 
 // --- Subscription session logic ---
 async function handleSubscriptionSession(customerSubscriptionId: string, serviceId: string, bookingId: string) {
-  // 1. Validate subscription
+  // 1. Validate subscription — allow active, authorized, and past_due (within grace)
   const { data: sub, error: subErr } = await supabase
     .from('customer_subscriptions')
-    .select('id, status, plan_id, started_at, current_period_start, current_period_end')
+    .select('id, status, plan_id, started_at, current_period_start, current_period_end, tenant_id, failed_at')
     .eq('id', customerSubscriptionId)
-    .in('status', ['active', 'authorized'])
+    .in('status', ['active', 'authorized', 'past_due'])
     .single();
 
   if (subErr || !sub) {
     console.error('Subscription not found or invalid:', subErr);
     return { valid: false, error: 'Subscription not active' };
+  }
+
+  // If past_due, check grace period
+  if (sub.status === 'past_due') {
+    const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', sub.tenant_id).single();
+    const graceHours = (tenant?.settings as any)?.subscription_grace_hours ?? 48;
+    const failedAt = sub.failed_at ? new Date(sub.failed_at) : null;
+    if (!failedAt || (Date.now() - failedAt.getTime()) > graceHours * 3600000) {
+      return { valid: false, error: 'Subscription grace period expired' };
+    }
+    console.log(`Subscription ${sub.id} is past_due but within grace period`);
   }
 
   // 2. Validate 30-day rolling period
@@ -300,12 +311,24 @@ serve(async (req) => {
     }
 
     if (customer_subscription_id) {
+      // Allow active, authorized, and past_due (grace check happens in handleSubscriptionSession)
       const { data: sub } = await supabase
         .from('customer_subscriptions')
-        .select('id, status, plan_id')
-        .eq('id', customer_subscription_id).in('status', ['active', 'authorized']).single();
+        .select('id, status, plan_id, tenant_id, failed_at')
+        .eq('id', customer_subscription_id)
+        .in('status', ['active', 'authorized', 'past_due'])
+        .single();
       if (!sub) {
         return createErrorResponse(ErrorType.SUBSCRIPTION_INVALID, 'Subscription not active', 400);
+      }
+      // If past_due, verify grace period
+      if (sub.status === 'past_due') {
+        const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', sub.tenant_id).single();
+        const graceHours = (tenant?.settings as any)?.subscription_grace_hours ?? 48;
+        const failedAt = sub.failed_at ? new Date(sub.failed_at) : null;
+        if (!failedAt || (Date.now() - failedAt.getTime()) > graceHours * 3600000) {
+          return createErrorResponse(ErrorType.SUBSCRIPTION_INVALID, 'Subscription grace period expired', 400);
+        }
       }
       const { data: planSvc } = await supabase
         .from('subscription_plan_services')
@@ -386,17 +409,24 @@ serve(async (req) => {
     let benefitSource: 'subscription' | 'package' | null = null;
 
     if (!resolvedPackageId && !resolvedSubscriptionId) {
-      // Priority 1: Check active subscription covering this service
+      // Priority 1: Check active/past_due subscription covering this service
       const { data: activeSubs } = await supabase
         .from('customer_subscriptions')
-        .select('id, status, plan_id, started_at, current_period_start, current_period_end')
+        .select('id, status, plan_id, started_at, current_period_start, current_period_end, tenant_id, failed_at')
         .eq('customer_id', customerId)
         .eq('tenant_id', tenant_id)
-        .in('status', ['active', 'authorized']);
+        .in('status', ['active', 'authorized', 'past_due']);
 
       if (activeSubs && activeSubs.length > 0) {
         const now = new Date();
         for (const sub of activeSubs) {
+          // If past_due, check grace period
+          if (sub.status === 'past_due') {
+            const graceHours = (tenantSettings as any)?.subscription_grace_hours ?? 48;
+            const failedAt = sub.failed_at ? new Date(sub.failed_at) : null;
+            if (!failedAt || (Date.now() - failedAt.getTime()) > graceHours * 3600000) continue;
+          }
+
           // Validate 30-day rolling validity
           const startDate = sub.current_period_start ? new Date(sub.current_period_start) : (sub.started_at ? new Date(sub.started_at) : null);
           if (!startDate) continue;

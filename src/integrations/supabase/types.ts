@@ -454,6 +454,7 @@ export type Database = {
           current_period_end: string | null
           current_period_start: string | null
           customer_id: string
+          failed_at: string | null
           id: string
           mp_payer_id: string | null
           mp_preapproval_id: string | null
@@ -472,6 +473,7 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           customer_id: string
+          failed_at?: string | null
           id?: string
           mp_payer_id?: string | null
           mp_preapproval_id?: string | null
@@ -490,6 +492,7 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           customer_id?: string
+          failed_at?: string | null
           id?: string
           mp_payer_id?: string | null
           mp_preapproval_id?: string | null
