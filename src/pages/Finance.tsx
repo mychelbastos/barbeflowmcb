@@ -248,11 +248,20 @@ export default function Finance() {
     revenueExpected += productRevenue; revenueReceived += productRevenue;
     const avgTicket = bookingsCount > 0 ? revenueExpected / bookingsCount : 0;
 
-    // Calculate real received (from payments table)
-    const { data: paidPayments } = await supabase.from("payments").select("amount_cents")
-      .eq("tenant_id", currentTenant!.id).eq("status", "paid")
-      .gte("updated_at", dateRange.from.toISOString()).lte("updated_at", dateRange.to.toISOString());
-    const realReceived = (paidPayments || []).reduce((s: number, p: any) => s + p.amount_cents, 0);
+      // Recebido Real = payments(paid) + cash_entries locais(income, source=booking) + product_sales
+      // Usa created_at para filtro temporal consistente
+      const [{ data: paidPayments }, { data: localCashEntries }] = await Promise.all([
+        supabase.from("payments").select("amount_cents, booking_id")
+          .eq("tenant_id", currentTenant!.id).eq("status", "paid")
+          .gte("created_at", dateRange.from.toISOString()).lte("created_at", dateRange.to.toISOString()),
+        supabase.from("cash_entries").select("amount_cents, booking_id, payment_id")
+          .eq("tenant_id", currentTenant!.id).eq("kind", "income").eq("source", "booking")
+          .is("payment_id", null) // Exclui entradas vinculadas a payments online (evita dupla contagem)
+          .gte("created_at", dateRange.from.toISOString()).lte("created_at", dateRange.to.toISOString()),
+      ]);
+      const onlineReceived = (paidPayments || []).reduce((s: number, p: any) => s + p.amount_cents, 0);
+      const localReceived = (localCashEntries || []).reduce((s: number, e: any) => s + e.amount_cents, 0);
+      const realReceived = onlineReceived + localReceived + productRevenue;
 
     // Calculate open balances
     const { data: balances } = await supabase.from("customer_balance_entries").select("type, amount_cents")

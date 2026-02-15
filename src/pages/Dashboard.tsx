@@ -104,21 +104,15 @@ const Dashboard = () => {
     }
   };
 
+  // Faturamento TEÓRICO: somente bookings completed + product_sales
   const calculateRevenue = async (bookingsList: any[]) => {
     if (!currentTenant) return 0;
     try {
-      let totalRevenue = 0;
-      if (bookingsList.length > 0) {
-        const bookingIds = bookingsList.map(b => b.id);
-        const { data: payments } = await supabase.from('payments').select('amount_cents, status').in('booking_id', bookingIds).eq('status', 'paid');
-        const paidPayments = payments?.reduce((sum, payment) => sum + payment.amount_cents, 0) || 0;
-        if (paidPayments > 0) {
-          totalRevenue += paidPayments;
-        } else {
-          const revenueBookings = bookingsList.filter(booking => booking.status === 'confirmed' || booking.status === 'completed');
-          totalRevenue += revenueBookings.reduce((sum, booking) => sum + (booking.service?.price_cents || 0), 0);
-        }
-      }
+      // Serviços: apenas bookings concluídos (completed)
+      const completedBookings = bookingsList.filter(b => b.status === 'completed');
+      let totalRevenue = completedBookings.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0);
+
+      // Produtos vendidos no período
       const { data: productSales } = await supabase.from('product_sales').select('sale_price_snapshot_cents, quantity')
         .eq('tenant_id', currentTenant.id).gte('sale_date', dateRange.from.toISOString()).lte('sale_date', dateRange.to.toISOString());
       if (productSales && productSales.length > 0) {
