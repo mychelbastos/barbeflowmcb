@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
-import { LocalPaymentSection } from "@/components/modals/LocalPaymentSection";
+import { ComandaItemsSection, type BookingItem } from "@/components/modals/ComandaItemsSection";
+import { ComandaPaymentSection } from "@/components/modals/ComandaPaymentSection";
+import { ComandaCloseSection } from "@/components/modals/ComandaCloseSection";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  User, Phone, Scissors, Clock, Users, TrendingUp, Edit,
-  CheckCircle, XCircle, MessageCircle, CreditCard,
+  User, Phone, Scissors, Clock, Users, Edit,
+  CheckCircle, XCircle, MessageCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -31,7 +33,6 @@ interface Props {
   tenantId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // Actions - only shown when provided
   onEdit?: () => void;
   onStatusChange?: (bookingId: string, status: string, booking?: any) => void;
   showActions?: boolean;
@@ -43,79 +44,70 @@ export function BookingDetailsModal({
 }: Props) {
   const [customerNotes, setCustomerNotes] = useState<string | null>(null);
   const [customerBalance, setCustomerBalance] = useState<number>(0);
-  const [hasPaidOnline, setHasPaidOnline] = useState(false);
-  const [onlinePaymentInfo, setOnlinePaymentInfo] = useState<{ amount_cents: number; updated_at: string; external_id: string | null } | null>(null);
-  const [paymentRecorded, setPaymentRecorded] = useState(false);
+  const [bookingItems, setBookingItems] = useState<BookingItem[]>([]);
+  const [comandaStatus, setComandaStatus] = useState<string>("open");
   const [balanceKey, setBalanceKey] = useState(0);
+
+  const loadData = useCallback(async () => {
+    if (!booking || !open) return;
+
+    const customerId = booking.customer_id;
+
+    // Load all data in parallel
+    // Load all data in parallel
+    const [custRes, balRes, itemsRes, statusRes] = await Promise.all([
+      customerId
+        ? supabase.from("customers").select("notes").eq("id", customerId).single()
+        : Promise.resolve({ data: null }),
+      customerId
+        ? supabase.from("customer_balance_entries").select("type, amount_cents")
+            .eq("customer_id", customerId).eq("tenant_id", tenantId)
+        : Promise.resolve({ data: null }),
+      supabase.from("booking_items")
+        .select("*, staff:staff(name)")
+        .eq("booking_id", booking.id)
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: true }),
+      supabase.from("bookings").select("comanda_status").eq("id", booking.id).single(),
+    ]);
+
+    setCustomerNotes(custRes.data?.notes || null);
+
+    const balTotal = (balRes.data || []).reduce((sum: number, e: any) =>
+      sum + (e.type === "credit" ? e.amount_cents : -e.amount_cents), 0);
+    setCustomerBalance(balTotal);
+
+    const mappedItems: BookingItem[] = (itemsRes.data || []).map((d: any) => ({
+      id: d.id,
+      type: d.type,
+      ref_id: d.ref_id,
+      title: d.title,
+      quantity: d.quantity,
+      unit_price_cents: d.unit_price_cents,
+      total_price_cents: d.total_price_cents,
+      staff_id: d.staff_id,
+      staff_name: d.staff?.name || null,
+      paid_status: d.paid_status,
+      paid_at: d.paid_at,
+      payment_id: d.payment_id,
+      receipt_id: d.receipt_id,
+      purchase_price_cents: d.purchase_price_cents,
+    }));
+    setBookingItems(mappedItems);
+
+    setComandaStatus(statusRes.data?.comanda_status || "open");
+  }, [booking?.id, open, tenantId]);
 
   useEffect(() => {
     if (!booking || !open) {
       setCustomerNotes(null);
       setCustomerBalance(0);
-      setHasPaidOnline(false);
-      setPaymentRecorded(false);
+      setBookingItems([]);
+      setComandaStatus("open");
       return;
     }
-    loadBookingDetails();
-  }, [booking?.id, open]);
-
-  const loadBookingDetails = async () => {
-    if (!booking) return;
-
-    // Load customer notes, balance, and online payment status in parallel
-    // Customer notes
-    if (booking.customer_id) {
-      const { data: custData } = await supabase
-        .from("customers")
-        .select("notes")
-        .eq("id", booking.customer_id)
-        .single();
-      setCustomerNotes(custData?.notes || null);
-
-      const { data: balData } = await supabase
-        .from("customer_balance_entries")
-        .select("type, amount_cents")
-        .eq("customer_id", booking.customer_id)
-        .eq("tenant_id", tenantId);
-      const total = (balData || []).reduce((sum, e) =>
-        sum + (e.type === "credit" ? e.amount_cents : -e.amount_cents), 0
-      );
-      setCustomerBalance(total);
-    }
-
-    // Check if paid online or locally
-    if (!booking.is_recurring) {
-      const { data: payData } = await supabase
-        .from("payments")
-        .select("status, amount_cents, updated_at, external_id")
-        .eq("booking_id", booking.id)
-        .eq("status", "paid")
-        .limit(1);
-      const paidOnline = (payData || []).length > 0;
-      setHasPaidOnline(paidOnline);
-      if (paidOnline && payData?.[0]) {
-        setOnlinePaymentInfo({
-          amount_cents: payData[0].amount_cents,
-          updated_at: payData[0].updated_at,
-          external_id: payData[0].external_id,
-        });
-      } else {
-        setOnlinePaymentInfo(null);
-      }
-
-      // Check if local payment already recorded
-      const { data: localPayData } = await supabase
-        .from("customer_balance_entries")
-        .select("id")
-        .eq("booking_id", booking.id)
-        .eq("tenant_id", tenantId)
-        .or("description.ilike.Pagamento local%,description.eq.Serviço realizado")
-        .limit(1);
-      if ((localPayData || []).length > 0) {
-        setPaymentRecorded(true);
-      }
-    }
-  };
+    loadData();
+  }, [booking?.id, open, loadData]);
 
   if (!booking) return null;
 
@@ -123,34 +115,27 @@ export function BookingDetailsModal({
   const isRecurring = booking.is_recurring;
   const isCompleted = booking.status === "completed";
   const isCancelled = booking.status === "cancelled";
-  const servicePriceCents = booking.service?.price_cents || 0;
   const isBenefitBooking = !!booking.customer_package_id || !!booking.customer_subscription_id;
+  const comandaClosed = comandaStatus === "closed";
 
-  const handlePaymentRecorded = () => {
-    setPaymentRecorded(true);
+  const handleRefresh = () => {
+    loadData();
     setBalanceKey(prev => prev + 1);
-    // Reload balance
-    if (booking.customer_id) {
-      supabase
-        .from("customer_balance_entries")
-        .select("type, amount_cents")
-        .eq("customer_id", booking.customer_id)
-        .eq("tenant_id", tenantId)
-        .then(({ data }) => {
-          const total = (data || []).reduce((sum, e) =>
-            sum + (e.type === "credit" ? e.amount_cents : -e.amount_cents), 0
-          );
-          setCustomerBalance(total);
-        });
-    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold">Detalhes do Agendamento</DialogTitle>
-          <DialogDescription className="sr-only">Informações do agendamento</DialogDescription>
+          <DialogTitle className="text-base font-bold flex items-center justify-between">
+            Comanda
+            {comandaClosed && (
+              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20 ml-2">
+                Fechada
+              </Badge>
+            )}
+          </DialogTitle>
+          <DialogDescription className="sr-only">Detalhes do agendamento e comanda</DialogDescription>
         </DialogHeader>
 
         <motion.div
@@ -159,135 +144,126 @@ export function BookingDetailsModal({
           transition={{ duration: 0.4, ease }}
           className="space-y-4"
         >
-          {/* Customer header */}
-          <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-3">
+          {/* ═══════════════ SEÇÃO 1: DADOS DO BOOKING ═══════════════ */}
+          <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-2.5">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center">
-                <User className="h-5 w-5 text-muted-foreground" />
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <User className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div>
-                <p className="font-bold text-foreground">{booking.customer?.name}</p>
-                {isRecurring && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 mt-0.5 inline-block">
-                    Cliente Fixo
-                  </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-foreground text-sm">{booking.customer?.name}</p>
+                {booking.customer?.phone && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> {booking.customer.phone}
+                  </p>
                 )}
               </div>
+              <Badge variant={status.variant} className="text-[10px]">{status.label}</Badge>
             </div>
-            {booking.customer?.phone && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Phone className="h-3.5 w-3.5" />
-                <span>{booking.customer.phone}</span>
-              </div>
-            )}
-          </div>
 
-          {/* Details rows */}
-          <div className="space-y-3">
-            {[
-              { icon: Scissors, label: "Serviço", value: booking.service?.name },
-              {
-                icon: Clock, label: "Horário",
-                value: `${format(new Date(booking.starts_at), "dd/MM 'às' HH:mm", { locale: ptBR })} — ${format(new Date(booking.ends_at), "HH:mm")}`,
-              },
-              ...(booking.staff?.name ? [{ icon: Users, label: "Profissional", value: booking.staff.name }] : []),
-              {
-                icon: TrendingUp, label: "Valor",
-                value: isBenefitBooking ? "Incluso no plano/pacote" : `R$ ${(servicePriceCents / 100).toFixed(2)}`,
-                highlight: !isBenefitBooking,
-              },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <item.icon className="h-3.5 w-3.5" />
-                  <span>{item.label}</span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Scissors className="h-3 w-3" />
+                <span className="truncate">{booking.service?.name}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{format(new Date(booking.starts_at), "dd/MM HH:mm", { locale: ptBR })} — {format(new Date(booking.ends_at), "HH:mm")}</span>
+              </div>
+              {booking.staff?.name && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Users className="h-3 w-3" />
+                  <span>{booking.staff.name}</span>
                 </div>
-                <span className={`text-sm font-semibold ${(item as any).highlight ? "text-primary font-bold" : "text-foreground"}`}>
-                  {item.value}
-                </span>
-              </div>
-            ))}
+              )}
+              {isBenefitBooking && (
+                <div className="flex gap-1.5">
+                  {booking.customer_package_id && (
+                    <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">Pacote</Badge>
+                  )}
+                  {booking.customer_subscription_id && (
+                    <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20">Assinatura</Badge>
+                  )}
+                </div>
+              )}
+            </div>
 
-            {/* Benefit badges */}
-            {isBenefitBooking && (
-              <div className="flex gap-2">
-                {booking.customer_package_id && (
-                  <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">Pacote</Badge>
-                )}
-                {booking.customer_subscription_id && (
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">Assinatura</Badge>
-                )}
+            {/* Customer notes */}
+            {customerNotes && (
+              <div className="p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">📋 Observações</p>
+                <p className="text-xs text-foreground/80 whitespace-pre-wrap mt-0.5">{customerNotes}</p>
               </div>
             )}
 
-            {/* Status */}
-            {!isRecurring && (
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <Badge variant={status.variant}>{status.label}</Badge>
-              </div>
+            {booking.notes && (
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium">Nota:</span> {booking.notes}
+              </p>
             )}
           </div>
 
           {/* Balance alert */}
           <CustomerBalanceAlert key={balanceKey} customerId={booking.customer_id} tenantId={tenantId} />
 
-          {/* Customer notes */}
-          {customerNotes && (
-            <div className="p-2.5 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-1 font-semibold">📋 Observações / Anamnese</p>
-              <p className="text-sm text-foreground/80 whitespace-pre-wrap">{customerNotes}</p>
-            </div>
+          {/* ═══════════════ SEÇÃO 2: ITENS DA COMANDA ═══════════════ */}
+          {!isRecurring && !isCancelled && (
+            <>
+              <Separator />
+              <ComandaItemsSection
+                bookingId={booking.id}
+                tenantId={tenantId}
+                items={bookingItems}
+                onItemsChange={handleRefresh}
+                comandaClosed={comandaClosed}
+              />
+            </>
           )}
 
-          {/* Booking notes */}
-          {booking.notes && (
-            <div>
-              <p className="text-[11px] text-muted-foreground mb-1 font-medium">Observações do Agendamento</p>
-              <p className="text-sm text-foreground/80">{booking.notes}</p>
-            </div>
+          {/* ═══════════════ SEÇÃO 3: PAGAMENTO ═══════════════ */}
+          {!isRecurring && isCompleted && !isCancelled && booking.customer_id && !isBenefitBooking && (
+            <>
+              <Separator />
+              <ComandaPaymentSection
+                bookingId={booking.id}
+                customerId={booking.customer_id}
+                tenantId={tenantId}
+                staffId={booking.staff_id || null}
+                items={bookingItems}
+                customerBalance={customerBalance}
+                onPaymentRecorded={handleRefresh}
+                comandaClosed={comandaClosed}
+              />
+            </>
           )}
 
-          {/* Payment status banners */}
-          {hasPaidOnline && onlinePaymentInfo && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 space-y-1">
-              <p className="text-sm font-medium text-emerald-500">✅ Pago online</p>
-              <div className="text-xs text-muted-foreground space-y-0.5">
-                <p>Valor: R$ {(onlinePaymentInfo.amount_cents / 100).toFixed(2)}</p>
-                <p>Data: {format(parseISO(onlinePaymentInfo.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
-                {onlinePaymentInfo.external_id && <p>ID MP: #{onlinePaymentInfo.external_id}</p>}
+          {/* Benefit bookings: all items covered */}
+          {!isRecurring && isCompleted && isBenefitBooking && !comandaClosed && (
+            <>
+              <Separator />
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400 text-center">
+                  🎫 Serviço coberto por {booking.customer_package_id ? "pacote" : "assinatura"}
+                </p>
               </div>
-            </div>
+            </>
           )}
 
-          {paymentRecorded && !hasPaidOnline && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <p className="text-sm font-medium text-emerald-500">✅ Pago no balcão</p>
-            </div>
+          {/* ═══════════════ SEÇÃO 4: FECHAR COMANDA ═══════════════ */}
+          {!isRecurring && isCompleted && !isCancelled && (
+            <>
+              <Separator />
+              <ComandaCloseSection
+                bookingId={booking.id}
+                tenantId={tenantId}
+                items={bookingItems}
+                comandaClosed={comandaClosed}
+                onClose={handleRefresh}
+              />
+            </>
           )}
 
-          {/* Payment section - only for completed bookings without benefits, not yet paid */}
-          {isCompleted && !isBenefitBooking && !paymentRecorded && !hasPaidOnline && booking.customer_id && (
-            <LocalPaymentSection
-              bookingId={booking.id}
-              customerId={booking.customer_id}
-              tenantId={tenantId}
-              staffId={booking.staff_id || null}
-              servicePriceCents={servicePriceCents}
-              customerBalance={customerBalance}
-              hasPaidOnline={false}
-              onPaymentRecorded={handlePaymentRecorded}
-            />
-          )}
-
-          {/* Pending warning for completed but unpaid */}
-          {isCompleted && !isBenefitBooking && !paymentRecorded && !hasPaidOnline && !booking.customer_id && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <p className="text-sm font-medium text-amber-500">⚠️ Pendente</p>
-            </div>
-          )}
-
-          {/* Actions */}
+          {/* ═══════════════ AÇÕES ═══════════════ */}
           {showActions && !isRecurring && (
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
               {!isCancelled && !isCompleted && onEdit && (
