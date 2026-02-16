@@ -5,18 +5,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Pencil, Trash2, Users, EyeOff, Sparkles, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Users, EyeOff, Sparkles, Loader2, Link2 } from "lucide-react";
 import { AiGenerateImageButton } from "@/components/AiContentButtons";
 
 interface SubscriptionPlanCardProps {
   plan: any;
+  tenantSlug?: string;
   onEdit: (plan: any) => void;
   onDelete: (id: string) => void;
   onToggleActive: (plan: any) => void;
   onReload?: () => void;
 }
 
-export function SubscriptionPlanCard({ plan, onEdit, onDelete, onToggleActive, onReload }: SubscriptionPlanCardProps) {
+export function SubscriptionPlanCard({ plan, tenantSlug, onEdit, onDelete, onToggleActive, onReload }: SubscriptionPlanCardProps) {
   const { toast } = useToast();
   const [enhancing, setEnhancing] = useState(false);
 
@@ -38,6 +39,20 @@ export function SubscriptionPlanCard({ plan, onEdit, onDelete, onToggleActive, o
     } finally {
       setEnhancing(false);
     }
+  };
+
+  const handleCopyLink = () => {
+    if (!tenantSlug) {
+      toast({ title: "Slug não encontrado", variant: "destructive" });
+      return;
+    }
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/${tenantSlug}?tab=subscriptions`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({ title: "Link copiado!", description: "Envie para o cliente assinar o plano." });
+    }).catch(() => {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    });
   };
 
   return (
@@ -110,6 +125,11 @@ export function SubscriptionPlanCard({ plan, onEdit, onDelete, onToggleActive, o
               title="Melhorar imagem com IA"
             >
               {enhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            </Button>
+          )}
+          {tenantSlug && (
+            <Button variant="ghost" size="sm" onClick={handleCopyLink} title="Copiar link de assinatura">
+              <Link2 className="h-3.5 w-3.5" />
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={() => onEdit(plan)}>

@@ -43,6 +43,7 @@ type BookingTab = 'services' | 'packages' | 'subscriptions';
 
 const BookingPublic = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
   const [tenant, setTenant] = useState<any>(null);
@@ -88,7 +89,10 @@ const BookingPublic = () => {
 
   // Packages
   const [packages, setPackages] = useState<any[]>([]);
-  const [bookingTab, setBookingTab] = useState<BookingTab>('services');
+  const initialTab = searchParams.get('tab') as BookingTab | null;
+  const [bookingTab, setBookingTab] = useState<BookingTab>(
+    initialTab && ['services', 'packages', 'subscriptions'].includes(initialTab) ? initialTab : 'services'
+  );
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [activeCustomerPackage, setActiveCustomerPackage] = useState<any>(null);
   const [packageCoveredService, setPackageCoveredService] = useState(false);

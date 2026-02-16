@@ -147,6 +147,7 @@ export default function SubscriptionPlansPage() {
                   <SubscriptionPlanCard
                     key={plan.id}
                     plan={plan}
+                    tenantSlug={currentTenant?.slug}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onToggleActive={handleToggleActive}
