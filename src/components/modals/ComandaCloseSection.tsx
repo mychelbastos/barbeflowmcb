@@ -55,7 +55,14 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
       );
       onClose();
     } catch (err: any) {
-      toast.error("Erro ao fechar comanda: " + (err.message || ""));
+      const msg = err.message || "";
+      if (msg.includes("INVALID_COMMISSION_PERCENT")) {
+        toast.error("Percentual de comissão inválido (deve ser entre 0% e 100%). Corrija nas configurações do profissional.");
+      } else if (msg.includes("NEGATIVE_COMMISSION_NOT_ALLOWED")) {
+        toast.error("Erro: comissão resultou em valor negativo. Verifique os valores dos itens e percentuais.");
+      } else {
+        toast.error("Erro ao fechar comanda: " + msg);
+      }
     } finally {
       setClosing(false);
     }
