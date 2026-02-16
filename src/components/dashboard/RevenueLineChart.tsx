@@ -1,34 +1,12 @@
-import { useMemo } from "react";
-import { format, eachDayOfInterval, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface RevenueLineChartProps {
-  bookings: { starts_at: string; status: string; service?: { price_cents: number } }[];
-  dateRange: { from: Date; to: Date };
+  dailyData: { date: string; label: string; income: number; cumulative: number }[];
 }
 
-export function RevenueLineChart({ bookings, dateRange }: RevenueLineChartProps) {
-  const data = useMemo(() => {
-    const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
-    let cumulative = 0;
-    return days.map(day => {
-      const dayBookings = bookings.filter(
-        b => isSameDay(new Date(b.starts_at), day) && (b.status === "confirmed" || b.status === "completed")
-      );
-      const dayRevenue = dayBookings.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0) / 100;
-      cumulative += dayRevenue;
-      return {
-        date: format(day, "dd/MM"),
-        label: format(day, "dd MMM", { locale: ptBR }),
-        revenue: dayRevenue,
-        cumulative: Math.round(cumulative),
-      };
-    });
-  }, [bookings, dateRange]);
-
+export function RevenueLineChart({ dailyData }: RevenueLineChartProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
@@ -42,14 +20,14 @@ export function RevenueLineChart({ bookings, dateRange }: RevenueLineChartProps)
             <TrendingUp className="h-3.5 w-3.5 text-primary" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground tracking-tight">Receita</h3>
-            <p className="text-[10px] text-muted-foreground">Acumulada no período</p>
+            <h3 className="text-sm font-bold text-foreground tracking-tight">Receita Real</h3>
+            <p className="text-[10px] text-muted-foreground">Acumulada no período (cash_entries)</p>
           </div>
         </div>
       </div>
       <div className="p-3 md:p-4 h-44 md:h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+          <AreaChart data={dailyData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />

@@ -16,6 +16,7 @@ import {
   Calendar, Plus, Clock, Users, TrendingUp, Scissors, Phone,
   ArrowUpRight, Sparkles, UserCheck, User,
 } from "lucide-react";
+import { useCashRevenue } from "@/hooks/useCashRevenue";
 import { WeeklyScheduleGrid } from "@/components/dashboard/WeeklyScheduleGrid";
 import { WeeklyBarChart } from "@/components/dashboard/WeeklyBarChart";
 import { RevenueLineChart } from "@/components/dashboard/RevenueLineChart";
@@ -42,7 +43,6 @@ const Dashboard = () => {
   const [staff, setStaff] = useState<any[]>([]);
   const [recurringClients, setRecurringClients] = useState<any[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
-  const [revenue, setRevenue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
 
@@ -50,6 +50,7 @@ const Dashboard = () => {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { dateRange } = useDateRange();
   const navigate = useNavigate();
+  const { data: cashData } = useCashRevenue({ tenantId: currentTenant?.id, dateRange });
 
   useEffect(() => {
     if (user && !tenantLoading) {
@@ -94,9 +95,6 @@ const Dashboard = () => {
       setServices(servicesRes.data || []);
       setStaff(staffRes.data || []);
       setRecurringClients(recurringRes.data || []);
-      
-      const revenueValue = await calculateRevenue(periodBookingsRes.data || []);
-      setRevenue(revenueValue);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -104,26 +102,7 @@ const Dashboard = () => {
     }
   };
 
-  // Faturamento TEÓRICO: somente bookings completed + product_sales
-  const calculateRevenue = async (bookingsList: any[]) => {
-    if (!currentTenant) return 0;
-    try {
-      // Serviços: apenas bookings concluídos (completed)
-      const completedBookings = bookingsList.filter(b => b.status === 'completed');
-      let totalRevenue = completedBookings.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0);
 
-      // Produtos vendidos no período
-      const { data: productSales } = await supabase.from('product_sales').select('sale_price_snapshot_cents, quantity')
-        .eq('tenant_id', currentTenant.id).gte('sale_date', dateRange.from.toISOString()).lte('sale_date', dateRange.to.toISOString());
-      if (productSales && productSales.length > 0) {
-        totalRevenue += productSales.reduce((sum, sale) => sum + (sale.sale_price_snapshot_cents * sale.quantity), 0);
-      }
-      return totalRevenue;
-    } catch (error) {
-      console.error('Error fetching revenue data:', error);
-      return 0;
-    }
-  };
 
   const allBookings = useMemo(() => {
     const virtualRecurring = recurringClients.flatMap(r => {
@@ -210,7 +189,7 @@ const Dashboard = () => {
     },
     {
       label: "Faturamento",
-      value: loading ? "—" : `R$ ${(revenue / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
+      value: loading ? "—" : `R$ ${((cashData?.totalIncome || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
       sub: "no período",
       icon: TrendingUp,
       gradient: "from-amber-500/20 to-amber-600/5",
@@ -292,7 +271,7 @@ const Dashboard = () => {
         {/* Right Column: Revenue Panel + Bar Chart */}
         <div className="space-y-4">
           {!loading && (
-            <ClientRevenuePanel bookings={allBookings} totalRevenue={revenue} />
+            <ClientRevenuePanel bookings={allBookings} totalRevenue={cashData?.totalIncome || 0} />
           )}
 
           {!loading && (
@@ -302,8 +281,8 @@ const Dashboard = () => {
       </div>
 
       {/* Revenue Line Chart — full width */}
-      {!loading && (
-        <RevenueLineChart bookings={allBookings} dateRange={dateRange} />
+      {!loading && cashData && (
+        <RevenueLineChart dailyData={cashData.dailyIncome} />
       )}
 
       {/* Booking Detail Modal */}

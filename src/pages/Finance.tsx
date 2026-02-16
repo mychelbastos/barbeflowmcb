@@ -4,7 +4,6 @@ import { useTenant } from "@/hooks/useTenant";
 import { useDateRange } from "@/contexts/DateRangeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { NoTenantState } from "@/components/NoTenantState";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -26,22 +25,7 @@ import { UnifiedFilters } from "@/components/finance/UnifiedFilters";
 import { RevenueHeatmap } from "@/components/finance/RevenueHeatmap";
 import { PeriodComparisonChart } from "@/components/finance/PeriodComparisonChart";
 import { BookingStatusChart } from "@/components/finance/BookingStatusChart";
-
-interface FinanceData {
-  revenue_expected: number;
-  revenue_received: number;
-  revenue_received_real: number; // actual payments received
-  open_balance: number; // total pending customer balances
-  bookings_count: number;
-  no_show_rate: number;
-  avg_ticket: number;
-  daily_revenue: { date: string; expected: number; received: number }[];
-  top_services: { name: string; revenue: number; count: number }[];
-  staff_performance: { name: string; revenue: number; bookings: number; staffId?: string }[];
-  product_sales_revenue: number;
-  product_sales_profit: number;
-  top_products: { name: string; revenue: number; profit: number; quantity: number }[];
-}
+import { useCashRevenue } from "@/hooks/useCashRevenue";
 
 const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444"];
 
@@ -64,7 +48,6 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
 } as const;
 
-// Premium tooltip style
 const tooltipStyle = {
   backgroundColor: "hsl(var(--card))",
   border: "1px solid hsl(var(--border))",
@@ -123,7 +106,6 @@ function KpiCard({
   );
 }
 
-// ---------- Section wrapper ----------
 function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <motion.div variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-40px" }} className={className}>
@@ -132,7 +114,6 @@ function Section({ children, className = "" }: { children: React.ReactNode; clas
   );
 }
 
-// ---------- Chart Card wrapper ----------
 function ChartCard({ icon: Icon, iconColor, iconBg, title, description, children }: {
   icon: any; iconColor: string; iconBg: string; title: string; description?: string; children: React.ReactNode;
 }) {
@@ -156,7 +137,6 @@ export default function Finance() {
   const { user } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { dateRange } = useDateRange();
-  const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [staffFilter, setStaffFilter] = useState<string>("all");
   const [staff, setStaff] = useState<any[]>([]);
@@ -165,13 +145,34 @@ export default function Finance() {
   const [paymentsInPeriod, setPaymentsInPeriod] = useState<any[]>([]);
   const [staffDetails, setStaffDetails] = useState<any[]>([]);
   const [staffServicesMap, setStaffServicesMap] = useState<Record<string, number>>({});
-  const [prevData, setPrevData] = useState<{
-    revenue_expected: number; revenue_received: number; bookings_count: number; avg_ticket: number;
-    daily_revenue: { date: string; expected: number }[];
-  } | null>(null);
+  const [openBalance, setOpenBalance] = useState(0);
+  const [topServices, setTopServices] = useState<{ name: string; revenue: number; count: number }[]>([]);
+  const [staffPerformance, setStaffPerformance] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<{ name: string; revenue: number; profit: number; quantity: number }[]>([]);
+  const [productRevenue, setProductRevenue] = useState(0);
+  const [productProfit, setProductProfit] = useState(0);
+
+  // Previous period for variation badges
+  const periodDays = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
+  const prevFrom = subDays(dateRange.from, periodDays);
+  const prevTo = subDays(dateRange.to, periodDays);
+
+  // Cash revenue - current period (source of truth)
+  const { data: cashData, loading: cashLoading } = useCashRevenue({
+    tenantId: currentTenant?.id,
+    dateRange,
+    staffFilter,
+  });
+
+  // Cash revenue - previous period (for variation badges)
+  const { data: prevCashData } = useCashRevenue({
+    tenantId: currentTenant?.id,
+    dateRange: { from: prevFrom, to: prevTo },
+    staffFilter,
+  });
 
   useEffect(() => {
-    if (currentTenant) { loadFinanceData(); loadStaff(); }
+    if (currentTenant) { loadSupportData(); loadStaff(); }
   }, [currentTenant, dateRange, staffFilter]);
 
   const loadStaff = async () => {
@@ -187,129 +188,78 @@ export default function Finance() {
     setStaffServicesMap(ssMap);
   };
 
-  const loadFinanceData = async () => {
+  // Load supplementary data (bookings for status chart, top services, staff performance, products)
+  const loadSupportData = async () => {
     if (!currentTenant) return;
     try {
       setLoading(true);
-      const periodDays = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
-      const prevFrom = subDays(dateRange.from, periodDays);
-      const prevTo = subDays(dateRange.to, periodDays);
 
-      let query = supabase.from("bookings").select(`*, service:services(name, price_cents, id), staff:staff(name, id), customer:customers(name, phone)`).eq("tenant_id", currentTenant.id).in("status", ["confirmed", "completed"]).gte("starts_at", dateRange.from.toISOString()).lte("starts_at", dateRange.to.toISOString());
+      let query = supabase.from("bookings").select(`*, service:services(name, price_cents, id), staff:staff(name, id), customer:customers(name, phone)`)
+        .eq("tenant_id", currentTenant.id).in("status", ["confirmed", "completed"])
+        .gte("starts_at", dateRange.from.toISOString()).lte("starts_at", dateRange.to.toISOString());
       if (staffFilter && staffFilter !== "all") query = query.eq("staff_id", staffFilter);
 
-      let allQuery = supabase.from("bookings").select("id, status, starts_at").eq("tenant_id", currentTenant.id).gte("starts_at", dateRange.from.toISOString()).lte("starts_at", dateRange.to.toISOString());
+      let allQuery = supabase.from("bookings").select("id, status, starts_at")
+        .eq("tenant_id", currentTenant.id)
+        .gte("starts_at", dateRange.from.toISOString()).lte("starts_at", dateRange.to.toISOString());
       if (staffFilter && staffFilter !== "all") allQuery = allQuery.eq("staff_id", staffFilter);
 
-      let prevQuery = supabase.from("bookings").select("*, service:services(price_cents)").eq("tenant_id", currentTenant.id).in("status", ["confirmed", "completed"]).gte("starts_at", prevFrom.toISOString()).lte("starts_at", prevTo.toISOString());
-      if (staffFilter && staffFilter !== "all") prevQuery = prevQuery.eq("staff_id", staffFilter);
-
-      const [{ data: bookingsData }, { data: allBookingsData }, { data: prevBookingsData }, { data: paymentsData }] = await Promise.all([
-        query.order("starts_at"), allQuery, prevQuery.order("starts_at"),
+      const [{ data: bookingsData }, { data: allBookingsData }, { data: paymentsData }] = await Promise.all([
+        query.order("starts_at"),
+        allQuery,
         supabase.from("payments").select("amount_cents, status, booking_id").eq("tenant_id", currentTenant.id).gte("created_at", dateRange.from.toISOString()).lte("created_at", dateRange.to.toISOString()),
       ]);
 
       setBookings(bookingsData || []);
       setAllBookingsForStatus(allBookingsData || []);
       setPaymentsInPeriod(paymentsData || []);
-      await calculateFinanceMetrics(bookingsData || [], prevBookingsData || [], prevFrom, prevTo);
+
+      // Top services (still based on bookings for service breakdown)
+      const serviceStats = (bookingsData || []).reduce((acc: any, b: any) => {
+        const name = b.service?.name || "Serviço"; const price = b.service?.price_cents || 0;
+        if (!acc[name]) acc[name] = { name, revenue: 0, count: 0 }; acc[name].revenue += price; acc[name].count += 1; return acc;
+      }, {});
+      setTopServices(Object.values(serviceStats).sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 5) as any);
+
+      // Staff performance
+      const staffStats = (bookingsData || []).reduce((acc: any, b: any) => {
+        const name = b.staff?.name || "Staff"; const staffId = b.staff?.id || ""; const price = b.service?.price_cents || 0;
+        if (!acc[name]) acc[name] = { name, revenue: 0, bookings: 0, staffId }; acc[name].revenue += price; acc[name].bookings += 1; return acc;
+      }, {});
+      setStaffPerformance(Object.values(staffStats).sort((a: any, b: any) => b.revenue - a.revenue) as any);
+
+      // Products
+      const { data: productSales } = await supabase.from("product_sales").select("sale_price_snapshot_cents, purchase_price_snapshot_cents, quantity, product:products(name)")
+        .eq("tenant_id", currentTenant.id).gte("sale_date", dateRange.from.toISOString()).lte("sale_date", dateRange.to.toISOString());
+      const pRev = productSales?.reduce((s, ps) => s + ps.sale_price_snapshot_cents * ps.quantity, 0) || 0;
+      const pProfit = productSales?.reduce((s, ps) => s + (ps.sale_price_snapshot_cents - ps.purchase_price_snapshot_cents) * ps.quantity, 0) || 0;
+      setProductRevenue(pRev);
+      setProductProfit(pProfit);
+      const productStats = (productSales || []).reduce((acc: any, sale: any) => {
+        const n = sale.product?.name || "Produto"; const rev = sale.sale_price_snapshot_cents * sale.quantity;
+        const prof = (sale.sale_price_snapshot_cents - sale.purchase_price_snapshot_cents) * sale.quantity;
+        if (!acc[n]) acc[n] = { name: n, revenue: 0, profit: 0, quantity: 0 }; acc[n].revenue += rev; acc[n].profit += prof; acc[n].quantity += sale.quantity; return acc;
+      }, {});
+      setTopProducts(Object.values(productStats).sort((a: any, b: any) => b.quantity - a.quantity).slice(0, 5) as any);
+
+      // Open balance
+      const { data: balances } = await supabase.from("customer_balance_entries").select("type, amount_cents").eq("tenant_id", currentTenant.id);
+      const totalCredits = (balances || []).filter((b: any) => b.type === "credit").reduce((s: number, b: any) => s + b.amount_cents, 0);
+      const totalDebits = (balances || []).filter((b: any) => b.type === "debit").reduce((s: number, b: any) => s + b.amount_cents, 0);
+      setOpenBalance(totalDebits - totalCredits);
     } catch (error) { console.error("Error loading finance data:", error); } finally { setLoading(false); }
   };
 
-  const calculateFinanceMetrics = async (bookingsData: any[], prevBookingsData: any[], prevFrom: Date, prevTo: Date) => {
-    const completedBookings = bookingsData.filter((b) => b.status === "completed");
-    let revenueExpected = bookingsData.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0);
-    let revenueReceived = completedBookings.reduce((sum, b) => sum + (b.service?.price_cents || 0), 0);
-    const bookingsCount = bookingsData.length;
-    const dailyRevenue = generateDailyRevenue(bookingsData, dateRange.from, dateRange.to);
-
-    const serviceStats = bookingsData.reduce((acc: any, b: any) => {
-      const name = b.service?.name || "Serviço"; const price = b.service?.price_cents || 0;
-      if (!acc[name]) acc[name] = { name, revenue: 0, count: 0 }; acc[name].revenue += price; acc[name].count += 1; return acc;
-    }, {});
-    const topServices = Object.values(serviceStats).sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 5);
-
-    const staffStats = bookingsData.reduce((acc: any, b: any) => {
-      const name = b.staff?.name || "Staff"; const staffId = b.staff?.id || ""; const price = b.service?.price_cents || 0;
-      if (!acc[name]) acc[name] = { name, revenue: 0, bookings: 0, staffId }; acc[name].revenue += price; acc[name].bookings += 1; return acc;
-    }, {});
-    const staffPerformance = Object.values(staffStats).sort((a: any, b: any) => b.revenue - a.revenue);
-
-    const { data: productSales } = await supabase.from("product_sales").select("sale_price_snapshot_cents, purchase_price_snapshot_cents, quantity, product:products(name)").eq("tenant_id", currentTenant!.id).gte("sale_date", dateRange.from.toISOString()).lte("sale_date", dateRange.to.toISOString());
-    const productRevenue = productSales?.reduce((s, ps) => s + ps.sale_price_snapshot_cents * ps.quantity, 0) || 0;
-    const productProfit = productSales?.reduce((s, ps) => s + (ps.sale_price_snapshot_cents - ps.purchase_price_snapshot_cents) * ps.quantity, 0) || 0;
-    const productStats = (productSales || []).reduce((acc: any, sale: any) => {
-      const n = sale.product?.name || "Produto"; const rev = sale.sale_price_snapshot_cents * sale.quantity;
-      const prof = (sale.sale_price_snapshot_cents - sale.purchase_price_snapshot_cents) * sale.quantity;
-      if (!acc[n]) acc[n] = { name: n, revenue: 0, profit: 0, quantity: 0 }; acc[n].revenue += rev; acc[n].profit += prof; acc[n].quantity += sale.quantity; return acc;
-    }, {});
-    const topProducts = Object.values(productStats).sort((a: any, b: any) => b.quantity - a.quantity).slice(0, 5);
-
-    revenueExpected += productRevenue; revenueReceived += productRevenue;
-    const avgTicket = bookingsCount > 0 ? revenueExpected / bookingsCount : 0;
-
-      // Recebido Real = payments(paid) + cash_entries locais(income, source=booking) + product_sales
-      // Usa created_at para filtro temporal consistente
-      const [{ data: paidPayments }, { data: localCashEntries }] = await Promise.all([
-        supabase.from("payments").select("amount_cents, booking_id")
-          .eq("tenant_id", currentTenant!.id).eq("status", "paid")
-          .gte("created_at", dateRange.from.toISOString()).lte("created_at", dateRange.to.toISOString()),
-        supabase.from("cash_entries").select("amount_cents, booking_id, payment_id")
-          .eq("tenant_id", currentTenant!.id).eq("kind", "income").eq("source", "booking")
-          .is("payment_id", null) // Exclui entradas vinculadas a payments online (evita dupla contagem)
-          .gte("created_at", dateRange.from.toISOString()).lte("created_at", dateRange.to.toISOString()),
-      ]);
-      const onlineReceived = (paidPayments || []).reduce((s: number, p: any) => s + p.amount_cents, 0);
-      const localReceived = (localCashEntries || []).reduce((s: number, e: any) => s + e.amount_cents, 0);
-      const realReceived = onlineReceived + localReceived + productRevenue;
-
-    // Calculate open balances
-    const { data: balances } = await supabase.from("customer_balance_entries").select("type, amount_cents")
-      .eq("tenant_id", currentTenant!.id);
-    const totalCredits = (balances || []).filter((b: any) => b.type === "credit").reduce((s: number, b: any) => s + b.amount_cents, 0);
-    const totalDebits = (balances || []).filter((b: any) => b.type === "debit").reduce((s: number, b: any) => s + b.amount_cents, 0);
-    const openBalance = totalDebits - totalCredits; // positive = customers owe money
-
-    setData({ revenue_expected: revenueExpected, revenue_received: revenueReceived, revenue_received_real: realReceived, open_balance: openBalance, bookings_count: bookingsCount, no_show_rate: 0, avg_ticket: avgTicket, daily_revenue: dailyRevenue, top_services: topServices as any, staff_performance: staffPerformance as any, product_sales_revenue: productRevenue, product_sales_profit: productProfit, top_products: topProducts as any });
-
-    const prevRevExpected = prevBookingsData.reduce((s, b) => s + (b.service?.price_cents || 0), 0);
-    const prevCompleted = prevBookingsData.filter((b) => b.status === "completed");
-    const prevRevReceived = prevCompleted.reduce((s, b) => s + (b.service?.price_cents || 0), 0);
-    const prevCount = prevBookingsData.length;
-    const prevAvgTicket = prevCount > 0 ? prevRevExpected / prevCount : 0;
-    setPrevData({ revenue_expected: prevRevExpected, revenue_received: prevRevReceived, bookings_count: prevCount, avg_ticket: prevAvgTicket, daily_revenue: generateDailyRevenue(prevBookingsData, prevFrom, prevTo) });
-  };
-
-  const generateDailyRevenue = (bks: any[], from: Date, to: Date) => {
-    const days: { date: string; expected: number; received: number }[] = [];
-    const current = new Date(from);
-    while (current <= to) {
-      const dayStr = format(current, "yyyy-MM-dd");
-      const dayBks = bks.filter((b) => format(new Date(b.starts_at), "yyyy-MM-dd") === dayStr);
-      const expected = dayBks.reduce((s, b) => s + (b.service?.price_cents || 0), 0);
-      const received = dayBks.filter((b) => b.status === "completed").reduce((s, b) => s + (b.service?.price_cents || 0), 0);
-      days.push({ date: format(current, "dd/MM"), expected: expected / 100, received: received / 100 });
-      current.setDate(current.getDate() + 1);
-    }
-    return days;
-  };
-
-  const avgPerWorkDay = useMemo(() => {
-    if (!data) return 0;
-    const daysWithBookings = new Set(bookings.map((b) => format(new Date(b.starts_at), "yyyy-MM-dd"))).size;
-    return daysWithBookings > 0 ? data.revenue_expected / daysWithBookings : 0;
-  }, [data, bookings]);
-
   const dailyAvg = useMemo(() => {
-    if (!data?.daily_revenue) return 0;
-    const withData = data.daily_revenue.filter((d) => d.expected > 0);
-    return withData.length === 0 ? 0 : withData.reduce((s, d) => s + d.expected, 0) / withData.length;
-  }, [data]);
+    if (!cashData?.dailyIncome) return 0;
+    const withData = cashData.dailyIncome.filter((d) => d.income > 0);
+    return withData.length === 0 ? 0 : withData.reduce((s, d) => s + d.income, 0) / withData.length;
+  }, [cashData]);
 
   const staffWithCommission = useMemo(() => {
-    if (!data?.staff_performance) return [];
-    const maxRev = Math.max(...data.staff_performance.map((s) => s.revenue), 1);
-    return data.staff_performance.map((sp: any) => {
+    if (!staffPerformance.length) return [];
+    const maxRev = Math.max(...staffPerformance.map((s: any) => s.revenue), 1);
+    return staffPerformance.map((sp: any) => {
       const detail = staffDetails.find((sd) => sd.id === sp.staffId);
       const commPct = detail?.default_commission_percent || 0;
       const ticketMedio = sp.bookings > 0 ? sp.revenue / sp.bookings : 0;
@@ -317,16 +267,16 @@ export default function Finance() {
       const progressPct = (sp.revenue / maxRev) * 100;
       return { ...sp, ticketMedio, comissao, progressPct, commPct, isTop: sp.revenue === maxRev };
     });
-  }, [data, staffDetails]);
+  }, [staffPerformance, staffDetails]);
 
   const exportToCSV = () => {
-    if (!data || bookings.length === 0) return;
+    if (bookings.length === 0) return;
     const csvContent = [
       ["Data", "Cliente", "Serviço", "Profissional", "Valor", "Status"],
       ...bookings.map((b) => [
         format(new Date(b.starts_at), "dd/MM/yyyy HH:mm"), b.customer?.name || "", b.service?.name || "", b.staff?.name || "",
         `R$ ${((b.service?.price_cents || 0) / 100).toFixed(2)}`,
-        b.status === "completed" ? "Concluído" : b.status === "confirmed" ? "Confirmado" : b.status === "cancelled" ? "Cancelado" : b.status === "no_show" ? "Faltou" : b.status,
+        b.status === "completed" ? "Concluído" : b.status === "confirmed" ? "Confirmado" : b.status,
       ]),
     ].map((row) => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -335,7 +285,9 @@ export default function Finance() {
     link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
-  if (tenantLoading || loading) {
+  const isLoading = tenantLoading || loading || cashLoading;
+
+  if (isLoading) {
     return (
       <div className="space-y-6 px-4 md:px-0">
         <div className="space-y-2">
@@ -343,8 +295,8 @@ export default function Finance() {
           <div className="h-4 w-72 bg-muted/20 rounded-lg animate-pulse" />
         </div>
         <div className="h-14 bg-muted/20 rounded-2xl animate-pulse" />
-        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-5">
-          {[...Array(5)].map((_, i) => (
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="h-28 bg-muted/20 rounded-2xl animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
           ))}
         </div>
@@ -355,6 +307,7 @@ export default function Finance() {
 
   if (!currentTenant) return <NoTenantState />;
 
+  const fmtCents = (v: number) => `R$ ${(v / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
   const statusLabel = (s: string) => s === "completed" ? "Concluído" : s === "confirmed" ? "Confirmado" : s === "cancelled" ? "Cancelado" : s === "no_show" ? "Faltou" : s;
 
   return (
@@ -366,70 +319,97 @@ export default function Finance() {
         </div>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">Financeiro</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">Análise de receitas e performance</p>
+          <p className="text-xs md:text-sm text-muted-foreground">Receita real baseada em cash_entries</p>
         </div>
       </motion.div>
 
       {/* Filters */}
       <motion.div variants={fadeUp}>
-        <UnifiedFilters staff={staff} staffFilter={staffFilter} onStaffFilterChange={setStaffFilter} onExportPDF={exportToCSV} hasData={!!data && bookings.length > 0} />
+        <UnifiedFilters staff={staff} staffFilter={staffFilter} onStaffFilterChange={setStaffFilter} onExportPDF={exportToCSV} hasData={bookings.length > 0} />
       </motion.div>
 
-      {/* KPI Cards */}
-      <motion.div variants={stagger} className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
-        <KpiCard label="Fat. Previsto" value={`R$ ${data ? (data.revenue_expected / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Target} gradient="from-primary/15 to-primary/5" iconColor="text-primary" variation={prevData ? { current: data?.revenue_expected || 0, previous: prevData.revenue_expected } : undefined} />
-        <KpiCard label="Recebido Real" value={`R$ ${data ? (data.revenue_received_real / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} subtitle="Pagamentos confirmados" icon={DollarSign} gradient="from-blue-500/15 to-blue-600/5" iconColor="text-blue-500" variation={prevData ? { current: data?.revenue_received_real || 0, previous: prevData.revenue_received } : undefined} />
-        <KpiCard label="Agendamentos" value={`${data?.bookings_count || 0}`} icon={Calendar} gradient="from-violet-500/15 to-violet-600/5" iconColor="text-violet-500" variation={prevData ? { current: data?.bookings_count || 0, previous: prevData.bookings_count } : undefined} />
-        <KpiCard label="Ticket Médio" value={`R$ ${data ? (data.avg_ticket / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} icon={Wallet} gradient="from-amber-500/15 to-amber-600/5" iconColor="text-amber-500" variation={prevData ? { current: data?.avg_ticket || 0, previous: prevData.avg_ticket } : undefined} />
-        <KpiCard label="Em Aberto" value={`R$ ${data ? (data.open_balance / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 }) : "0"}`} subtitle="Saldo pendente clientes" icon={AlertTriangle} gradient="from-red-500/15 to-red-600/5" iconColor="text-red-500" />
+      {/* KPI Cards — all from cash_entries */}
+      <motion.div variants={stagger} className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+        <KpiCard
+          label="Receita Real"
+          value={fmtCents(cashData?.totalIncome || 0)}
+          subtitle="Pagamentos confirmados"
+          icon={DollarSign}
+          gradient="from-primary/15 to-primary/5"
+          iconColor="text-primary"
+          variation={prevCashData ? { current: cashData?.totalIncome || 0, previous: prevCashData.totalIncome } : undefined}
+        />
+        <KpiCard
+          label="Agendamentos"
+          value={`${bookings.length}`}
+          icon={Calendar}
+          gradient="from-violet-500/15 to-violet-600/5"
+          iconColor="text-violet-500"
+        />
+        <KpiCard
+          label="Ticket Médio"
+          value={fmtCents(cashData?.avgTicket || 0)}
+          subtitle={`${cashData?.closedComandas || 0} comandas fechadas`}
+          icon={Wallet}
+          gradient="from-amber-500/15 to-amber-600/5"
+          iconColor="text-amber-500"
+          variation={prevCashData ? { current: cashData?.avgTicket || 0, previous: prevCashData.avgTicket } : undefined}
+        />
+        <KpiCard
+          label="Em Aberto"
+          value={fmtCents(openBalance)}
+          subtitle="Saldo pendente clientes"
+          icon={AlertTriangle}
+          gradient="from-red-500/15 to-red-600/5"
+          iconColor="text-red-500"
+        />
       </motion.div>
 
       {/* Product KPIs */}
-      {(data?.product_sales_revenue || 0) > 0 && (
+      {productRevenue > 0 && (
         <Section>
           <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-            <KpiCard label="Fat. Produtos" value={`R$ ${(data!.product_sales_revenue / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} icon={ShoppingCart} gradient="from-cyan-500/15 to-cyan-600/5" iconColor="text-cyan-500" />
-            <KpiCard label="Lucro Produtos" value={`R$ ${(data!.product_sales_profit / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`} subtitle={data!.product_sales_revenue > 0 ? `${((data!.product_sales_profit / data!.product_sales_revenue) * 100).toFixed(0)}% margem` : "0%"} icon={TrendingUp} gradient="from-primary/15 to-primary/5" iconColor="text-primary" />
+            <KpiCard label="Fat. Produtos" value={fmtCents(productRevenue)} icon={ShoppingCart} gradient="from-cyan-500/15 to-cyan-600/5" iconColor="text-cyan-500" />
+            <KpiCard label="Lucro Produtos" value={fmtCents(productProfit)} subtitle={productRevenue > 0 ? `${((productProfit / productRevenue) * 100).toFixed(0)}% margem` : "0%"} icon={TrendingUp} gradient="from-primary/15 to-primary/5" iconColor="text-primary" />
           </div>
         </Section>
       )}
 
-      {/* Daily Revenue Chart */}
-      <Section>
-        <ChartCard icon={Zap} iconColor="text-primary" iconBg="bg-primary/10" title="Faturamento Diário" description="Previsto vs Recebido">
-          <ResponsiveContainer width="100%" height={280} className="md:!h-[320px]">
-            <ComposedChart data={data?.daily_revenue?.filter((d) => d.expected > 0 || d.received > 0) || []}>
-              <defs>
-                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="areaGradBlue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.1} />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.6} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={50} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(var(--muted-foreground))", fontSize: 11, marginBottom: 4 }} formatter={(value: number, name: string) => [`R$ ${value.toFixed(2)}`, name === "expected" ? "Previsto" : "Recebido"]} />
-              {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" strokeOpacity={0.8} label={{ value: `Média: R$ ${dailyAvg.toFixed(0)}`, position: "insideTopRight", fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />}
-              <Area type="monotone" dataKey="expected" fill="url(#areaGrad)" stroke="transparent" />
-              <Area type="monotone" dataKey="received" fill="url(#areaGradBlue)" stroke="transparent" />
-              <Line type="monotone" dataKey="expected" stroke="#10b981" strokeWidth={2.5} dot={false} name="expected" />
-              <Line type="monotone" dataKey="received" stroke="#3b82f6" strokeWidth={2} dot={false} name="received" strokeOpacity={0.8} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </Section>
+      {/* Daily Revenue Chart — from cash_entries */}
+      {cashData && (
+        <Section>
+          <ChartCard icon={Zap} iconColor="text-primary" iconBg="bg-primary/10" title="Receita Diária" description="Baseado em cash_entries">
+            <ResponsiveContainer width="100%" height={280} className="md:!h-[320px]">
+              <ComposedChart data={cashData.dailyIncome.filter((d) => d.income > 0)}>
+                <defs>
+                  <linearGradient id="areaGradIncome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.6} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={50} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(var(--muted-foreground))", fontSize: 11, marginBottom: 4 }} formatter={(value: number) => [`R$ ${value.toFixed(2)}`, "Receita"]} />
+                {dailyAvg > 0 && <ReferenceLine y={dailyAvg} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" strokeOpacity={0.8} label={{ value: `Média: R$ ${dailyAvg.toFixed(0)}`, position: "insideTopRight", fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />}
+                <Area type="monotone" dataKey="income" fill="url(#areaGradIncome)" stroke="transparent" />
+                <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2.5} dot={false} name="income" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Section>
+      )}
 
       {/* Heatmap */}
       <Section><RevenueHeatmap bookings={bookings} /></Section>
 
       {/* Period Comparison */}
-      {prevData && (
+      {prevCashData && cashData && (
         <Section>
-          <PeriodComparisonChart currentDaily={data?.daily_revenue || []} previousDaily={prevData.daily_revenue} />
+          <PeriodComparisonChart
+            currentDaily={cashData.dailyIncome.map(d => ({ date: d.date, expected: d.income, received: d.income }))}
+            previousDaily={prevCashData.dailyIncome.map(d => ({ date: d.date, expected: d.income, received: d.income }))}
+          />
         </Section>
       )}
 
@@ -439,7 +419,7 @@ export default function Finance() {
           <ChartCard icon={Sparkles} iconColor="text-violet-500" iconBg="bg-violet-500/10" title="Top Serviços" description="Por faturamento no período">
             {/* Mobile */}
             <div className="md:hidden space-y-2">
-              {(data?.top_services || []).map((service, index) => (
+              {topServices.map((service, index) => (
                 <motion.div key={index} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${COLORS[index % COLORS.length]}15`, color: COLORS[index % COLORS.length] }}>{index + 1}</div>
@@ -451,12 +431,12 @@ export default function Finance() {
                   <span className="font-bold text-sm text-primary tabular-nums">R$ {(service.revenue / 100).toFixed(0)}</span>
                 </motion.div>
               ))}
-              {(!data?.top_services || data.top_services.length === 0) && <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado</p>}
+              {topServices.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado</p>}
             </div>
             {/* Desktop */}
             <div className="hidden md:block">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data?.top_services || []} barSize={36}>
+                <BarChart data={topServices} barSize={36}>
                   <defs>
                     {COLORS.map((c, i) => (
                       <linearGradient key={i} id={`barGrad${i}`} x1="0" y1="0" x2="0" y2="1">
@@ -470,7 +450,7 @@ export default function Finance() {
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "hsl(var(--muted-foreground))", fontSize: 11 }} itemStyle={{ color: "hsl(var(--primary))", fontSize: 12, fontWeight: 700 }} formatter={(value: number) => [`R$ ${(value / 100).toFixed(2)}`, "Faturamento"]} cursor={{ fill: "hsl(var(--muted) / 0.3)" }} />
                   <Bar dataKey="revenue" radius={[8, 8, 0, 0]}>
-                    {(data?.top_services || []).map((_, index) => (
+                    {topServices.map((_, index) => (
                       <Cell key={index} fill={`url(#barGrad${index % COLORS.length})`} />
                     ))}
                   </Bar>
@@ -486,7 +466,6 @@ export default function Finance() {
       {/* Staff Performance */}
       <Section>
         <ChartCard icon={Users} iconColor="text-blue-500" iconBg="bg-blue-500/10" title="Performance da Equipe" description="Faturamento, ticket médio e comissão">
-          {/* Mobile */}
           <div className="md:hidden space-y-2">
             {staffWithCommission.map((sp, index) => (
               <motion.div key={index} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
@@ -512,7 +491,6 @@ export default function Finance() {
             ))}
             {staffWithCommission.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado</p>}
           </div>
-          {/* Desktop */}
           <div className="hidden md:block">
             <Table>
               <TableHeader>
@@ -548,11 +526,11 @@ export default function Finance() {
       </Section>
 
       {/* Top Products */}
-      {data?.top_products && data.top_products.length > 0 && (
+      {topProducts.length > 0 && (
         <Section>
           <ChartCard icon={Package} iconColor="text-amber-500" iconBg="bg-amber-500/10" title="Produtos Mais Vendidos" description="Por quantidade no período">
             <div className="md:hidden space-y-2">
-              {data.top_products.map((product, index) => (
+              {topProducts.map((product, index) => (
                 <motion.div key={index} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${COLORS[index % COLORS.length]}15`, color: COLORS[index % COLORS.length] }}>{index + 1}</div>
@@ -579,7 +557,7 @@ export default function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.top_products.map((product, index) => (
+                  {topProducts.map((product, index) => (
                     <TableRow key={index} className="border-border/50 hover:bg-muted/30 transition-colors">
                       <TableCell className="font-medium text-foreground">{product.name}</TableCell>
                       <TableCell className="text-right tabular-nums text-foreground/80">{product.quantity}</TableCell>
