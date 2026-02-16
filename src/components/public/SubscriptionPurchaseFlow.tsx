@@ -31,6 +31,11 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
       toast({ title: "Preencha todos os campos, incluindo e-mail", variant: "destructive" });
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast({ title: "E-mail inválido", description: "Verifique o e-mail digitado e tente novamente.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke('mp-create-subscription', {

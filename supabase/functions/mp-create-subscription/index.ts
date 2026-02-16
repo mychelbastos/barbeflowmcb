@@ -39,6 +39,17 @@ serve(async (req) => {
       });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customer_email)) {
+      console.error('Invalid email format:', customer_email);
+      return new Response(JSON.stringify({ 
+        error: 'E-mail inválido. Verifique e tente novamente.' 
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -129,7 +140,7 @@ serve(async (req) => {
     const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.barberflow.store';
     const tenantSlug = plan.tenant?.slug || '';
 
-    const backUrl = `${frontBaseUrl}/${tenantSlug}/subscription/callback`;
+    const backUrl = `${frontBaseUrl.replace(/\/+$/, '')}/${tenantSlug}/subscription/callback`;
 
     const mpBody: any = {
       reason: `${plan.name} - ${plan.tenant?.name || 'modoGESTOR'}`,
