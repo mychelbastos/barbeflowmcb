@@ -120,8 +120,102 @@ export type Database = {
           },
         ]
       }
+      booking_items: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          paid_status: string
+          payment_id: string | null
+          purchase_price_cents: number
+          quantity: number
+          receipt_id: string | null
+          ref_id: string | null
+          staff_id: string | null
+          tenant_id: string
+          title: string
+          total_price_cents: number
+          type: string
+          unit_price_cents: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_status?: string
+          payment_id?: string | null
+          purchase_price_cents?: number
+          quantity?: number
+          receipt_id?: string | null
+          ref_id?: string | null
+          staff_id?: string | null
+          tenant_id: string
+          title: string
+          total_price_cents?: number
+          type: string
+          unit_price_cents?: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_status?: string
+          payment_id?: string | null
+          purchase_price_cents?: number
+          quantity?: number
+          receipt_id?: string | null
+          ref_id?: string | null
+          staff_id?: string | null
+          tenant_id?: string
+          title?: string
+          total_price_cents?: number
+          type?: string
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_items_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "booking_items_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
+          comanda_status: string
           created_at: string
           created_via: string | null
           customer_id: string
@@ -140,6 +234,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          comanda_status?: string
           created_at?: string
           created_via?: string | null
           customer_id: string
@@ -158,6 +253,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          comanda_status?: string
           created_at?: string
           created_via?: string | null
           customer_id?: string
