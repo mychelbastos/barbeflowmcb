@@ -213,7 +213,7 @@ serve(async (req) => {
           staff_id: currentBooking?.staff_id || null,
           amount_cents: payment.amount_cents,
           kind: 'income',
-          source: 'booking',
+          source: 'booking_service',
           payment_method: 'online',
           booking_id: bookingId,
           payment_id: paymentId,

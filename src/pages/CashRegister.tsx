@@ -18,8 +18,9 @@ import {
 import {
   Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Lock, Unlock,
   Plus, Minus, Receipt, AlertTriangle, Clock, Banknote, CreditCard, Smartphone,
+  Wifi, WifiOff,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -41,8 +42,13 @@ const KIND_LABELS: Record<string, string> = {
 
 const SOURCE_LABELS: Record<string, string> = {
   booking: "Agendamento",
+  booking_service: "Serviço",
+  booking_product: "Produto",
   product: "Produto",
+  product_sale: "Produto",
   subscription: "Assinatura",
+  package: "Pacote",
+  package_sale: "Pacote",
   manual: "Manual",
   online: "Online",
   supply: "Suprimento",
@@ -74,6 +80,12 @@ type CashEntry = {
   payment_method: string | null;
   session_id: string | null;
   staff_id: string | null;
+  booking_id: string | null;
+};
+
+type StaffMember = {
+  id: string;
+  name: string;
 };
 
 export default function CashRegister() {
@@ -83,6 +95,8 @@ export default function CashRegister() {
   const [session, setSession] = useState<CashSession | null>(null);
   const [entries, setEntries] = useState<CashEntry[]>([]);
   const [history, setHistory] = useState<CashSession[]>([]);
+  const [orphanEntries, setOrphanEntries] = useState<CashEntry[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
 
   // Modals
   const [openCashModal, setOpenCashModal] = useState(false);
@@ -96,12 +110,22 @@ export default function CashRegister() {
   const [entryAmount, setEntryAmount] = useState("");
   const [entryNotes, setEntryNotes] = useState("");
   const [entryPaymentMethod, setEntryPaymentMethod] = useState("cash");
+  const [entryStaffId, setEntryStaffId] = useState<string>("none");
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentTenant) return;
     setLoading(true);
     try {
+      // Load staff
+      const { data: staffData } = await supabase
+        .from("staff")
+        .select("id, name")
+        .eq("tenant_id", currentTenant.id)
+        .eq("active", true)
+        .order("name");
+      setStaffList(staffData || []);
+
       // Get open session
       const { data: openSession } = await supabase
         .from("cash_sessions")
@@ -122,8 +146,23 @@ export default function CashRegister() {
           .eq("session_id", openSession.id)
           .order("occurred_at", { ascending: false });
         setEntries(sessionEntries || []);
+
+        // Get orphan entries (session_id IS NULL, kind=income, today)
+        const todayStart = startOfDay(new Date()).toISOString();
+        const todayEnd = endOfDay(new Date()).toISOString();
+        const { data: orphans } = await supabase
+          .from("cash_entries")
+          .select("*")
+          .eq("tenant_id", currentTenant.id)
+          .eq("kind", "income")
+          .is("session_id", null)
+          .gte("occurred_at", todayStart)
+          .lte("occurred_at", todayEnd)
+          .order("occurred_at", { ascending: false });
+        setOrphanEntries(orphans || []);
       } else {
         setEntries([]);
+        setOrphanEntries([]);
       }
 
       // Get recent closed sessions
@@ -173,10 +212,9 @@ export default function CashRegister() {
     try {
       const closingCents = Math.round(parseFloat(closingAmount || "0") * 100);
       
-      // Calculate expected: opening + incomes - expenses
-      const totalIn = entries.filter(e => e.kind === "income" || e.kind === "supply")
+      const totalIn = entries.filter(e => e.kind === "income" || e.source === "supply")
         .reduce((s, e) => s + e.amount_cents, 0);
-      const totalOut = entries.filter(e => e.kind === "expense" || e.kind === "withdrawal")
+      const totalOut = entries.filter(e => e.kind === "expense" || e.source === "withdrawal")
         .reduce((s, e) => s + e.amount_cents, 0);
       const expectedCents = session.opening_amount_cents + totalIn - totalOut;
       const diffCents = closingCents - expectedCents;
@@ -217,6 +255,9 @@ export default function CashRegister() {
       else if (entryModal === "expense") { kind = "expense"; source = "expense"; }
       else { kind = "income"; source = "manual"; }
 
+      // Only send staff_id for income entries (not supply/withdrawal/expense admin)
+      const staffId = entryModal === "income" && entryStaffId !== "none" ? entryStaffId : null;
+
       const { error } = await supabase.from("cash_entries").insert({
         tenant_id: currentTenant.id,
         session_id: session.id,
@@ -226,6 +267,7 @@ export default function CashRegister() {
         notes: entryNotes || null,
         payment_method: entryPaymentMethod,
         occurred_at: new Date().toISOString(),
+        staff_id: staffId,
       });
       if (error) throw error;
       toast.success("Lançamento registrado!");
@@ -233,6 +275,7 @@ export default function CashRegister() {
       setEntryAmount("");
       setEntryNotes("");
       setEntryPaymentMethod("cash");
+      setEntryStaffId("none");
       await loadData();
     } catch (err: any) {
       toast.error("Erro: " + err.message);
@@ -242,9 +285,9 @@ export default function CashRegister() {
   };
 
   // Calculations for open session
-  const totalIn = entries.filter(e => e.kind === "income" || e.kind === "supply")
+  const totalIn = entries.filter(e => e.kind === "income" || e.source === "supply")
     .reduce((s, e) => s + e.amount_cents, 0);
-  const totalOut = entries.filter(e => e.kind === "expense" || e.kind === "withdrawal")
+  const totalOut = entries.filter(e => e.kind === "expense" || e.source === "withdrawal")
     .reduce((s, e) => s + e.amount_cents, 0);
   const currentBalance = session ? session.opening_amount_cents + totalIn - totalOut : 0;
 
@@ -252,7 +295,7 @@ export default function CashRegister() {
   const byMethod = entries.reduce((acc, e) => {
     const m = e.payment_method || "cash";
     if (!acc[m]) acc[m] = { income: 0, expense: 0 };
-    if (e.kind === "income" || e.kind === "supply") acc[m].income += e.amount_cents;
+    if (e.kind === "income" || e.source === "supply") acc[m].income += e.amount_cents;
     else acc[m].expense += e.amount_cents;
     return acc;
   }, {} as Record<string, { income: number; expense: number }>);
@@ -365,6 +408,59 @@ export default function CashRegister() {
             </Button>
           </div>
 
+          {/* ========== Orphan entries (online without session) ========== */}
+          {orphanEntries.length > 0 && (
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <WifiOff className="h-4 w-4 text-blue-400" />
+                  <h3 className="text-sm font-semibold text-blue-400">
+                    Receitas Online (fora da sessão)
+                  </h3>
+                  <Badge variant="outline" className="text-blue-400 border-blue-500/30 text-[10px]">
+                    {orphanEntries.length}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-3">
+                  Pagamentos recebidos quando o caixa estava fechado. Não entram no saldo da sessão.
+                </p>
+                <div className="space-y-1.5">
+                  {orphanEntries.map(e => (
+                    <div key={e.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                      <div className="flex items-center gap-2">
+                        <Wifi className="h-3 w-3 text-blue-400" />
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(e.occurred_at), "HH:mm")}
+                        </span>
+                        <span className="text-xs">
+                          {SOURCE_LABELS[e.source || ""] || e.source || "Online"}
+                        </span>
+                        {e.booking_id && (
+                          <span className="text-[10px] text-muted-foreground/70 font-mono">
+                            {e.booking_id.substring(0, 8)}…
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-blue-400 border-blue-500/20 text-[10px]">
+                          Online sem sessão
+                        </Badge>
+                        <span className="text-sm font-bold text-blue-400">+{fmt(e.amount_cents)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex justify-end pt-1">
+                    <span className="text-xs text-muted-foreground">
+                      Total: <span className="font-bold text-blue-400">
+                        {fmt(orphanEntries.reduce((s, e) => s + e.amount_cents, 0))}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Breakdown by payment method */}
           {Object.keys(byMethod).length > 0 && (
             <Card>
@@ -416,7 +512,7 @@ export default function CashRegister() {
                             {format(new Date(e.occurred_at), "HH:mm")}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={e.kind === "income" || e.kind === "supply" ? "default" : "destructive"} className="text-xs">
+                            <Badge variant={e.kind === "income" || e.source === "supply" ? "default" : "destructive"} className="text-xs">
                               {KIND_LABELS[e.kind] || e.kind}
                             </Badge>
                           </TableCell>
@@ -426,8 +522,8 @@ export default function CashRegister() {
                           <TableCell className="text-xs">
                             {PAYMENT_METHODS.find(m => m.value === e.payment_method)?.label || e.payment_method || "-"}
                           </TableCell>
-                          <TableCell className={`font-medium ${e.kind === "income" || e.kind === "supply" ? "text-emerald-400" : "text-red-400"}`}>
-                            {e.kind === "income" || e.kind === "supply" ? "+" : "-"}{fmt(e.amount_cents)}
+                          <TableCell className={`font-medium ${e.kind === "income" || e.source === "supply" ? "text-emerald-400" : "text-red-400"}`}>
+                            {e.kind === "income" || e.source === "supply" ? "+" : "-"}{fmt(e.amount_cents)}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
                             {e.notes || "-"}
@@ -615,6 +711,21 @@ export default function CashRegister() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Staff selector — only for manual income */}
+            {entryModal === "income" && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">Profissional (opcional)</label>
+                <Select value={entryStaffId} onValueChange={setEntryStaffId}>
+                  <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {staffList.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium mb-1 block">
                 Observação {entryModal === "expense" && <span className="text-red-400">*</span>}

@@ -9,17 +9,20 @@ export interface CashRevenueData {
   totalSupply: number;
   /** Total expenses (kind=expense) */
   totalExpense: number;
-  /** Income from booking source only */
+  /** Income from booking_service source */
+  bookingServiceIncome: number;
+  /** Income from booking_product source */
+  bookingProductIncome: number;
+  /** Legacy booking source (for backwards compat) */
   bookingIncome: number;
-  /** Income from product source only (source contains 'product' or booking items of type product) */
-  productIncome: number;
   /** Income from subscription/package sources */
-  benefitSalesIncome: number;
+  subscriptionIncome: number;
+  packageIncome: number;
   /** Daily breakdown of income (excluding supply) */
   dailyIncome: { date: string; label: string; income: number; cumulative: number }[];
-  /** Number of closed comandas in period */
+  /** Number of closed comandas in period (based on cash_entries existence) */
   closedComandas: number;
-  /** Ticket médio: bookingIncome / closedComandas */
+  /** Ticket médio: bookingServiceIncome / closedComandas */
   avgTicket: number;
 }
 
@@ -67,21 +70,24 @@ export function useCashRevenue({ tenantId, dateRange, staffFilter }: UseCashReve
       const totalSupply = supplyEntries.reduce((s, e) => s + e.amount_cents, 0);
       const totalExpense = expenseEntries.reduce((s, e) => s + e.amount_cents, 0);
 
-      const bookingIncome = revenueEntries
-        .filter(e => e.source === "booking")
+      // Granular source breakdown
+      const bookingServiceIncome = revenueEntries
+        .filter(e => e.source === "booking_service" || e.source === "booking")
         .reduce((s, e) => s + e.amount_cents, 0);
 
-      // Product income: source that indicates product sale
-      // In the current schema, product sales via comanda go through source='booking'
-      // but standalone product sales might use a different source. 
-      // For now, we identify product-specific income by looking at cash_entries 
-      // where source contains product-related terms
-      const productIncome = revenueEntries
-        .filter(e => e.source === "product_sale" || e.source === "product")
+      const bookingProductIncome = revenueEntries
+        .filter(e => e.source === "booking_product" || e.source === "product_sale" || e.source === "product")
         .reduce((s, e) => s + e.amount_cents, 0);
 
-      const benefitSalesIncome = revenueEntries
-        .filter(e => e.source === "subscription" || e.source === "package_sale" || e.source === "package")
+      // Legacy: total booking income (service + product + old 'booking' source)
+      const bookingIncome = bookingServiceIncome + bookingProductIncome;
+
+      const subscriptionIncome = revenueEntries
+        .filter(e => e.source === "subscription")
+        .reduce((s, e) => s + e.amount_cents, 0);
+
+      const packageIncome = revenueEntries
+        .filter(e => e.source === "package_sale" || e.source === "package")
         .reduce((s, e) => s + e.amount_cents, 0);
 
       // Daily breakdown
@@ -100,31 +106,44 @@ export function useCashRevenue({ tenantId, dateRange, staffFilter }: UseCashReve
         };
       });
 
-      // Closed comandas count for ticket médio
-      let comandaQuery = supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId)
-        .eq("comanda_status", "closed")
-        .gte("starts_at", dateRange.from.toISOString())
-        .lte("starts_at", dateRange.to.toISOString());
+      // Closed comandas: COUNT DISTINCT booking_id from cash_entries
+      // where the booking has comanda_status='closed' and there's a cash_entry in the period
+      const bookingIds = [...new Set(
+        revenueEntries
+          .filter(e => e.booking_id && (e.source === "booking_service" || e.source === "booking"))
+          .map(e => e.booking_id!)
+      )];
 
-      if (staffFilter && staffFilter !== "all") {
-        comandaQuery = comandaQuery.eq("staff_id", staffFilter);
+      let comandaCount = 0;
+      if (bookingIds.length > 0) {
+        // Check which of these bookings have comanda_status = 'closed'
+        let comandaQuery = supabase
+          .from("bookings")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("comanda_status", "closed")
+          .in("id", bookingIds);
+
+        if (staffFilter && staffFilter !== "all") {
+          comandaQuery = comandaQuery.eq("staff_id", staffFilter);
+        }
+
+        const { count } = await comandaQuery;
+        comandaCount = count || 0;
       }
 
-      const { count: closedComandas } = await comandaQuery;
-      const comandaCount = closedComandas || 0;
-
-      const avgTicket = comandaCount > 0 ? bookingIncome / comandaCount : 0;
+      // Ticket médio: only service income / closed comandas
+      const avgTicket = comandaCount > 0 ? bookingServiceIncome / comandaCount : 0;
 
       setData({
         totalIncome,
         totalSupply,
         totalExpense,
+        bookingServiceIncome,
+        bookingProductIncome,
         bookingIncome,
-        productIncome,
-        benefitSalesIncome,
+        subscriptionIncome,
+        packageIncome,
         dailyIncome,
         closedComandas: comandaCount,
         avgTicket,
