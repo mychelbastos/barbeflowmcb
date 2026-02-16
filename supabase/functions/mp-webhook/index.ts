@@ -448,25 +448,63 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
     });
   }
 
-  const preapprovalId = mpPaymentData.metadata?.preapproval_id || mpPaymentData.point_of_interaction?.subscription_id || mpPaymentData.preapproval_id;
-  let subscription: any = null;
+  const preapprovalId = mpPaymentData.metadata?.preapproval_id 
+    || mpPaymentData.point_of_interaction?.transaction_data?.subscription_id
+    || mpPaymentData.point_of_interaction?.subscription_id 
+    || mpPaymentData.preapproval_id;
 
+  console.log('Subscription payment details:', JSON.stringify({
+    payment_id: mpPaymentId,
+    status: mpPaymentData.status,
+    amount: mpPaymentData.transaction_amount,
+    preapprovalId,
+    external_reference: mpPaymentData.external_reference,
+    metadata: mpPaymentData.metadata,
+    point_of_interaction: mpPaymentData.point_of_interaction,
+  }));
+
+  let subscription: any = null;
+  const subSelect = '*, customer:customers(name, phone), plan:subscription_plans(name, price_cents, tenant:tenants(name, slug))';
+
+  // Strategy 1: Match by preapproval_id
   if (preapprovalId) {
     const { data } = await supabase.from('customer_subscriptions')
-      .select('*, customer:customers(name, phone), plan:subscription_plans(name, price_cents, tenant:tenants(name, slug))')
+      .select(subSelect)
       .eq('mp_preapproval_id', preapprovalId).maybeSingle();
     subscription = data;
+    if (subscription) console.log('Matched subscription by preapproval_id:', subscription.id);
   }
 
-  if (!subscription) {
+  // Strategy 2: Match by external_reference (subscription.id)
+  if (!subscription && mpPaymentData.external_reference) {
     const { data } = await supabase.from('customer_subscriptions')
-      .select('*, customer:customers(name, phone), plan:subscription_plans(name, price_cents, tenant:tenants(name, slug))')
-      .eq('mp_preapproval_id', mpPaymentData.metadata?.preapproval_id || '').maybeSingle();
+      .select(subSelect)
+      .eq('id', mpPaymentData.external_reference).maybeSingle();
     subscription = data;
+    if (subscription) console.log('Matched subscription by external_reference:', subscription.id);
+  }
+
+  // Strategy 3: Match by tenant (from connection) + recent active subscription for payer email
+  if (!subscription && usedConnection && mpPaymentData.payer?.email) {
+    const { data: customers } = await supabase.from('customers')
+      .select('id').eq('tenant_id', usedConnection.tenant_id).eq('email', mpPaymentData.payer.email);
+    
+    if (customers?.length) {
+      const customerIds = customers.map((c: any) => c.id);
+      const { data } = await supabase.from('customer_subscriptions')
+        .select(subSelect)
+        .eq('tenant_id', usedConnection.tenant_id)
+        .in('customer_id', customerIds)
+        .in('status', ['active', 'pending', 'past_due'])
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle();
+      subscription = data;
+      if (subscription) console.log('Matched subscription by payer email fallback:', subscription.id);
+    }
   }
 
   if (!subscription) {
-    console.log('No subscription found for payment, may be a regular payment');
+    console.log('No subscription found for payment:', mpPaymentId, 'preapprovalId:', preapprovalId);
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
