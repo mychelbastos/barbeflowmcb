@@ -8,6 +8,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Helper: find open cash session for a tenant.
+ * Returns session_id or null.
+ */
+async function findOpenCashSession(supabase: any, tenantId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('cash_sessions')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'open')
+    .order('opened_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.id || null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -134,7 +150,7 @@ serve(async (req) => {
 
     if (newStatus === 'paid' && previousStatus !== 'paid') {
       const { data: currentBooking } = await supabase
-        .from('bookings').select('id, status, starts_at, ends_at, staff_id, tenant_id')
+        .from('bookings').select('id, status, starts_at, ends_at, staff_id, tenant_id, customer_id, customer_package_id, customer_subscription_id, service_id')
         .eq('id', payment.booking_id).single();
 
       if (!currentBooking) {
@@ -164,75 +180,105 @@ serve(async (req) => {
         }
       }
 
-      // ========== AUTO-CLOSE COMANDA: debit + credit + cash_entry (all idempotent) ==========
-      const customerId = payment.booking?.customer_id;
       const bookingId = payment.booking_id;
-      const staffIdForEntry = payment.booking?.staff_id || null;
+      const tenantId = payment.tenant_id;
+      const isBenefit = !!(currentBooking?.customer_package_id || currentBooking?.customer_subscription_id);
 
-      // 1) Idempotent DEBIT for service consumption
-      if (customerId) {
+      // ========== MARK booking_items AS paid_online ==========
+      if (!isBenefit) {
+        // Mark the service item as paid_online (anti-dup: only unpaid items)
+        await supabase.from('booking_items')
+          .update({
+            paid_status: 'paid_online',
+            payment_id: paymentId,
+            paid_at: new Date().toISOString(),
+          })
+          .eq('booking_id', bookingId)
+          .eq('tenant_id', tenantId)
+          .eq('type', 'service')
+          .eq('paid_status', 'unpaid');
+
+        console.log(`[ITEMS] Marked service items as paid_online for booking ${bookingId}`);
+      }
+      // If benefit-covered, items already have paid_status = 'covered' from trigger
+
+      // ========== IDEMPOTENT CASH ENTRY (with session_id) ==========
+      // RULE: Only create cash_entry if NOT a package/subscription purchase benefit
+      // The unique index on payment_id prevents duplicates
+      if (!isBenefit && payment.amount_cents > 0) {
+        const sessionId = await findOpenCashSession(supabase, tenantId);
+
+        const { error: cashError } = await supabase.from('cash_entries').insert({
+          tenant_id: tenantId,
+          staff_id: currentBooking?.staff_id || null,
+          amount_cents: payment.amount_cents,
+          kind: 'income',
+          source: 'booking',
+          payment_method: 'online',
+          booking_id: bookingId,
+          payment_id: paymentId,
+          session_id: sessionId, // Links to open session or null
+          notes: `Pagamento online MP #${mpPaymentId}`,
+          occurred_at: new Date().toISOString(),
+        });
+
+        if (cashError) {
+          // Unique constraint violation = duplicate, which is expected/safe
+          if (cashError.code === '23505') {
+            console.log(`[CASH] Duplicate cash entry for payment ${paymentId}, skipping`);
+          } else {
+            console.error(`[CASH] Error creating cash entry:`, cashError);
+          }
+        } else {
+          console.log(`[CASH] Created online cash entry for booking ${bookingId}, session: ${sessionId || 'none'}`);
+        }
+      }
+
+      // ========== CUSTOMER BALANCE: DEBIT + CREDIT (idempotent) ==========
+      const customerId = currentBooking?.customer_id;
+      const staffIdForEntry = currentBooking?.staff_id || null;
+
+      if (customerId && !isBenefit) {
+        // Debit for service consumption
         const { data: existingDebit } = await supabase
           .from('customer_balance_entries').select('id')
-          .eq('tenant_id', payment.tenant_id).eq('booking_id', bookingId)
+          .eq('tenant_id', tenantId).eq('booking_id', bookingId)
           .eq('type', 'debit').eq('description', 'Serviço realizado').maybeSingle();
 
         if (!existingDebit) {
-          // Get service price from booking
           const { data: bookingWithService } = await supabase
-            .from('bookings').select('service:services(price_cents), customer_package_id, customer_subscription_id')
+            .from('bookings').select('service:services(price_cents)')
             .eq('id', bookingId).single();
-
-          const isBenefit = !!(bookingWithService?.customer_package_id || bookingWithService?.customer_subscription_id);
-          const svcPrice = isBenefit ? 0 : (bookingWithService?.service?.price_cents || 0);
+          const svcPrice = bookingWithService?.service?.price_cents || 0;
 
           if (svcPrice > 0) {
             await supabase.from('customer_balance_entries').insert({
-              tenant_id: payment.tenant_id, customer_id: customerId,
+              tenant_id: tenantId, customer_id: customerId,
               type: 'debit', amount_cents: svcPrice,
               description: 'Serviço realizado', booking_id: bookingId, staff_id: staffIdForEntry,
             });
-            console.log(`[LEDGER] Created debit ${svcPrice} cents for booking ${bookingId}`);
           }
-        } else {
-          console.log(`[LEDGER] Debit already exists for booking ${bookingId}, skipping`);
+        }
+
+        // Credit for payment received
+        if (payment.amount_cents > 0) {
+          const dedupKey = `mp_payment_${paymentId}`;
+          const { data: existingCredit } = await supabase
+            .from('customer_balance_entries').select('id')
+            .eq('tenant_id', tenantId).eq('booking_id', bookingId)
+            .eq('type', 'credit').eq('description', dedupKey).maybeSingle();
+
+          if (!existingCredit) {
+            await supabase.from('customer_balance_entries').insert({
+              tenant_id: tenantId, customer_id: customerId,
+              type: 'credit', amount_cents: payment.amount_cents,
+              description: dedupKey, booking_id: bookingId, staff_id: staffIdForEntry,
+            });
+          }
         }
       }
 
-      // 2) Idempotent CREDIT for payment received
-      if (payment.amount_cents > 0 && customerId) {
-        const dedupKey = `mp_payment_${paymentId}`;
-        const { data: existingCredit } = await supabase
-          .from('customer_balance_entries').select('id')
-          .eq('tenant_id', payment.tenant_id).eq('booking_id', bookingId)
-          .eq('type', 'credit').eq('description', dedupKey).maybeSingle();
-
-        if (!existingCredit) {
-          await supabase.from('customer_balance_entries').insert({
-            tenant_id: payment.tenant_id, customer_id: customerId,
-            type: 'credit', amount_cents: payment.amount_cents,
-            description: dedupKey, booking_id: bookingId, staff_id: staffIdForEntry,
-          });
-          console.log(`[LEDGER] Created credit ${payment.amount_cents} cents for booking ${bookingId}`);
-        } else {
-          console.log(`[LEDGER] Credit already exists for booking ${bookingId}, skipping`);
-        }
-      }
-
-      // 3) Idempotent CASH ENTRY for online income
-      const { data: existingCashEntry } = await supabase.from('cash_entries').select('id')
-        .eq('tenant_id', payment.tenant_id).eq('source', 'online')
-        .eq('booking_id', bookingId).eq('payment_id', paymentId).maybeSingle();
-
-      if (!existingCashEntry) {
-        await supabase.from('cash_entries').insert({
-          tenant_id: payment.tenant_id, staff_id: staffIdForEntry,
-          amount_cents: payment.amount_cents, kind: 'income', source: 'online',
-          payment_method: 'online', booking_id: bookingId, payment_id: paymentId,
-          notes: `Pagamento online MP #${mpPaymentId}`, occurred_at: new Date().toISOString(),
-        });
-        console.log(`[CASH] Created online cash entry for booking ${bookingId}`);
-      }
-
+      // Package confirmation
       if (customerPackageId) {
         await supabase.from('customer_packages').update({ payment_status: 'confirmed' }).eq('id', customerPackageId);
       }
@@ -348,7 +394,6 @@ async function handleSubscriptionPreapproval(supabase: any, mpPreapprovalId: str
     updateData.cancelled_at = new Date().toISOString();
     updateData.cancellation_reason = 'mp_automatic';
 
-    // 🆕 Notify customer about MP auto-cancellation
     const customer = subscription.customer;
     const plan = subscription.plan;
     const tenantName = plan?.tenant?.name || 'modoGESTOR';
@@ -465,11 +510,15 @@ async function handleSubscriptionPayment(supabase: any, mpPaymentId: string, con
         paid_at: new Date().toISOString(),
       });
 
+      // 📦 Subscription payment → cash_entry with session_id
+      const sessionId = await findOpenCashSession(supabase, subscription.tenant_id);
       await supabase.from('cash_entries').insert({
         tenant_id: subscription.tenant_id,
         amount_cents: Math.round(mpPaymentData.transaction_amount * 100),
         kind: 'income', source: 'subscription',
-        notes: `subscription:${subscription.id} | MP payment: ${mpPaymentId}`,
+        payment_method: 'online',
+        session_id: sessionId,
+        notes: `Assinatura ${subscription.id} | MP payment: ${mpPaymentId}`,
         occurred_at: new Date().toISOString(),
       });
 
