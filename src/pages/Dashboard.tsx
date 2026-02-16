@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
 import { useDateRange } from "@/contexts/DateRangeContext";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { dashPath } from "@/lib/hostname";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,64 @@ const Dashboard = () => {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { dateRange } = useDateRange();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { data: cashData } = useCashRevenue({ tenantId: currentTenant?.id, dateRange });
+
+  const updateBookingStatus = useCallback(async (bookingId: string, newStatus: string, booking?: any) => {
+    if (!currentTenant) return;
+    try {
+      if (newStatus === "cancelled") {
+        const cancellationMinHours = currentTenant.settings?.cancellation_min_hours ?? 4;
+        const { data: result, error: rpcError } = await supabase.rpc("cancel_booking_with_refund", {
+          p_booking_id: bookingId,
+          p_tenant_id: currentTenant.id,
+          p_cancellation_min_hours: cancellationMinHours,
+        });
+        if (rpcError) throw rpcError;
+        const res = result as any;
+        if (!res?.success) throw new Error(res?.error || "Erro ao cancelar");
+      } else if (newStatus === "no_show") {
+        const { data: result, error: rpcError } = await supabase.rpc("mark_booking_no_show", {
+          p_booking_id: bookingId,
+          p_tenant_id: currentTenant.id,
+        });
+        if (rpcError) throw rpcError;
+        const res = result as any;
+        if (!res?.success) throw new Error(res?.error || "Erro ao marcar falta");
+      } else {
+        const { error } = await supabase.from("bookings").update({ status: newStatus }).eq("id", bookingId);
+        if (error) throw error;
+      }
+
+      if (newStatus === "completed") {
+        await supabase.from("bookings").update({ session_outcome: "consumed" }).eq("id", bookingId).not("customer_package_id", "is", null).or("customer_subscription_id.not.is.null");
+      }
+
+      const notificationTypeMap: Record<string, string | null> = {
+        cancelled: "booking_cancelled", confirmed: "booking_confirmed", completed: null, no_show: "booking_no_show",
+      };
+      const notificationType = notificationTypeMap[newStatus];
+      if (notificationType) {
+        try { await supabase.functions.invoke("send-whatsapp-notification", { body: { type: notificationType, booking_id: bookingId, tenant_id: currentTenant.id } }); } catch {}
+      }
+
+      toast({ title: "Status atualizado" });
+
+      if (newStatus === "completed") {
+        const { data: updated } = await supabase
+          .from("bookings")
+          .select("*, service:services(name, color, duration_minutes, price_cents), staff:staff(name, color, is_owner, default_commission_percent, product_commission_percent), customer:customers(name, phone, notes)")
+          .eq("id", bookingId)
+          .single();
+        if (updated) setSelectedBooking(updated);
+      } else {
+        setSelectedBooking(null);
+      }
+      loadDashboardData();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Erro ao atualizar status", variant: "destructive" });
+    }
+  }, [currentTenant]);
 
   useEffect(() => {
     if (user && !tenantLoading) {
@@ -292,6 +350,8 @@ const Dashboard = () => {
           tenantId={currentTenant.id}
           open={!!selectedBooking}
           onOpenChange={(open) => { if (!open) { setSelectedBooking(null); } }}
+          showActions
+          onStatusChange={updateBookingStatus}
         />
       )}
     </div>
