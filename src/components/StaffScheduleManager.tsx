@@ -16,6 +16,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Clock, Plus, Edit, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -237,16 +248,12 @@ export const StaffScheduleManager = ({ staffId, staffName }: StaffScheduleManage
     setShowForm(true);
   };
 
-  const handleDelete = async (schedule: Schedule) => {
-    if (!confirm(`Excluir horário de ${WEEKDAYS[schedule.weekday]}?`)) {
-      return;
-    }
-
+  const handleDelete = async (scheduleId: string) => {
     try {
       const { error } = await supabase
         .from('schedules')
         .delete()
-        .eq('id', schedule.id);
+        .eq('id', scheduleId);
 
       if (error) throw error;
 
@@ -373,13 +380,33 @@ export const StaffScheduleManager = ({ staffId, staffName }: StaffScheduleManage
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(schedule)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir horário?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Deseja excluir o horário de {WEEKDAYS[schedule.weekday]}? Essa ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(schedule.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               ))}
