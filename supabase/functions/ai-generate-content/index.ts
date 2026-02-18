@@ -139,23 +139,17 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
 
       console.log(`Generating image for ${finalTable}: ${item.name}`);
 
-      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) {
-        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      // Use Gemini API directly with Imagen model
+      const geminiImageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResponse = await fetch(geminiImageUrl, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
-          messages: [{ role: 'user', content: imagePrompts[finalTable] }],
-          modalities: ['image', 'text'],
+          contents: [{ parts: [{ text: imagePrompts[finalTable] }] }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          },
         }),
       });
 
@@ -174,25 +168,19 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
 
       const aiData = await aiResponse.json();
 
-      // Extract image from Lovable AI Gateway response
-      const imageUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      // Extract inline image from Gemini response
+      const parts = aiData.candidates?.[0]?.content?.parts || [];
+      const imagePart = parts.find((p: any) => p.inlineData);
 
-      if (!imageUrl || !imageUrl.startsWith('data:image')) {
-        console.error('No image in AI response:', JSON.stringify(aiData).substring(0, 500));
+      if (!imagePart?.inlineData?.data) {
+        console.error('No image in Gemini response:', JSON.stringify(aiData).substring(0, 500));
         return new Response(JSON.stringify({ error: 'IA não retornou imagem. Tente novamente.' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Parse base64 from data URL
-      const base64Match = imageUrl.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/);
-      if (!base64Match) {
-        return new Response(JSON.stringify({ error: 'Formato de imagem inválido' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const generatedMimeType = `image/${base64Match[1]}`;
-      const generatedImageData = base64Match[2];
+      const generatedMimeType = imagePart.inlineData.mimeType || 'image/png';
+      const generatedImageData = imagePart.inlineData.data;
 
       // Upload to storage
       const binaryData = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));

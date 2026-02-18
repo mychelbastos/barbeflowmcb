@@ -108,38 +108,30 @@ Enhance the overall quality while keeping the original subject intact.`,
 Enhance quality and presentation while keeping the original subject.`,
     };
 
-    // Call Lovable AI Gateway for image editing
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    // Call Gemini API directly for image editing
     const sourceDataUrl = `data:${contentType};base64,${imgBase64}`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const geminiImageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
+
+    const aiResponse = await fetch(geminiImageUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: prompts[finalTable] },
-            { type: 'image_url', image_url: { url: sourceDataUrl } },
+        contents: [{
+          parts: [
+            { text: prompts[finalTable] },
+            { inlineData: { mimeType: contentType, data: imgBase64 } },
           ],
         }],
-        modalities: ['image', 'text'],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
       }),
     });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error('AI Gateway error:', aiResponse.status, errText);
+      console.error('Gemini image error:', aiResponse.status, errText);
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: 'Limite de requisições excedido. Tente novamente em alguns segundos.' }), {
           status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -152,22 +144,19 @@ Enhance quality and presentation while keeping the original subject.`,
 
     const aiData = await aiResponse.json();
 
-    const imageUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageUrl || !imageUrl.startsWith('data:image')) {
-      console.error('No image in AI response:', JSON.stringify(aiData).substring(0, 500));
+    // Extract inline image from Gemini response
+    const parts = aiData.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p: any) => p.inlineData);
+
+    if (!imagePart?.inlineData?.data) {
+      console.error('No image in Gemini response:', JSON.stringify(aiData).substring(0, 500));
       return new Response(JSON.stringify({ error: 'IA não retornou imagem' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const base64Match = imageUrl.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/);
-    if (!base64Match) {
-      return new Response(JSON.stringify({ error: 'Formato de imagem inválido' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const generatedMimeType = `image/${base64Match[1]}`;
-    const generatedImageData = base64Match[2];
+    const generatedMimeType = imagePart.inlineData.mimeType || 'image/png';
+    const generatedImageData = imagePart.inlineData.data;
 
     // Upload to storage
     const binaryData = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));

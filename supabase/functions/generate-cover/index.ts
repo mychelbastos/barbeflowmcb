@@ -12,8 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -30,50 +30,60 @@ serve(async (req) => {
 
     console.log("Generating cover for tenant:", tenant_id);
 
-    // Use AI to generate a cover image with the logo
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Download the logo image
+    const logoResponse = await fetch(logo_url);
+    if (!logoResponse.ok) throw new Error("Failed to download logo");
+    const logoBuffer = await logoResponse.arrayBuffer();
+    const logoBytes = new Uint8Array(logoBuffer);
+    let logoBase64 = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < logoBytes.length; i += chunkSize) {
+      logoBase64 += String.fromCharCode(...logoBytes.subarray(i, i + chunkSize));
+    }
+    logoBase64 = btoa(logoBase64);
+    const logoContentType = logoResponse.headers.get('content-type') || 'image/png';
+
+    // Use Gemini API directly for cover generation
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GOOGLE_GEMINI_API_KEY}`;
+
+    const response = await fetch(geminiUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Create a professional service business cover banner (landscape 16:9 aspect ratio). Place the provided logo centered on a dark elegant gradient background going from dark charcoal (#1a1a1a) to dark gold (#8B6914). Add subtle decorative elements like thin lines or geometric patterns around the logo. Keep it minimal, modern and professional. The logo should be prominent and centered."
-              },
-              {
-                type: "image_url",
-                image_url: { url: logo_url }
-              }
-            ]
-          }
-        ],
-        modalities: ["image", "text"]
+        contents: [{
+          parts: [
+            {
+              text: "Create a professional service business cover banner (landscape 16:9 aspect ratio). Place the provided logo centered on a dark elegant gradient background going from dark charcoal (#1a1a1a) to dark gold (#8B6914). Add subtle decorative elements like thin lines or geometric patterns around the logo. Keep it minimal, modern and professional. The logo should be prominent and centered."
+            },
+            {
+              inlineData: { mimeType: logoContentType, data: logoBase64 }
+            }
+          ]
+        }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"],
+        },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
+      console.error("Gemini API error:", response.status, errorText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const generatedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p: any) => p.inlineData);
 
-    if (!generatedImageUrl) {
+    if (!imagePart?.inlineData?.data) {
       throw new Error("No image generated from AI");
     }
 
+    const generatedImageData = imagePart.inlineData.data;
+
     // Convert base64 to blob and upload to storage
-    const base64Data = generatedImageUrl.replace(/^data:image\/\w+;base64,/, "");
-    const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    const imageBytes = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));
 
     const fileName = `${tenant_id}/cover-${Date.now()}.png`;
 
