@@ -20,6 +20,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   Plus, 
   Edit, 
@@ -271,22 +282,18 @@ export default function Staff() {
     setShowForm(true);
   };
 
-  const handleDelete = async (staffMember: any) => {
-    if (!confirm(`Tem certeza que deseja excluir "${staffMember.name}"?`)) {
-      return;
-    }
-
+  const handleDelete = async (staffId: string, staffName: string) => {
     try {
       const { error } = await supabase
         .from('staff')
         .delete()
-        .eq('id', staffMember.id);
+        .eq('id', staffId);
 
       if (error) throw error;
 
       toast({
         title: "Profissional excluído",
-        description: `${staffMember.name} foi removido da equipe.`,
+        description: `${staffName} foi removido da equipe.`,
       });
 
       loadData();
@@ -435,33 +442,49 @@ export default function Staff() {
                     </div>
                   )}
                   
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      Serviços ({memberServices.length})
-                    </Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {memberServices.length > 0 ? (
-                        memberServices.slice(0, 3).map((service) => (
-                          <Badge key={service.id} variant="outline" className="text-xs">
-                            {service.name}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Todos os serviços
-                        </span>
-                      )}
-                      {memberServices.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{memberServices.length - 3}
-                        </Badge>
-                      )}
+                  {/* Services section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Scissors className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Serviços ({memberServices.length})
+                      </span>
                     </div>
+                    {memberServices.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {memberServices.slice(0, 4).map((service: any) => (
+                          <div key={service.id} className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: service.color || staffMember.color }}
+                              />
+                              <span className="text-xs font-medium text-foreground truncate">
+                                {service.name}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                              {(service.price_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                          </div>
+                        ))}
+                        {memberServices.length > 4 && (
+                          <p className="text-xs text-muted-foreground text-center pt-0.5">
+                            +{memberServices.length - 4} serviço(s)
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic px-2">
+                        Todos os serviços
+                      </p>
+                    )}
                   </div>
                   
+                  {/* Actions footer */}
                   <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <div className="flex items-center">
-                      <Palette className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5">
+                      <Palette className="h-3.5 w-3.5 text-muted-foreground" />
                       <div 
                         className="w-4 h-4 rounded-full border border-border"
                         style={{ backgroundColor: staffMember.color }}
@@ -487,13 +510,30 @@ export default function Staff() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(staffMember)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir profissional?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Deseja excluir "{staffMember.name}" da equipe? Essa ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(staffMember.id, staffMember.name)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </div>
