@@ -142,6 +142,8 @@ serve(async (req) => {
 
     const backUrl = `${frontBaseUrl.replace(/\/+$/, '')}/${tenantSlug}/subscription/callback`;
 
+    const webhookUrl = Deno.env.get('MP_WEBHOOK_URL');
+
     const mpBody: any = {
       reason: `${plan.name} - ${plan.tenant?.name || 'modoGESTOR'}`,
       auto_recurring: {
@@ -153,6 +155,7 @@ serve(async (req) => {
       payer_email: customer_email,
       external_reference: subscription.id,
       back_url: backUrl,
+      notification_url: webhookUrl || undefined,
     };
 
     // If card_token_id is provided, authorize immediately (in-site payment)

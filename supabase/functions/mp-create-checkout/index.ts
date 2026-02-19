@@ -140,6 +140,7 @@ serve(async (req) => {
           quantity: 1,
           currency_id: 'BRL',
           unit_price: amountCents / 100,
+          category_id: 'services',
         },
       ],
       payer: {

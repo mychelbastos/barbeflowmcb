@@ -129,6 +129,22 @@ serve(async (req) => {
     let mpPaymentBody: any;
     const description = `${booking.service?.name || 'Serviço'} - ${booking.tenant?.name || 'Estabelecimento'}`;
 
+    const webhookUrl = Deno.env.get('MP_WEBHOOK_URL');
+    const statementDescriptor = (booking.tenant?.name || 'modoGESTOR').substring(0, 22);
+    const customerFirstName = booking.customer?.name?.split(' ')[0] || 'Cliente';
+    const customerLastName = booking.customer?.name?.split(' ').slice(1).join(' ') || '';
+
+    const itemsArray = [
+      {
+        id: booking.service?.id || booking.service_id,
+        title: booking.service?.name || 'Serviço',
+        description: `Agendamento em ${booking.tenant?.name || 'Estabelecimento'}`,
+        quantity: 1,
+        unit_price: amountCents / 100,
+        category_id: 'services',
+      },
+    ];
+
     if (payment_type === 'pix') {
       // PIX payment
       console.log('Creating PIX payment...');
@@ -136,10 +152,15 @@ serve(async (req) => {
         transaction_amount: amountCents / 100,
         description: description,
         payment_method_id: 'pix',
+        statement_descriptor: statementDescriptor,
+        notification_url: webhookUrl || undefined,
+        additional_info: {
+          items: itemsArray,
+        },
         payer: {
           email: payer?.email || booking.customer?.email || 'cliente@example.com',
-          first_name: booking.customer?.name?.split(' ')[0] || 'Cliente',
-          last_name: booking.customer?.name?.split(' ').slice(1).join(' ') || '',
+          first_name: customerFirstName,
+          last_name: customerLastName,
           identification: payer?.identification || undefined,
         },
         external_reference: paymentRecord.id,
@@ -156,10 +177,17 @@ serve(async (req) => {
         transaction_amount: amountCents / 100,
         token: token,
         description: description,
-        installments: 1, // Always 1 (à vista)
+        installments: 1,
         payment_method_id: payment_method_id,
+        statement_descriptor: statementDescriptor,
+        notification_url: webhookUrl || undefined,
+        additional_info: {
+          items: itemsArray,
+        },
         payer: {
           email: payer?.email || booking.customer?.email || 'cliente@example.com',
+          first_name: customerFirstName,
+          last_name: customerLastName,
           identification: payer?.identification || undefined,
         },
         external_reference: paymentRecord.id,
