@@ -6,7 +6,9 @@ serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
-const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
+let frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
+if (!frontBaseUrl.startsWith('http')) frontBaseUrl = 'https://' + frontBaseUrl;
+frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
 
     console.log('OAuth callback received, code:', code ? 'present' : 'missing', 'state:', state ? 'present' : 'missing');
 
