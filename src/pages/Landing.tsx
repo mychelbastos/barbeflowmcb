@@ -87,13 +87,16 @@ const Landing = () => {
         <motion.div style={{ opacity: heroOpacity, scale: heroScale }} className="max-w-5xl mx-auto text-center">
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-8 uppercase tracking-wider"
+            className="flex items-center gap-3 justify-center mb-8"
           >
-            <Crown className="h-3.5 w-3.5" />
-            Sistema de Receita Recorrente para Barbeiros
+            <div className="w-8 h-px bg-primary/50" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">
+              Receita Recorrente para Barbeiros
+            </span>
+            <div className="w-8 h-px bg-primary/50" />
           </motion.div>
 
           <motion.h1
@@ -256,14 +259,11 @@ const Landing = () => {
             viewport={{ once: true, margin: "-100px" }}
             className="text-center mb-20"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider"
-            >
-              Recursos
-            </motion.div>
+            <div className="flex items-center gap-3 justify-center mb-6">
+              <div className="w-8 h-px bg-zinc-700" />
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-[0.2em]">Recursos</span>
+              <div className="w-8 h-px bg-zinc-700" />
+            </div>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
               Tudo que você precisa,
               <br />
@@ -327,9 +327,10 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-6 uppercase tracking-wider">
-              <Crown className="h-3.5 w-3.5" />
-              Clube de Assinatura
+            <div className="flex items-center gap-3 justify-center mb-6">
+              <div className="w-8 h-px bg-primary/40" />
+              <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">Clube de Assinatura</span>
+              <div className="w-8 h-px bg-primary/40" />
             </div>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
               Receita recorrente no{" "}
@@ -394,8 +395,9 @@ const Landing = () => {
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-6 uppercase tracking-wider">
-                Para seu Cliente
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-px bg-primary/40" />
+                <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">Para seu Cliente</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6 leading-tight">
                 A experiência{" "}
@@ -493,8 +495,10 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider">
-              Depoimentos
+            <div className="flex items-center gap-3 justify-center mb-6">
+              <div className="w-8 h-px bg-zinc-700" />
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-[0.2em]">Depoimentos</span>
+              <div className="w-8 h-px bg-zinc-700" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
               Quem usa, <span className="text-primary">recomenda</span>
@@ -544,8 +548,10 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider">
-              Preços
+            <div className="flex items-center gap-3 justify-center mb-6">
+              <div className="w-8 h-px bg-zinc-700" />
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-[0.2em]">Preços</span>
+              <div className="w-8 h-px bg-zinc-700" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
               Simples. Transparente. Sem surpresas.
@@ -711,8 +717,10 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider">
-              Como Funciona
+            <div className="flex items-center gap-3 justify-center mb-6">
+              <div className="w-8 h-px bg-zinc-700" />
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-[0.2em]">Como Funciona</span>
+              <div className="w-8 h-px bg-zinc-700" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
               3 passos para <span className="text-primary">começar</span>
@@ -758,8 +766,10 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 text-xs font-medium mb-6 uppercase tracking-wider">
-              Perguntas Frequentes
+            <div className="flex items-center gap-3 justify-center mb-6">
+              <div className="w-8 h-px bg-zinc-700" />
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-[0.2em]">Perguntas Frequentes</span>
+              <div className="w-8 h-px bg-zinc-700" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
               Dúvidas? A gente <span className="text-primary">responde</span>
