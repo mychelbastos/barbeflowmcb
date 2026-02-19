@@ -97,14 +97,14 @@ export function CustomerBalanceTab({ customerId }: Props) {
   return (
     <div className="space-y-4">
       {/* Balance Summary */}
-      <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-800/30 border border-zinc-700/50">
+      <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${balance >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
-            <Wallet className={`h-5 w-5 ${balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`} />
+            <Wallet className={`h-5 w-5 ${balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`} />
           </div>
           <div>
-            <p className="text-xs text-zinc-500">Saldo Atual</p>
-            <p className={`text-xl font-bold ${balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className="text-xs text-muted-foreground">Saldo Atual</p>
+            <p className={`text-xl font-bold ${balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
               R$ {(Math.abs(balance) / 100).toFixed(2)}
               {balance < 0 && ' (devendo)'}
             </p>
@@ -117,25 +117,25 @@ export function CustomerBalanceTab({ customerId }: Props) {
 
       {/* History */}
       {loading ? (
-        <div className="text-center text-zinc-500 py-6 text-sm">Carregando...</div>
+        <div className="text-center text-muted-foreground py-6 text-sm">Carregando...</div>
       ) : entries.length === 0 ? (
-        <div className="text-center text-zinc-500 py-8 text-sm">Nenhum lançamento registrado</div>
+        <div className="text-center text-muted-foreground py-8 text-sm">Nenhum lançamento registrado</div>
       ) : (
         <div className="space-y-2">
           {entries.map((entry) => (
-            <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/20 border border-zinc-800/30">
+            <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
               <div className="flex items-center gap-3">
                 {entry.type === "credit" ? (
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-red-400" />
+                  <TrendingDown className="h-4 w-4 text-red-500" />
                 )}
                 <div>
-                  <p className="text-sm text-zinc-200">{entry.description || (entry.type === "credit" ? "Crédito" : "Débito")}</p>
-                  <p className="text-xs text-zinc-500">{format(new Date(entry.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                  <p className="text-sm text-foreground">{entry.description || (entry.type === "credit" ? "Crédito" : "Débito")}</p>
+                  <p className="text-xs text-muted-foreground">{format(new Date(entry.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                 </div>
               </div>
-              <Badge className={`text-xs ${entry.type === "credit" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-red-500/10 text-red-400 border-red-500/30"}`}>
+              <Badge className={`text-xs ${entry.type === "credit" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"}`}>
                 {entry.type === "credit" ? "+" : "-"} R$ {(entry.amount_cents / 100).toFixed(2)}
               </Badge>
             </div>
