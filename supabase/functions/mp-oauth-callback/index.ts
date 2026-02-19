@@ -6,15 +6,13 @@ serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
-let frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
-if (!frontBaseUrl.startsWith('http')) frontBaseUrl = 'https://' + frontBaseUrl;
-frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
+const dashboardUrl = 'https://app.modogestor.com.br/settings';
 
     console.log('OAuth callback received, code:', code ? 'present' : 'missing', 'state:', state ? 'present' : 'missing');
 
     if (!code || !state) {
       console.error('Missing code or state in callback');
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=missing_params`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=missing_params`, 302);
     }
 
     // Decode and validate state
@@ -23,7 +21,7 @@ frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
       stateData = JSON.parse(atob(state));
     } catch (e) {
       console.error('Invalid state format:', e);
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=invalid_state`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=invalid_state`, 302);
     }
 
     const { tenant_id, exp } = stateData;
@@ -31,7 +29,7 @@ frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
     // Check expiration
     if (!tenant_id || !exp || Date.now() > exp) {
       console.error('State expired or missing tenant_id');
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=expired`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=expired`, 302);
     }
 
     // Get MP credentials
@@ -41,7 +39,7 @@ frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
 
     if (!clientId || !clientSecret || !redirectUri) {
       console.error('MP credentials not configured');
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=config_error`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=config_error`, 302);
     }
 
     // Exchange code for tokens
@@ -64,7 +62,7 @@ frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token exchange failed:', tokenResponse.status, errorText);
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=token_exchange_failed`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=token_exchange_failed`, 302);
     }
 
     const tokenData = await tokenResponse.json();
@@ -82,7 +80,7 @@ frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
 
     if (!access_token) {
       console.error('No access_token in response');
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=no_token`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=no_token`, 302);
     }
 
     // If public_key not in token response, fetch it from credentials endpoint
@@ -158,17 +156,16 @@ frontBaseUrl = frontBaseUrl.replace(/\/+$/, '');
 
     if (upsertError) {
       console.error('Error upserting connection:', upsertError);
-      return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=db_error`, 302);
+      return Response.redirect(`${dashboardUrl}?mp_error=db_error`, 302);
     }
 
     console.log('MP connection saved for tenant:', tenant_id);
 
     // Redirect to settings with success
-    return Response.redirect(`${frontBaseUrl}/app/settings?mp_connected=1`, 302);
+    return Response.redirect(`${dashboardUrl}?mp_connected=1`, 302);
 
   } catch (error) {
     console.error('Error in mp-oauth-callback:', error);
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
-    return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=server_error`, 302);
+    return Response.redirect('https://app.modogestor.com.br/settings?mp_error=server_error', 302);
   }
 });
