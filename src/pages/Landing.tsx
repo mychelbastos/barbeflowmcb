@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe, UserPlus, Settings, CalendarCheck, Crown } from "lucide-react";
+import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe, UserPlus, Settings, CalendarCheck, Crown, Lock, Bot, ChartNoAxesCombined } from "lucide-react";
 import { PLANS } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/badge";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
@@ -15,6 +15,7 @@ import testimonialRafael from "@/assets/testimonial-rafael.jpg";
 import testimonialAndre from "@/assets/testimonial-andre.jpg";
 import testimonialD from "@/assets/testimonial-d.jpg";
 import testimonialE from "@/assets/testimonial-e.jpg";
+import RevenueCalculator from "@/components/landing/RevenueCalculator";
 
 const Landing = () => {
   const heroRef = useRef(null);
@@ -81,21 +82,31 @@ const Landing = () => {
         </div>
       </motion.nav>
 
-      {/* Hero Section */}
+      {/* Hero Section — Subscription-focused copy */}
       <section ref={heroRef} className="relative pt-36 pb-8 px-6">
         <motion.div style={{ opacity: heroOpacity, scale: heroScale }} className="max-w-5xl mx-auto text-center">
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-8 uppercase tracking-wider"
+          >
+            <Crown className="h-3.5 w-3.5" />
+            Sistema de Receita Recorrente para Barbeiros
+          </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.05]"
+            className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.05]"
           >
-            Seu negócio no
+            Pare de matar um leão por dia.
             <br />
             <span className="relative">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-primary to-amber-500">
-                próximo nível
+                Garanta seu aluguel no dia 01.
               </span>
               <motion.span
                 initial={{ scaleX: 0 }}
@@ -112,8 +123,8 @@ const Landing = () => {
             transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Agendamento online, gestão financeira e notificações automáticas.
-            Tudo em uma plataforma intuitiva e elegante.
+            Transforme clientes eventuais em membros fiéis do seu clube.
+            Crie planos de assinatura e pacotes de serviços em segundos.
           </motion.p>
 
           <motion.div
@@ -133,8 +144,8 @@ const Landing = () => {
               <>
                 <a href={getDashboardUrl('/app/register')}>
                   <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
-                    <Zap className="mr-2 h-5 w-5" />
-                    Começar Agora — Grátis
+                    <Crown className="mr-2 h-5 w-5" />
+                    Quero Criar Meu Clube de Assinatura
                   </Button>
                 </a>
                 <a href="#demo">
@@ -157,10 +168,10 @@ const Landing = () => {
               <Check className="h-4 w-4 text-primary" /> 14 dias grátis
             </span>
             <span className="flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-primary" /> Todos os recursos
+              <Check className="h-4 w-4 text-primary" /> Cobrança automática
             </span>
             <span className="hidden sm:flex items-center gap-1.5">
-              <Check className="h-4 w-4 text-primary" /> Setup em 5 min
+              <Check className="h-4 w-4 text-primary" /> Sem fiado
             </span>
           </motion.div>
         </motion.div>
@@ -233,7 +244,10 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Revenue Calculator */}
+      <RevenueCalculator />
+
+      {/* Features Section — Reordered with Subscription first */}
       <section id="recursos" className="py-28 px-6">
         <div className="max-w-5xl mx-auto">
           <motion.div
@@ -262,12 +276,12 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: Calendar, title: "Agendamento Online 24/7", description: "Seus clientes agendam a qualquer hora, sem criar conta. Link exclusivo do seu negócio.", accent: "primary" },
-              { icon: Users, title: "Gestão de Equipe", description: "Cadastre profissionais, defina horários individuais e acompanhe a performance de cada um.", accent: "blue" },
-              { icon: MessageCircle, title: "WhatsApp Automático", description: "Confirmações, lembretes e notificações enviadas automaticamente via WhatsApp.", accent: "green" },
-              { icon: CreditCard, title: "Pagamento Antecipado", description: "Integração com Mercado Pago. Reduza faltas com cobrança no agendamento.", accent: "violet" },
-              { icon: BarChart3, title: "Dashboard Financeiro", description: "Receita, comissões e métricas em tempo real. Gráficos interativos e relatórios.", accent: "amber" },
-              { icon: Zap, title: "Pacotes & Assinaturas", description: "Crie pacotes de serviços e planos recorrentes para fidelizar seus clientes.", accent: "rose" },
+              { icon: Crown, title: "Clube de Assinatura Recorrente", description: "Crie planos VIP (ex: Corte + Barba ilimitados por R$99,90/mês). Cobrança automática, sem fiado.", accent: "primary" },
+              { icon: Calendar, title: "Agendamento Online 24/7", description: "Seus clientes agendam a qualquer hora, sem criar conta. Link exclusivo do seu negócio.", accent: "blue" },
+              { icon: Users, title: "Gestão de Equipe", description: "Cadastre profissionais, defina horários individuais e acompanhe a performance de cada um.", accent: "green" },
+              { icon: MessageCircle, title: "WhatsApp Automático", description: "Confirmações, lembretes e notificações enviadas automaticamente via WhatsApp.", accent: "violet" },
+              { icon: CreditCard, title: "Pagamento Antecipado", description: "Integração com Mercado Pago. Reduza faltas com cobrança no agendamento.", accent: "amber" },
+              { icon: BarChart3, title: "Dashboard Financeiro", description: "Receita, comissões e métricas em tempo real. Gráficos interativos e relatórios.", accent: "rose" },
             ].map((feature, index) => (
               <motion.div
                 key={index}
@@ -276,7 +290,11 @@ const Landing = () => {
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: index * 0.08 }}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="group relative p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 hover:border-zinc-700/60 transition-all duration-300 hover:bg-zinc-900/60"
+                className={`group relative p-6 rounded-2xl border transition-all duration-300 ${
+                  index === 0
+                    ? 'bg-zinc-900/60 border-primary/30 hover:border-primary/50 hover:bg-zinc-900/80'
+                    : 'bg-zinc-900/40 border-zinc-800/40 hover:border-zinc-700/60 hover:bg-zinc-900/60'
+                }`}
               >
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative">
@@ -299,7 +317,73 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Showcase Section - Dashboard + Mobile */}
+      {/* Subscription Club Section — NEW dedicated section */}
+      <section className="py-28 px-6 relative border-t border-zinc-800/30">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
+        <div className="max-w-5xl mx-auto relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-6 uppercase tracking-wider">
+              <Crown className="h-3.5 w-3.5" />
+              Clube de Assinatura
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
+              Receita recorrente no{" "}
+              <span className="text-primary">piloto automático</span>
+            </h2>
+            <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+              Pare de depender da agenda cheia. Crie um clube onde seus clientes pagam todo mês, faça chuva ou faça sol.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
+            {[
+              {
+                icon: Calendar,
+                title: "O Fim da Agenda Vazia",
+                description: "Crie seu próprio Clube de Assinatura. Ex: Cabelo + Barba ilimitados por R$ 99,90/mês. O cliente paga automaticamente.",
+              },
+              {
+                icon: Lock,
+                title: "Fidelização Automática",
+                description: "Quem assina o seu plano não corta no concorrente. Garanta que o cliente volte toda semana para a sua cadeira.",
+              },
+              {
+                icon: Bot,
+                title: "Cobrança no Piloto Automático",
+                description: "Esqueça o \"fiado\" e a vergonha de cobrar. O sistema debita do cartão do cliente na data certa, todo mês.",
+              },
+              {
+                icon: ChartNoAxesCombined,
+                title: "Previsibilidade de Caixa",
+                description: "Saiba exatamente quanto vai entrar na sua conta no mês que vem, antes mesmo de começar a trabalhar.",
+              },
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                className="p-6 rounded-2xl bg-zinc-900/50 border border-primary/20 hover:border-primary/40 transition-all duration-300"
+              >
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                  <item.icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-base font-semibold text-zinc-100 mb-2">{item.title}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Showcase Section — Updated floating cards for subscription mockup */}
       <section id="demo" className="py-28 px-6 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent" />
         <div className="max-w-6xl mx-auto relative">
@@ -310,22 +394,23 @@ const Landing = () => {
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-6 uppercase tracking-wider">
-                Para seu Negócio
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-6 uppercase tracking-wider">
+                Para seu Cliente
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6 leading-tight">
-                Aumente sua receita em até{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-300">40%</span>
+                A experiência{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-300">Netflix</span>{" "}
+                da barbearia
               </h2>
               <p className="text-zinc-400 mb-10 leading-relaxed">
-                Reduza faltas, automatize sua operação e ofereça a melhor experiência aos seus clientes.
+                Seu cliente se sente VIP. Assina, agenda grátis e nunca mais pensa em ir ao concorrente. Você oferece status, ele te dá fidelidade.
               </p>
 
               <div className="space-y-5">
                 {[
-                  { icon: TrendingUp, title: "Reduza faltas em 60%", description: "Lembretes automáticos e confirmação reduzem no-shows" },
-                  { icon: Sparkles, title: "Experiência premium", description: "Agendamento rápido e prático pelo celular" },
-                  { icon: Shield, title: "Controle total", description: "Dashboard com métricas, relatórios e gestão completa" }
+                  { icon: Crown, title: "Status de Membro VIP", description: "O cliente vê que é assinante e que seus agendamentos são gratuitos" },
+                  { icon: Sparkles, title: "Experiência premium no celular", description: "Agendamento rápido e prático, com a sua marca no domínio" },
+                  { icon: Shield, title: "Controle total pra você", description: "Dashboard com métricas de assinantes, receita recorrente e churn" }
                 ].map((item, index) => (
                   <motion.div
                     key={index}
@@ -357,23 +442,25 @@ const Landing = () => {
               <div className="absolute -inset-8 bg-gradient-to-br from-primary/10 via-transparent to-blue-500/10 rounded-3xl blur-3xl opacity-50" />
               <div className="relative">
                 <img src={mobileMockup} alt="modoGESTOR Mobile" className="w-64 rounded-[2rem] shadow-2xl shadow-black/60 border border-zinc-800/50" />
+                {/* Floating card: VIP Plan Active */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8, x: -20 }}
                   whileInView={{ opacity: 1, scale: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.6 }}
-                  className="absolute -left-16 top-1/4 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
+                  className="absolute -left-16 top-1/4 bg-zinc-900/90 backdrop-blur-xl border border-primary/30 rounded-xl p-4 shadow-xl shadow-black/30"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-4 w-4 text-primary" />
+                      <Crown className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="text-xs text-zinc-400">Novo agendamento</p>
-                      <p className="text-sm font-semibold text-zinc-100">João • 14:30</p>
+                      <p className="text-xs text-primary font-semibold">Plano VIP Ativo</p>
+                      <p className="text-[11px] text-zinc-400">Próximo agendamento: <span className="text-emerald-400">Grátis</span></p>
                     </div>
                   </div>
                 </motion.div>
+                {/* Floating card: Subscriber info */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8, x: 20 }}
                   whileInView={{ opacity: 1, scale: 1, x: 0 }}
@@ -382,12 +469,12 @@ const Landing = () => {
                   className="absolute -right-12 bottom-1/3 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary" />
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-zinc-400">Confirmado</p>
-                      <p className="text-sm font-semibold text-primary">R$ 45,00</p>
+                      <p className="text-xs text-zinc-400">Assinante desde Jan/2025</p>
+                      <p className="text-sm font-semibold text-zinc-100">4 cortes este mês</p>
                     </div>
                   </div>
                 </motion.div>
@@ -397,7 +484,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials — Updated with subscription-focused testimonial */}
       <section id="depoimentos" className="py-28 px-6 border-t border-zinc-800/30">
         <div className="max-w-5xl mx-auto">
           <motion.div
@@ -416,8 +503,8 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { name: "Carlos Mendes", role: "Studio Premium", quote: "Depois do modoGESTOR, minhas faltas caíram pela metade. Os clientes adoram agendar pelo celular.", photo: testimonialCarlos },
-              { name: "Rafael Costa", role: "Studio RC", quote: "O dashboard financeiro me deu uma visão que eu nunca tive. Consegui aumentar minha receita em 35%.", photo: testimonialRafael },
+              { name: "Carlos Mendes", role: "Studio Premium", quote: "Antes eu não sabia se ia conseguir pagar as contas na semana fraca. Hoje, com 40 assinantes no modoGESTOR, eu já pago o aluguel e a luz no dia 5. O resto é lucro.", photo: testimonialCarlos },
+              { name: "Rafael Costa", role: "Studio RC", quote: "O dashboard financeiro me deu uma visão que eu nunca tive. Consegui aumentar minha receita em 35% com os planos recorrentes.", photo: testimonialRafael },
               { name: "André Silva", role: "Espaço André", quote: "Setup em 10 minutos e já estava funcionando. O WhatsApp automático economiza horas do meu dia.", photo: testimonialAndre },
             ].map((testimonial, index) => (
               <motion.div
@@ -635,8 +722,8 @@ const Landing = () => {
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {[
               { icon: UserPlus, step: "1", title: "Cadastre-se", description: "Crie sua conta em 2 minutos. Sem burocracia, sem compromisso." },
-              { icon: Settings, step: "2", title: "Configure", description: "Adicione seus serviços, horários e profissionais. Pronto para usar." },
-              { icon: CalendarCheck, step: "3", title: "Receba", description: "Agendamentos e pagamentos chegam automaticamente no seu painel." },
+              { icon: Settings, step: "2", title: "Configure", description: "Adicione seus serviços, horários e crie seu Clube de Assinatura." },
+              { icon: CalendarCheck, step: "3", title: "Fature", description: "Assinantes pagam todo mês. Agendamentos e receita chegam no automático." },
             ].map((item, index) => (
               <motion.div
                 key={index}
@@ -662,7 +749,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* FAQ — Updated with subscription & domain questions */}
       <section id="faq" className="py-28 px-6 border-t border-zinc-800/30">
         <div className="max-w-3xl mx-auto">
           <motion.div
@@ -681,6 +768,14 @@ const Landing = () => {
 
           <Accordion type="single" collapsible className="space-y-3">
             {[
+              {
+                q: "Como funciona o Clube de Assinatura?",
+                a: "Você cria planos recorrentes (ex: Corte + Barba ilimitados por R$ 99,90/mês). Seu cliente assina, o cartão é debitado automaticamente todo mês, e os agendamentos dele passam a ser R$ 0,00. Você começa o mês com receita garantida na conta."
+              },
+              {
+                q: "Posso usar meu próprio domínio?",
+                a: "Sim! No plano Profissional, você pode ter seudominio.com.br em vez de modogestor.com/seudominio. Seu cliente acessa sua página com a sua marca, sem ver o nome do modoGESTOR."
+              },
               {
                 q: "Preciso de cartão de crédito para o trial?",
                 a: "Sim, mas você NÃO é cobrado durante os 14 dias. Cancele a qualquer momento antes do fim do trial sem nenhum custo."
@@ -715,7 +810,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* Final CTA — Subscription focused */}
       <section className="py-28 px-6 relative">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/[0.04] to-transparent" />
         <motion.div
@@ -728,18 +823,18 @@ const Landing = () => {
           <div className="absolute -inset-20 bg-primary/[0.03] rounded-full blur-3xl" />
           <div className="relative">
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5 leading-tight">
-              Pronto para modernizar
+              Pronto para garantir sua
               <br />
-              seu negócio?
+              <span className="text-primary">receita recorrente?</span>
             </h2>
             <p className="text-zinc-400 text-lg mb-10 max-w-lg mx-auto">
-              Configure em 5 minutos. Teste grátis por 14 dias. Cancele quando quiser.
+              Crie seu Clube de Assinatura em 5 minutos. Teste grátis por 14 dias. Cancele quando quiser.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
               <a href={getDashboardUrl('/app/register')}>
                 <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-10 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
-                  <Zap className="mr-2 h-5 w-5" />
-                  Começar Trial Grátis de 14 Dias
+                  <Crown className="mr-2 h-5 w-5" />
+                  Quero Criar Meu Clube de Assinatura
                 </Button>
               </a>
             </div>
