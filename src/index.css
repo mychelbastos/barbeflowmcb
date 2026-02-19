@@ -255,3 +255,13 @@ html {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* MercadoPago Brick overrides for subscription card payment */
+.subscription-brick-wrapper iframe {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.subscription-brick-wrapper > div {
+  background: transparent !important;
+}

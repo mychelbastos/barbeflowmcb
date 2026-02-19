@@ -5,10 +5,14 @@ import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2 } from "lucide-react";
+import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2, AlertTriangle } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AssignSubscriptionDialog } from "@/components/subscriptions/AssignSubscriptionDialog";
 
 const statusColors: Record<string, string> = {
@@ -39,6 +43,14 @@ export function SubscribersList() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showAssignDialog, setShowAssignDialog] = useState(false);
 
+  // Cancel confirmation state
+  const [cancelTarget, setCancelTarget] = useState<any>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     if (currentTenant) loadData();
   }, [currentTenant]);
@@ -59,7 +71,6 @@ export function SubscribersList() {
           .eq('tenant_id', currentTenant.id),
       ]);
 
-      // Load usage for active subscriptions
       const subs = subsRes.data || [];
       const activeSubs = subs.filter(s => s.status === 'active');
       if (activeSubs.length > 0) {
@@ -114,29 +125,38 @@ export function SubscribersList() {
     }
   };
 
-  const handleCancel = async (sub: any) => {
+  const confirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
     try {
       await supabase.functions.invoke('mp-cancel-subscription', {
-        body: { subscription_id: sub.id },
+        body: { subscription_id: cancelTarget.id },
       });
       toast({ title: "Assinatura cancelada" });
       loadData();
     } catch (err) {
       toast({ title: "Erro ao cancelar", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+      setCancelTarget(null);
     }
   };
 
-  const handleDelete = async (sub: any) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     const { error } = await supabase
       .from('customer_subscriptions')
       .delete()
-      .eq('id', sub.id);
+      .eq('id', deleteTarget.id);
     if (error) {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Assinatura excluída" });
       loadData();
     }
+    setDeleting(false);
+    setDeleteTarget(null);
   };
 
   const filtered = subscribers.filter(s => {
@@ -217,7 +237,7 @@ export function SubscribersList() {
                     <Button variant="ghost" size="sm" onClick={() => handlePause(sub)} title="Pausar">
                       <Pause className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleCancel(sub)} title="Cancelar">
+                    <Button variant="ghost" size="sm" onClick={() => setCancelTarget(sub)} title="Cancelar">
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </>
@@ -228,7 +248,7 @@ export function SubscribersList() {
                   </Button>
                 )}
                 {(sub.status === 'pending' || sub.status === 'cancelled') && (
-                  <Button variant="ghost" size="sm" title="Excluir assinatura" onClick={() => handleDelete(sub)}>
+                  <Button variant="ghost" size="sm" title="Excluir assinatura" onClick={() => setDeleteTarget(sub)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 )}
@@ -237,6 +257,98 @@ export function SubscribersList() {
           ))}
         </div>
       )}
+
+      {/* Cancel confirmation dialog */}
+      <AlertDialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle>Cancelar assinatura</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Tem certeza que deseja cancelar esta assinatura? Esta ação não pode ser desfeita.</p>
+                {cancelTarget && (
+                  <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{cancelTarget.customer?.name}</span>
+                      <Badge className={statusColors.active}>Ativo</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {cancelTarget.plan?.name} — R$ {((cancelTarget.plan?.price_cents || 0) / 100).toFixed(2)}/mês
+                    </div>
+                    {cancelTarget.customer?.phone && (
+                      <div className="text-xs text-muted-foreground">
+                        Tel: {cancelTarget.customer.phone}
+                      </div>
+                    )}
+                    {cancelTarget.customer?.email && (
+                      <div className="text-xs text-muted-foreground">
+                        E-mail: {cancelTarget.customer.email}
+                      </div>
+                    )}
+                    {cancelTarget.next_payment_date && (
+                      <div className="text-xs text-muted-foreground">
+                        Próx. cobrança: {new Date(cancelTarget.next_payment_date).toLocaleDateString('pt-BR')}
+                      </div>
+                    )}
+                    {cancelTarget.usage_summary && (
+                      <div className="text-xs text-muted-foreground">
+                        Uso no ciclo: {cancelTarget.usage_summary.used}{cancelTarget.usage_summary.limit != null ? `/${cancelTarget.usage_summary.limit}` : ''} sessões
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Manter assinatura</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancel}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelando...</> : 'Sim, cancelar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir assinatura</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Deseja excluir permanentemente esta assinatura?</p>
+                {deleteTarget && (
+                  <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-1">
+                    <span className="text-sm font-medium text-foreground">{deleteTarget.customer?.name}</span>
+                    <div className="text-xs text-muted-foreground">
+                      {deleteTarget.plan?.name} — {statusLabels[deleteTarget.status] || deleteTarget.status}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Excluindo...</> : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AssignSubscriptionDialog
         open={showAssignDialog}

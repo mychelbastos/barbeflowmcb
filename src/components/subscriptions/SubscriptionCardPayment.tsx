@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Check, ChevronLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Check, ChevronLeft, Shield, Lock, CreditCard } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -84,7 +84,6 @@ export function SubscriptionCardPayment({
       publicKeyRef.current = data.public_key;
       setStatus('card-form');
 
-      // Wait for container to render, then init brick
       requestAnimationFrame(() => {
         setTimeout(() => initializeCardBrick(), 50);
       });
@@ -123,14 +122,19 @@ export function SubscriptionCardPayment({
           visual: {
             style: {
               theme: 'dark',
-                customVariables: {
-                  baseColor: '#f97316',
+              customVariables: {
+                baseColor: '#FFC300',
                 fontSizeExtraSmall: '12px',
                 fontSizeSmall: '14px',
                 fontSizeMedium: '16px',
                 fontSizeLarge: '18px',
                 borderRadiusMedium: '12px',
                 borderRadiusLarge: '16px',
+                formBackgroundColor: 'transparent',
+                baseColorFirstVariant: '#1a1a1a',
+                baseColorSecondVariant: '#262626',
+                inputBackgroundColor: '#1a1a1a',
+                formPadding: '0px',
               },
             },
             hideFormTitle: true,
@@ -184,7 +188,6 @@ export function SubscriptionCardPayment({
         setStatus('success');
         setTimeout(() => onSuccess(), 2000);
       } else if (data?.checkout_url) {
-        // Fallback to redirect if card token wasn't accepted
         window.location.href = data.checkout_url;
       } else {
         setStatus('success');
@@ -207,33 +210,37 @@ export function SubscriptionCardPayment({
     loadSDKAndKey();
   };
 
+  const priceFormatted = (priceCents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   if (status === 'success') {
     return (
-      <div className="text-center py-8">
-        <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Check className="h-8 w-8 text-emerald-400" />
+      <div className="text-center py-10">
+        <div className="w-20 h-20 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-full flex items-center justify-center mx-auto mb-5 animate-in zoom-in duration-300">
+          <Check className="h-10 w-10 text-emerald-400" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Assinatura ativada!</h3>
-        <p className="text-zinc-400 text-sm">Sua assinatura do plano {planName} está ativa.</p>
+        <h3 className="text-xl font-semibold mb-2">Assinatura ativada!</h3>
+        <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+          Sua assinatura do plano <span className="font-medium text-foreground">{planName}</span> está ativa. Você será redirecionado em instantes.
+        </p>
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="text-center py-8">
-        <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="h-8 w-8 text-red-400" />
+      <div className="text-center py-10">
+        <div className="w-20 h-20 bg-destructive/10 border-2 border-destructive/30 rounded-full flex items-center justify-center mx-auto mb-5">
+          <AlertCircle className="h-10 w-10 text-destructive" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Erro no pagamento</h3>
-        <p className="text-zinc-400 text-sm mb-4">{errorMessage}</p>
+        <h3 className="text-xl font-semibold mb-2">Erro no pagamento</h3>
+        <p className="text-muted-foreground text-sm mb-6 max-w-xs mx-auto">{errorMessage}</p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={retry} variant="outline" className="rounded-xl">
+          <Button onClick={retry} className="rounded-xl px-6">
             Tentar novamente
           </Button>
-          <button onClick={onBack} className="text-zinc-500 hover:text-white text-sm transition-colors">
+          <Button onClick={onBack} variant="ghost" className="rounded-xl">
             Voltar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -241,35 +248,74 @@ export function SubscriptionCardPayment({
 
   if (status === 'loading') {
     return (
-      <div className="flex flex-col items-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-zinc-500 mb-4" />
-        <p className="text-zinc-400 text-sm">Carregando pagamento seguro...</p>
+      <div className="flex flex-col items-center py-12">
+        <div className="relative mb-5">
+          <div className="w-14 h-14 rounded-full border-2 border-muted flex items-center justify-center">
+            <CreditCard className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <Loader2 className="h-14 w-14 animate-spin text-primary absolute top-0 left-0" />
+        </div>
+        <p className="text-muted-foreground text-sm font-medium">Carregando pagamento seguro...</p>
+        <p className="text-muted-foreground/60 text-xs mt-1">Isso pode levar alguns segundos</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="text-center mb-2">
-        <h3 className="font-semibold">Dados do cartão</h3>
-        <p className="text-zinc-500 text-sm">{planName} — R$ {(priceCents / 100).toFixed(2)}/mês</p>
+    <div className="space-y-5">
+      {/* Plan summary header */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/30 p-4">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-8 translate-x-8" />
+        <div className="flex items-center justify-between relative">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <CreditCard className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm">{planName}</h3>
+              <p className="text-xs text-muted-foreground">Assinatura mensal</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-xl font-bold">R$ {priceFormatted}</span>
+            <span className="text-xs text-muted-foreground block">/mês</span>
+          </div>
+        </div>
       </div>
 
+      {/* Processing overlay */}
       {status === 'processing' && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-zinc-400 mr-2" />
-          <span className="text-zinc-400 text-sm">Processando assinatura...</span>
+        <div className="flex flex-col items-center justify-center py-8 animate-in fade-in duration-200">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+          <span className="text-muted-foreground text-sm font-medium">Processando assinatura...</span>
+          <span className="text-muted-foreground/60 text-xs mt-1">Não feche esta página</span>
         </div>
       )}
 
+      {/* Card form container */}
       <div
         id="subscriptionCardBrick_container"
+        className="subscription-brick-wrapper"
         style={{ display: status === 'processing' ? 'none' : 'block' }}
       />
 
+      {/* Security footer */}
+      <div className="flex items-center justify-center gap-4 pt-1">
+        <div className="flex items-center gap-1.5 text-muted-foreground/60">
+          <Lock className="h-3 w-3" />
+          <span className="text-[11px]">Criptografado</span>
+        </div>
+        <div className="w-px h-3 bg-border" />
+        <div className="flex items-center gap-1.5 text-muted-foreground/60">
+          <Shield className="h-3 w-3" />
+          <span className="text-[11px]">Pagamento seguro</span>
+        </div>
+      </div>
+
+      {/* Back button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm"
+        className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto transition-colors text-sm"
       >
         <ChevronLeft className="h-4 w-4" />
         Voltar
