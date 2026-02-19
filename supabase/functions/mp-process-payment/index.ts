@@ -225,6 +225,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${mpToken.access_token}`,
         'X-Idempotency-Key': `${booking_id}-${payment_type}-${Date.now()}`,
+        'User-Agent': 'MercadoPago DX-Nodejs/2.11.0',
+        'x-product-id': 'BC32BHVTRPP001U8NHJ0',
         ...(device_id ? { 'X-meli-session-id': device_id } : {}),
       },
       body: JSON.stringify(mpPaymentBody),

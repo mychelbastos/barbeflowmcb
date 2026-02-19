@@ -184,6 +184,8 @@ serve(async (req) => {
       headers: {
         'Authorization': `Bearer ${mpToken.access_token}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'MercadoPago DX-Nodejs/2.11.0',
+        'x-product-id': 'BC32BHVTRPP001U8NHJ0',
       },
       body: JSON.stringify(preferencePayload),
     });
