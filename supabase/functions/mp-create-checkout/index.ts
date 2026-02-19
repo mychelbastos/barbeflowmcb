@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidMpToken } from "../_shared/mp-token.ts";
+import { getCommissionRate } from "../_shared/commission.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,6 +77,12 @@ serve(async (req) => {
     if (settings.require_prepayment && settings.prepayment_percentage > 0 && settings.prepayment_percentage < 100) {
       amountCents = Math.round(service.price_cents * (settings.prepayment_percentage / 100));
     }
+
+    // --- Platform commission (marketplace fee) ---
+    const commissionRate = await getCommissionRate(supabase, tenant.id);
+    const transactionAmount = amountCents / 100;
+    const marketplaceFee = Math.round(transactionAmount * commissionRate * 100) / 100;
+    console.log(`Platform commission: ${commissionRate * 100}% = R$${marketplaceFee} on R$${transactionAmount}`);
 
     // Check if payment already exists for this booking
     const { data: existingPayment } = await supabase
@@ -153,6 +160,7 @@ serve(async (req) => {
         } : undefined,
         email: booking.customer?.email || undefined,
       },
+      ...(marketplaceFee > 0 ? { marketplace_fee: marketplaceFee } : {}),
       back_urls: {
         success: backUrl,
         pending: backUrl,
@@ -204,6 +212,18 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Error updating payment with preference:', updateError);
+    }
+
+    // Record platform fee
+    if (marketplaceFee > 0) {
+      await supabase.from('platform_fees').insert({
+        tenant_id: tenant.id,
+        payment_id: paymentId,
+        transaction_amount_cents: amountCents,
+        commission_rate: commissionRate,
+        fee_amount_cents: Math.round(marketplaceFee * 100),
+        status: 'pending',
+      });
     }
 
     // Update booking status to pending if require_prepayment is true

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getValidMpToken } from "../_shared/mp-token.ts";
+import { getCommissionRate } from "../_shared/commission.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,6 +91,12 @@ serve(async (req) => {
       amountCents = Math.round(servicePriceCents * prepaymentPercentage / 100);
     }
 
+    // --- Platform commission (marketplace fee) ---
+    const commissionRate = await getCommissionRate(supabase, booking.tenant_id);
+    const transactionAmount = amountCents / 100;
+    const applicationFee = Math.round(transactionAmount * commissionRate * 100) / 100;
+    console.log(`Platform commission: ${commissionRate * 100}% = R$${applicationFee} on R$${transactionAmount}`);
+
     // Check/create payment record
     let paymentRecord;
     const { data: existingPayment } = await supabase
@@ -152,6 +159,7 @@ serve(async (req) => {
         transaction_amount: amountCents / 100,
         description: description,
         payment_method_id: 'pix',
+        ...(applicationFee > 0 ? { application_fee: applicationFee } : {}),
         statement_descriptor: statementDescriptor,
         notification_url: webhookUrl || undefined,
         additional_info: {
@@ -179,6 +187,7 @@ serve(async (req) => {
         description: description,
         installments: 1,
         payment_method_id: payment_method_id,
+        ...(applicationFee > 0 ? { application_fee: applicationFee } : {}),
         statement_descriptor: statementDescriptor,
         notification_url: webhookUrl || undefined,
         additional_info: {
@@ -277,6 +286,19 @@ serve(async (req) => {
     }
 
     console.log('Payment processed successfully:', mpResult.id, 'Status:', mpResult.status);
+
+    // Record platform fee if applicable
+    if (mpResult.status === 'approved' && applicationFee > 0) {
+      await supabase.from('platform_fees').insert({
+        tenant_id: booking.tenant_id,
+        payment_id: paymentRecord.id,
+        mp_payment_id: mpResult.id?.toString(),
+        transaction_amount_cents: amountCents,
+        commission_rate: commissionRate,
+        fee_amount_cents: Math.round(applicationFee * 100),
+        status: 'collected',
+      });
+    }
 
     // Build response with PIX data if applicable
     const response: any = {

@@ -1135,6 +1135,57 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_fees: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          fee_amount_cents: number
+          id: string
+          mp_payment_id: string | null
+          payment_id: string | null
+          status: string
+          tenant_id: string
+          transaction_amount_cents: number
+        }
+        Insert: {
+          commission_rate: number
+          created_at?: string
+          fee_amount_cents: number
+          id?: string
+          mp_payment_id?: string | null
+          payment_id?: string | null
+          status?: string
+          tenant_id: string
+          transaction_amount_cents: number
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          fee_amount_cents?: number
+          id?: string
+          mp_payment_id?: string | null
+          payment_id?: string | null
+          status?: string
+          tenant_id?: string
+          transaction_amount_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_fees_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_fees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_sales: {
         Row: {
           created_at: string
