@@ -35,6 +35,10 @@ import AuthWatcher from "./components/AuthWatcher";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppShell from "./components/layout/AppShell";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { CookieBanner } from "./components/CookieBanner";
+import { useEffect } from "react";
+import { checkConsentOnLoad } from "@/utils/consent";
+import { persistFbclid } from "@/utils/metaTracking";
 
 const queryClient = new QueryClient();
 
@@ -55,7 +59,13 @@ const ProtectedAppShell = () => (
   </ProtectedRoute>
 );
 
-const App = () => (
+const App = () => {
+  useEffect(() => {
+    checkConsentOnLoad();
+    persistFbclid();
+  }, []);
+
+  return (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -113,10 +123,12 @@ const App = () => (
             
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieBanner />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>
-);
+  );
+};
 
 export default App;

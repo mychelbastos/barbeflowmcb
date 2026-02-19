@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { trackEvent } from "@/utils/metaTracking";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -37,6 +38,20 @@ export const ContactForm = ({ onSubmit, isLoading = false }: ContactFormProps) =
       title: "Dados validados!",
       description: "Finalizando seu agendamento...",
     });
+
+    // Track Lead event
+    trackEvent('Lead', {
+      content_name: 'Formulário de interesse',
+      content_category: 'lead_form',
+      value: 15.00,
+      currency: 'BRL',
+    }, {
+      email: data.email || undefined,
+      phone: data.phone || undefined,
+      first_name: data.name?.split(' ')[0] || undefined,
+      last_name: data.name?.split(' ').slice(1).join(' ') || undefined,
+    });
+
     reset();
   };
 

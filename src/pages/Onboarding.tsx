@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PLANS } from "@/hooks/useSubscription";
@@ -7,11 +7,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Loader2, Star, Sparkles } from "lucide-react";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
+import { trackEvent } from "@/utils/metaTracking";
+import { getFbp, getPersistedFbc } from "@/utils/metaTracking";
 
 export default function Onboarding() {
   const { toast } = useToast();
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  // Save Meta cookies to tenant and track ViewContent
+  useEffect(() => {
+    const saveMeta = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: ut } = await supabase.from('users_tenant').select('tenant_id').eq('user_id', user.id).limit(1);
+      if (ut && ut.length > 0) {
+        const fbp = getFbp();
+        const fbc = getPersistedFbc();
+        if (fbp || fbc) {
+          await supabase.from('tenants').update({
+            meta_fbp: fbp,
+            meta_fbc: fbc,
+          }).eq('id', ut[0].tenant_id);
+        }
+      }
+    };
+    saveMeta();
+    trackEvent('ViewContent', {
+      content_name: 'Onboarding Planos',
+      content_category: 'pricing',
+      content_ids: ['essencial', 'profissional'],
+      content_type: 'product',
+    }, {}, { pixelOnly: true });
+  }, []);
 
   const handleSubscribe = async (plan: "essencial" | "profissional") => {
     const key = `${plan}-${billingInterval}`;
@@ -21,7 +49,19 @@ export default function Onboarding() {
         body: { plan, billing_interval: billingInterval },
       });
       if (error) throw error;
-      if (data?.url) window.location.href = data.url;
+      if (data?.url) {
+        // Track AddPaymentInfo before redirect
+        const { data: { user } } = await supabase.auth.getUser();
+        await trackEvent('AddPaymentInfo', {
+          content_category: 'subscription',
+          content_name: plan,
+          value: 50.00,
+          currency: 'BRL',
+        }, {
+          email: user?.email || undefined,
+        });
+        window.location.href = data.url;
+      }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {

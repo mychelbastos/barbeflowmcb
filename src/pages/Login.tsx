@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
+import { trackEvent } from "@/utils/metaTracking";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -26,6 +27,16 @@ const Login = () => {
 
       if (error) {
         console.error('Auth failed:', error);
+      } else if (isSignUp) {
+        // Track CompleteRegistration on successful signup
+        trackEvent('CompleteRegistration', {
+          content_name: 'Cadastro modoGESTOR',
+          status: 'complete',
+          value: 30.00,
+          currency: 'BRL',
+        }, {
+          email,
+        });
       }
     } catch (err) {
       console.error('Auth error:', err);
