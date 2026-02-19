@@ -103,6 +103,7 @@ const BookingPublic = () => {
   const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
   const [subscriptionCoveredService, setSubscriptionCoveredService] = useState(false);
+  const [subscriptionAllowedStaff, setSubscriptionAllowedStaff] = useState<string[]>([]);
   
   // Benefits map for service cards display
   const [benefitsMap, setBenefitsMap] = useState<Map<string, any>>(new Map());
@@ -262,12 +263,14 @@ const BookingPublic = () => {
       .order("name");
 
     if (subPlansData && subPlansData.length > 0) {
-      const { data: planSvcs } = await supabase
-        .from("subscription_plan_services")
-        .select("*, service:services(name)")
-        .in("plan_id", subPlansData.map(p => p.id));
+      const planIds = subPlansData.map(p => p.id);
+      const [{ data: planSvcs }, { data: planStaffData }] = await Promise.all([
+        supabase.from("subscription_plan_services").select("*, service:services(name)").in("plan_id", planIds),
+        supabase.from("subscription_plan_staff").select("plan_id, staff_id").in("plan_id", planIds),
+      ]);
       for (const plan of subPlansData) {
         (plan as any).plan_services = (planSvcs || []).filter((ps: any) => ps.plan_id === plan.id);
+        (plan as any).plan_staff = (planStaffData || []).filter((ps: any) => ps.plan_id === plan.id);
       }
       setSubscriptionPlans(subPlansData);
     } else {
@@ -339,17 +342,20 @@ const BookingPublic = () => {
     if (benefit?.type === 'subscription') {
       setSubscriptionCoveredService(true);
       setActiveSubscription({ id: benefit.customerSubscriptionId, usage: { used: benefit.used, limit: benefit.limit } });
+      setSubscriptionAllowedStaff(benefit.allowedStaffIds || []);
       setActiveCustomerPackage(null);
       setPackageCoveredService(false);
     } else if (benefit?.type === 'package') {
       setPackageCoveredService(true);
       setActiveCustomerPackage({ id: benefit.customerPackageId, serviceUsage: { sessions_total: benefit.total, sessions_used: benefit.total - benefit.remaining } });
       setSubscriptionCoveredService(false);
+      setSubscriptionAllowedStaff([]);
       setActiveSubscription(null);
     } else {
       setActiveCustomerPackage(null);
       setPackageCoveredService(false);
       setSubscriptionCoveredService(false);
+      setSubscriptionAllowedStaff([]);
       setActiveSubscription(null);
     }
     
@@ -523,6 +529,8 @@ const BookingPublic = () => {
       });
       const todayStr = new Date().toISOString().split('T')[0];
       (benefitsData.subscriptions || []).forEach((sub: any) => {
+        const allowedStaffIds = (sub.plan_staff || []).map((ps: any) => ps.staff_id);
+        
         // First, map services from usage records (active period)
         const usageMapped = new Set<string>();
         (sub.usage || []).forEach((u: any) => {
@@ -530,7 +538,7 @@ const BookingPublic = () => {
             usageMapped.add(u.service_id);
             const remaining = u.sessions_limit === null ? null : u.sessions_limit - u.sessions_used;
             if (remaining === null || remaining > 0) {
-              map.set(u.service_id, { type: 'subscription' as const, remaining, limit: u.sessions_limit, used: u.sessions_used, customerSubscriptionId: sub.id });
+              map.set(u.service_id, { type: 'subscription' as const, remaining, limit: u.sessions_limit, used: u.sessions_used, customerSubscriptionId: sub.id, allowedStaffIds });
             }
           }
         });
@@ -538,7 +546,7 @@ const BookingPublic = () => {
         (sub.plan_services || []).forEach((ps: any) => {
           if (!usageMapped.has(ps.service_id) && !map.has(ps.service_id)) {
             const limit = ps.sessions_per_cycle ?? null;
-            map.set(ps.service_id, { type: 'subscription' as const, remaining: limit, limit, used: 0, customerSubscriptionId: sub.id });
+            map.set(ps.service_id, { type: 'subscription' as const, remaining: limit, limit, used: 0, customerSubscriptionId: sub.id, allowedStaffIds });
           }
         });
       });
@@ -1372,7 +1380,8 @@ END:VCALENDAR`;
             </div>
             
             <div className="space-y-3">
-              {/* Any option */}
+              {/* Any option - only show if no staff restriction or multiple allowed */}
+              {(subscriptionAllowedStaff.length === 0 || subscriptionAllowedStaff.length > 1) && (
               <button
                 onClick={() => handleStaffSelect("any")}
                 className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
@@ -1387,8 +1396,12 @@ END:VCALENDAR`;
                   </div>
                 </div>
               </button>
+              )}
 
-              {staff.map((member) => (
+              {(subscriptionAllowedStaff.length > 0
+                ? staff.filter(m => subscriptionAllowedStaff.includes(m.id))
+                : staff
+              ).map((member) => (
                 <button
                   key={member.id}
                   onClick={() => handleStaffSelect(member.id)}

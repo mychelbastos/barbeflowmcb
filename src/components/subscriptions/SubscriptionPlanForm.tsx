@@ -28,10 +28,11 @@ interface SubscriptionPlanFormProps {
   onOpenChange: (open: boolean) => void;
   plan: any | null;
   services: any[];
+  staffMembers: any[];
   onSaved: () => void;
 }
 
-export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSaved }: SubscriptionPlanFormProps) {
+export function SubscriptionPlanForm({ open, onOpenChange, plan, services, staffMembers, onSaved }: SubscriptionPlanFormProps) {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -54,6 +55,9 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
     }
     return [{ service_id: '', sessions_per_cycle: '', unlimited: true }];
   });
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(
+    plan?.plan_staff?.map((ps: any) => ps.staff_id) || []
+  );
 
   // Reset form when plan changes
   const resetForm = () => {
@@ -73,6 +77,7 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
     } else {
       setPlanServices([{ service_id: '', sessions_per_cycle: '', unlimited: true }]);
     }
+    setSelectedStaffIds(plan?.plan_staff?.map((ps: any) => ps.staff_id) || []);
   };
 
   // Sync form with plan prop when dialog opens
@@ -133,6 +138,13 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
             sessions_per_cycle: s.unlimited ? null : parseInt(s.sessions_per_cycle) || null,
           }))
         );
+        // Replace plan staff
+        await supabase.from('subscription_plan_staff').delete().eq('plan_id', plan.id);
+        if (selectedStaffIds.length > 0) {
+          await supabase.from('subscription_plan_staff').insert(
+            selectedStaffIds.map(sid => ({ plan_id: plan.id, staff_id: sid }))
+          );
+        }
         toast({ title: "Plano atualizado" });
       } else {
         // Create
@@ -154,6 +166,12 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
             sessions_per_cycle: s.unlimited ? null : parseInt(s.sessions_per_cycle) || null,
           }))
         );
+        // Save plan staff
+        if (selectedStaffIds.length > 0) {
+          await supabase.from('subscription_plan_staff').insert(
+            selectedStaffIds.map(sid => ({ plan_id: newPlan.id, staff_id: sid }))
+          );
+        }
         toast({ title: "Plano criado" });
       }
 
@@ -257,6 +275,42 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, onSav
               <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar serviço
             </Button>
             </div>
+
+            {/* Staff restriction */}
+            {staffMembers.length > 0 && (
+              <div className="space-y-2">
+                <Label>Profissionais permitidos</Label>
+                <p className="text-xs text-muted-foreground">Se nenhum for selecionado, todos ficam disponíveis para agendamento.</p>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {staffMembers.map((member) => (
+                    <label key={member.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStaffIds.includes(member.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStaffIds(prev => [...prev, member.id]);
+                          } else {
+                            setSelectedStaffIds(prev => prev.filter(id => id !== member.id));
+                          }
+                        }}
+                        className="rounded border-border"
+                      />
+                      <div className="flex items-center gap-2">
+                        {member.photo_url ? (
+                          <img src={member.photo_url} alt={member.name} className="w-6 h-6 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium" style={{ backgroundColor: `${member.color}20`, color: member.color }}>
+                            {member.name[0]}
+                          </div>
+                        )}
+                        <span className="text-sm">{member.name}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Photo Upload */}
             <div className="space-y-2">

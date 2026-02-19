@@ -191,15 +191,17 @@ Deno.serve(async (req) => {
           .in("status", ["active", "authorized"]),
       ]);
 
-      // Also get plan_services for subscriptions
+      // Also get plan_services and plan_staff for subscriptions
       const planIds = (subRes.data || []).map((s: any) => s.plan_id).filter(Boolean);
       let planServices: any[] = [];
+      let planStaff: any[] = [];
       if (planIds.length > 0) {
-        const { data } = await supabase
-          .from("subscription_plan_services")
-          .select("plan_id, service_id, sessions_per_cycle")
-          .in("plan_id", planIds);
-        planServices = data || [];
+        const [svcRes, staffRes] = await Promise.all([
+          supabase.from("subscription_plan_services").select("plan_id, service_id, sessions_per_cycle").in("plan_id", planIds),
+          supabase.from("subscription_plan_staff").select("plan_id, staff_id").in("plan_id", planIds),
+        ]);
+        planServices = svcRes.data || [];
+        planStaff = staffRes.data || [];
       }
 
       return new Response(
@@ -210,6 +212,7 @@ Deno.serve(async (req) => {
           subscriptions: (subRes.data || []).map((s: any) => ({
             ...s,
             plan_services: planServices.filter((ps: any) => ps.plan_id === s.plan_id),
+            plan_staff: planStaff.filter((ps: any) => ps.plan_id === s.plan_id),
           })),
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
