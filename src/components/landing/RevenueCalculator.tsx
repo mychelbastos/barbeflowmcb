@@ -52,9 +52,10 @@ export default function RevenueCalculator() {
         className="max-w-3xl mx-auto relative"
       >
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-5 uppercase tracking-wider">
-            <Calculator className="h-3.5 w-3.5" />
-            Calculadora da Liberdade
+          <div className="flex items-center gap-3 justify-center mb-5">
+            <div className="w-8 h-px bg-primary/40" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">Calculadora da Liberdade</span>
+            <div className="w-8 h-px bg-primary/40" />
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
             Quanto você pode <span className="text-primary">garantir</span> por mês?
