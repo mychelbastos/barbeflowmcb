@@ -29,6 +29,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Handle GET verification requests from Mercado Pago
+  if (req.method === 'GET') {
+    return new Response(
+      JSON.stringify({ status: 'ok' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const body = await req.json();
     console.log('Webhook received:', JSON.stringify(body));
@@ -114,9 +122,9 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      console.error('No payment_id found in metadata or external_reference');
-      return new Response(JSON.stringify({ error: 'No internal payment reference' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      console.log('No payment_id found in metadata or external_reference — ignoring external payment:', mpPaymentId);
+      return new Response(JSON.stringify({ received: true, ignored: true, reason: 'no_internal_reference' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 

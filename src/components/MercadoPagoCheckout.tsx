@@ -251,6 +251,7 @@ export const MercadoPagoCheckout = ({
           },
           customer_package_id: customerPackageId || undefined,
           package_amount_cents: packageAmountCents || undefined,
+          device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
         },
       });
 
@@ -360,6 +361,7 @@ export const MercadoPagoCheckout = ({
           },
           customer_package_id: customerPackageId || undefined,
           package_amount_cents: packageAmountCents || undefined,
+          device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
         },
       });
 

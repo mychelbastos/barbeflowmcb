@@ -23,6 +23,7 @@ serve(async (req) => {
       payment_type, // 'card' or 'pix'
       customer_package_id, // optional: for package purchases
       package_amount_cents, // optional: override amount for packages
+      device_id, // optional: device session ID for MP quality score
     } = await req.json();
     
     console.log('Processing payment for booking:', booking_id, 'type:', payment_type, 'package:', customer_package_id);
@@ -216,6 +217,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${mpToken.access_token}`,
         'X-Idempotency-Key': `${booking_id}-${payment_type}-${Date.now()}`,
+        ...(device_id ? { 'X-meli-session-id': device_id } : {}),
       },
       body: JSON.stringify(mpPaymentBody),
     });
