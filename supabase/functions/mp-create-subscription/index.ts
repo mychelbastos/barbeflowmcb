@@ -157,6 +157,7 @@ serve(async (req) => {
       auto_recurring: {
         frequency: 1,
         frequency_type: "months",
+        start_date: new Date().toISOString(),
         transaction_amount: plan.price_cents / 100,
         currency_id: "BRL",
       },
