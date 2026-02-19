@@ -439,48 +439,51 @@ const Landing = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="relative flex justify-center"
+              className="relative flex flex-col items-center gap-6"
             >
               <div className="absolute -inset-8 bg-gradient-to-br from-primary/10 via-transparent to-blue-500/10 rounded-3xl blur-3xl opacity-50" />
+              
+              {/* Floating card: VIP Plan Active — positioned above mockup on mobile, overlaid on desktop */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="relative z-10 lg:absolute lg:-left-20 lg:top-[22%] bg-zinc-900/90 backdrop-blur-xl border border-primary/30 rounded-xl p-4 shadow-xl shadow-black/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Crown className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-primary font-semibold">Plano VIP Ativo</p>
+                    <p className="text-[11px] text-zinc-400">Próximo agendamento: <span className="text-emerald-400">Grátis</span></p>
+                  </div>
+                </div>
+              </motion.div>
+
               <div className="relative">
                 <img src={mobileMockup} alt="modoGESTOR Mobile" className="w-64 rounded-[2rem] shadow-2xl shadow-black/60 border border-zinc-800/50" />
-                {/* Floating card: VIP Plan Active */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, x: -20 }}
-                  whileInView={{ opacity: 1, scale: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                  className="absolute -left-16 top-1/4 bg-zinc-900/90 backdrop-blur-xl border border-primary/30 rounded-xl p-4 shadow-xl shadow-black/30"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Crown className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-primary font-semibold">Plano VIP Ativo</p>
-                      <p className="text-[11px] text-zinc-400">Próximo agendamento: <span className="text-emerald-400">Grátis</span></p>
-                    </div>
-                  </div>
-                </motion.div>
-                {/* Floating card: Subscriber info */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, x: 20 }}
-                  whileInView={{ opacity: 1, scale: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.8 }}
-                  className="absolute -right-12 bottom-1/3 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <Check className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-400">Assinante desde Jan/2025</p>
-                      <p className="text-sm font-semibold text-zinc-100">4 cortes este mês</p>
-                    </div>
-                  </div>
-                </motion.div>
               </div>
+
+              {/* Floating card: Subscriber info — positioned below mockup on mobile, overlaid on desktop */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.8 }}
+                className="relative z-10 lg:absolute lg:-right-16 lg:bottom-[30%] bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Check className="h-4 w-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-400">Assinante desde Jan/2025</p>
+                    <p className="text-sm font-semibold text-zinc-100">4 cortes este mês</p>
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
         </div>
