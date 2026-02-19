@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, Play, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe, UserPlus, Settings, CalendarCheck, Crown, Lock, Bot, ChartNoAxesCombined } from "lucide-react";
+import { Calendar, Users, Clock, Shield, Smartphone, CreditCard, ArrowRight, Check, Sparkles, BarChart3, Zap, Star, ChevronRight, TrendingUp, MessageCircle, LayoutDashboard, Minus, Globe, UserPlus, Settings, CalendarCheck, Crown, Lock, Bot, ChartNoAxesCombined } from "lucide-react";
 import { PLANS } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/badge";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
@@ -69,7 +69,7 @@ const Landing = () => {
                         Entrar
                       </Button>
                     </a>
-                    <a href={getDashboardUrl('/app/register')}>
+                    <a href="#preços">
                       <Button size="sm" className="bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20">
                         Começar Grátis
                       </Button>
@@ -144,20 +144,12 @@ const Landing = () => {
                 </Button>
               </a>
             ) : (
-              <>
-                <a href={getDashboardUrl('/app/register')}>
-                  <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
-                    <Crown className="mr-2 h-5 w-5" />
-                    Quero Criar Meu Clube de Assinatura
-                  </Button>
-                </a>
-                <a href="#demo">
-                  <Button size="lg" variant="ghost" className="w-full sm:w-auto bg-zinc-800/60 border border-zinc-700/50 hover:bg-zinc-800 h-13 px-8 text-base text-zinc-100 rounded-xl backdrop-blur-sm">
-                    <Play className="mr-2 h-4 w-4" />
-                    Ver Demonstração
-                  </Button>
-                </a>
-              </>
+              <a href="#preços">
+                <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-8 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
+                  <Crown className="mr-2 h-5 w-5" />
+                  Quero Criar Meu Clube de Assinatura
+                </Button>
+              </a>
             )}
           </motion.div>
 
@@ -844,7 +836,7 @@ const Landing = () => {
               Crie seu Clube de Assinatura em 5 minutos. Teste grátis por 14 dias. Cancele quando quiser.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-              <a href={getDashboardUrl('/app/register')}>
+              <a href="#preços">
                 <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-foreground font-bold h-13 px-10 text-base rounded-xl shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02]">
                   <Crown className="mr-2 h-5 w-5" />
                   Quero Criar Meu Clube de Assinatura
