@@ -137,7 +137,10 @@ serve(async (req) => {
       });
     }
 
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
+    let frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
+    if (!frontBaseUrl.startsWith('http')) {
+      frontBaseUrl = `https://${frontBaseUrl}`;
+    }
     const tenantSlug = plan.tenant?.slug || '';
 
     const backUrl = `${frontBaseUrl.replace(/\/+$/, '')}/${tenantSlug}/subscription/callback`;
