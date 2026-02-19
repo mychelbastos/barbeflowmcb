@@ -329,12 +329,29 @@ const BookingPublic = () => {
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId);
     setSelectedPackage(null);
-    setActiveCustomerPackage(null);
-    setPackageCoveredService(false);
     setSelectedTime(null);
     setAvailableSlots([]);
     setOccupiedSlots([]);
     setAllTimeSlots([]);
+    
+    // Check if this service is covered by an active benefit from early identification
+    const benefit = benefitsMap.get(serviceId);
+    if (benefit?.type === 'subscription') {
+      setSubscriptionCoveredService(true);
+      setActiveSubscription({ id: benefit.customerSubscriptionId, usage: { used: benefit.used, limit: benefit.limit } });
+      setActiveCustomerPackage(null);
+      setPackageCoveredService(false);
+    } else if (benefit?.type === 'package') {
+      setPackageCoveredService(true);
+      setActiveCustomerPackage({ id: benefit.customerPackageId, serviceUsage: { sessions_total: benefit.total, sessions_used: benefit.total - benefit.remaining } });
+      setSubscriptionCoveredService(false);
+      setActiveSubscription(null);
+    } else {
+      setActiveCustomerPackage(null);
+      setPackageCoveredService(false);
+      setSubscriptionCoveredService(false);
+      setActiveSubscription(null);
+    }
     
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1427,7 +1444,9 @@ END:VCALENDAR`;
                 </p>
               </div>
               <span className="text-emerald-400 font-medium text-sm">
-                R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}
+                {(subscriptionCoveredService || packageCoveredService) 
+                  ? 'R$ 0' 
+                  : `R$ ${((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}`}
               </span>
             </div>
             
@@ -1579,13 +1598,15 @@ END:VCALENDAR`;
                   <span className="text-zinc-400">{selectedTime}</span>
                 </div>
                 <span className="text-emerald-400 font-semibold">
-                  {packageCoveredService ? 'Pacote' : selectedPackage 
-                    ? `R$ ${(selectedPackage.price_cents / 100).toFixed(0)}`
-                    : `R$ ${((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}`
+                  {(subscriptionCoveredService || packageCoveredService) 
+                    ? 'Incluso no plano' 
+                    : selectedPackage 
+                      ? `R$ ${(selectedPackage.price_cents / 100).toFixed(0)}`
+                      : `R$ ${((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}`
                   }
                 </span>
               </div>
-              {paymentMethod && (
+              {paymentMethod && !subscriptionCoveredService && !packageCoveredService && (
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800 text-sm">
                   {paymentMethod === 'online' ? (
                     <>
