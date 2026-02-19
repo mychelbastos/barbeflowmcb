@@ -65,7 +65,7 @@ const App = () => (
           <ScrollToTop />
           <AuthWatcher />
           <Routes>
-            {/* Public routes - barberflow.store */}
+            {/* Public routes - modogestor.com.br */}
             {showPublic && (
               <>
                 {/* On custom domains, root shows the booking page directly */}

@@ -46,7 +46,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found customer", { customerId });
 
-    const origin = req.headers.get("origin") || Deno.env.get("FRONT_BASE_URL") || "https://barbeflowmcb.lovable.app";
+    const origin = req.headers.get("origin") || Deno.env.get("FRONT_BASE_URL") || "https://www.modogestor.com.br";
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,

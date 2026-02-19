@@ -63,7 +63,7 @@ export default function Terms() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">9. Contato</h2>
-            <p>Para dúvidas sobre estes termos, entre em contato pelo e-mail: <a href="mailto:contato@barberflow.store" className="text-primary hover:underline">contato@barberflow.store</a></p>
+            <p>Para dúvidas sobre estes termos, entre em contato pelo e-mail: <a href="mailto:contato@modogestor.com.br" className="text-primary hover:underline">contato@modogestor.com.br</a></p>
           </section>
         </div>
       </main>

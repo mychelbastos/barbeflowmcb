@@ -190,7 +190,7 @@ const Landing = () => {
               </div>
               <div className="flex-1 flex justify-center">
                 <div className="bg-zinc-800/80 rounded-lg px-4 py-1 text-xs text-zinc-500 font-mono">
-                  app.barberflow.store/dashboard
+                  app.modogestor.com.br/dashboard
                 </div>
               </div>
             </div>
@@ -864,7 +864,7 @@ const Landing = () => {
           <div className="flex items-center gap-6 text-xs text-zinc-500">
             <a href={getPublicUrl('/termos')} className="hover:text-zinc-300 transition-colors">Termos de Uso</a>
             <a href={getPublicUrl('/privacidade')} className="hover:text-zinc-300 transition-colors">Política de Privacidade</a>
-            <a href="mailto:contato@barberflow.store" className="hover:text-zinc-300 transition-colors">Contato</a>
+            <a href="mailto:contato@modogestor.com.br" className="hover:text-zinc-300 transition-colors">Contato</a>
           </div>
           <p className="text-zinc-600 text-xs">
             © 2026 modoGESTOR. Todos os direitos reservados.

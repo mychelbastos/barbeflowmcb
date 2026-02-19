@@ -6,7 +6,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://lovable.dev';
+const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
 
     console.log('OAuth callback received, code:', code ? 'present' : 'missing', 'state:', state ? 'present' : 'missing');
 
@@ -166,7 +166,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in mp-oauth-callback:', error);
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://lovable.dev';
+    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
     return Response.redirect(`${frontBaseUrl}/app/settings?mp_error=server_error`, 302);
   }
 });

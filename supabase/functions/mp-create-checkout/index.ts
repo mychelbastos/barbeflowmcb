@@ -125,7 +125,7 @@ serve(async (req) => {
     }
 
     // Build back URLs
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://lovable.dev';
+    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
     const webhookUrl = Deno.env.get('MP_WEBHOOK_URL');
     
     const backUrl = `${frontBaseUrl}/${tenant.slug}/pagamento/retorno?booking_id=${booking_id}&payment_id=${paymentId}`;

@@ -11,8 +11,8 @@
  * In development/preview, all routes use the /app prefix.
  */
 
-const DASHBOARD_HOSTS = ['app.barberflow.store', 'app.modogestor.com.br'];
-const PUBLIC_HOSTS = ['barberflow.store', 'modogestor.com.br'];
+const DASHBOARD_HOSTS = ['app.modogestor.com.br'];
+const PUBLIC_HOSTS = ['modogestor.com.br'];
 const ALL_KNOWN_HOSTS = [...DASHBOARD_HOSTS, ...PUBLIC_HOSTS, ...PUBLIC_HOSTS.map(h => `www.${h}`)];
 
 export function isDashboardDomain(): boolean {

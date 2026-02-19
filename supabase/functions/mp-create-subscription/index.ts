@@ -137,7 +137,7 @@ serve(async (req) => {
       });
     }
 
-    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.barberflow.store';
+    const frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
     const tenantSlug = plan.tenant?.slug || '';
 
     const backUrl = `${frontBaseUrl.replace(/\/+$/, '')}/${tenantSlug}/subscription/callback`;
