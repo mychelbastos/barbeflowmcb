@@ -431,17 +431,22 @@ const Landing = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="relative flex flex-col items-center gap-6"
+              className="relative flex items-center justify-center min-h-[420px] lg:min-h-[480px]"
             >
-              <div className="absolute -inset-8 bg-gradient-to-br from-primary/10 via-transparent to-blue-500/10 rounded-3xl blur-3xl opacity-50" />
+              <div className="absolute -inset-8 bg-gradient-to-br from-primary/10 via-transparent to-blue-500/10 rounded-3xl blur-3xl opacity-40" />
               
-              {/* Floating card: VIP Plan Active — positioned above mockup on mobile, overlaid on desktop */}
+              {/* Phone mockup — centered anchor */}
+              <div className="relative z-[1]">
+                <img src={mobileMockup} alt="modoGESTOR Mobile" className="w-56 lg:w-60 rounded-[2rem] shadow-2xl shadow-black/60 border border-zinc-800/50" />
+              </div>
+
+              {/* Floating card: VIP Plan Active — anchored to the left of the phone */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, x: 20, y: 10 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.6 }}
-                className="relative z-10 lg:absolute lg:-left-20 lg:top-[22%] bg-zinc-900/90 backdrop-blur-xl border border-primary/30 rounded-xl p-4 shadow-xl shadow-black/30"
+                className="absolute z-10 left-0 lg:-left-8 top-[18%] bg-zinc-900/95 backdrop-blur-xl border border-primary/30 rounded-xl p-3.5 shadow-2xl shadow-black/40"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -454,17 +459,13 @@ const Landing = () => {
                 </div>
               </motion.div>
 
-              <div className="relative">
-                <img src={mobileMockup} alt="modoGESTOR Mobile" className="w-64 rounded-[2rem] shadow-2xl shadow-black/60 border border-zinc-800/50" />
-              </div>
-
-              {/* Floating card: Subscriber info — positioned below mockup on mobile, overlaid on desktop */}
+              {/* Floating card: Subscriber info — anchored to the right of the phone */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, x: -20, y: 10 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.8 }}
-                className="relative z-10 lg:absolute lg:-right-16 lg:bottom-[30%] bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-4 shadow-xl shadow-black/30"
+                className="absolute z-10 right-0 lg:-right-8 top-[55%] bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/50 rounded-xl p-3.5 shadow-2xl shadow-black/40"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
