@@ -68,6 +68,7 @@ const BookingPublic = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerBirthday, setCustomerBirthday] = useState('');
+  const [customerCpf, setCustomerCpf] = useState('');
   const [notes, setNotes] = useState('');
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   const [customerFound, setCustomerFound] = useState(false);
@@ -642,6 +643,7 @@ const BookingPublic = () => {
     setCustomerPhone('');
     setCustomerEmail('');
     setCustomerBirthday('');
+    setCustomerCpf('');
     setNotes('');
     setCreatedBooking(null);
     setAvailableSlots([]);
@@ -710,6 +712,29 @@ const BookingPublic = () => {
     if (digits.length <= 2) return digits.length > 0 ? `(${digits}` : '';
     if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  };
+
+  const formatCpfInput = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+
+  const isValidCpf = (value: string): boolean => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length !== 11 || /^(\d)\1+$/.test(digits)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+    let rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    if (rest !== parseInt(digits[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+    rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    return rest === parseInt(digits[10]);
   };
 
   // Lookup returning customer by phone
@@ -1835,6 +1860,22 @@ END:VCALENDAR`;
               </div>
             </div>
 
+            {/* CPF Input */}
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1.5">CPF *</label>
+              <Input
+                placeholder="000.000.000-00"
+                value={customerCpf}
+                onChange={(e) => setCustomerCpf(formatCpfInput(e.target.value))}
+                inputMode="numeric"
+                maxLength={14}
+                className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl"
+              />
+              {customerCpf.replace(/\D/g, '').length === 11 && !isValidCpf(customerCpf) && (
+                <p className="text-xs text-red-400 mt-1">CPF inválido</p>
+              )}
+            </div>
+
             {/* MercadoPago Checkout */}
             <MercadoPagoCheckout
               bookingId={createdBooking.id}
@@ -1849,6 +1890,9 @@ END:VCALENDAR`;
               }
               payer={{
                 email: customerEmail || 'cliente@email.com',
+                identification: customerCpf.replace(/\D/g, '').length === 11 
+                  ? { type: 'CPF', number: customerCpf.replace(/\D/g, '') } 
+                  : undefined,
               }}
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
