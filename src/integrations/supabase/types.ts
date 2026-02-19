@@ -2120,6 +2120,8 @@ export type Database = {
           email: string | null
           id: string
           logo_url: string | null
+          meta_fbc: string | null
+          meta_fbp: string | null
           name: string
           phone: string | null
           settings: Json | null
@@ -2137,6 +2139,8 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          meta_fbc?: string | null
+          meta_fbp?: string | null
           name: string
           phone?: string | null
           settings?: Json | null
@@ -2154,6 +2158,8 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          meta_fbc?: string | null
+          meta_fbp?: string | null
           name?: string
           phone?: string | null
           settings?: Json | null

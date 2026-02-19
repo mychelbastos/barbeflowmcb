@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { trackEvent } from "@/utils/metaTracking";
+import { getFbp, getPersistedFbc } from "@/utils/metaTracking";
 import {
   Form,
   FormControl,
@@ -120,6 +122,27 @@ export function NewTenantModal({ open, onOpenChange }: NewTenantModalProps) {
         title: "Sucesso!",
         description: "Novo estabelecimento criado com sucesso.",
       });
+
+      // Track CompleteRegistration
+      trackEvent('CompleteRegistration', {
+        content_name: 'Cadastro modoGESTOR',
+        status: 'complete',
+        value: 30.00,
+        currency: 'BRL',
+      }, {
+        email: values.email || undefined,
+        external_id: newTenant.id,
+      });
+
+      // Save Meta cookies to tenant
+      const fbp = getFbp();
+      const fbc = getPersistedFbc();
+      if (fbp || fbc) {
+        await supabase.from('tenants').update({
+          meta_fbp: fbp,
+          meta_fbc: fbc,
+        } as any).eq('id', newTenant.id);
+      }
 
       form.reset();
       onOpenChange(false);

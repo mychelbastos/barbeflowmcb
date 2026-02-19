@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from "@/utils/metaTracking";
+import { getFbp, getPersistedFbc } from "@/utils/metaTracking";
 import { PLANS } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +23,16 @@ export default function Onboarding() {
         body: { plan, billing_interval: billingInterval },
       });
       if (error) throw error;
-      if (data?.url) window.location.href = data.url;
+      if (data?.url) {
+        // Track AddPaymentInfo before redirect
+        await trackEvent('AddPaymentInfo', {
+          content_category: 'subscription',
+          content_name: `Plano ${plan}`,
+          value: plan === 'essencial' ? 59.90 : 89.90,
+          currency: 'BRL',
+        });
+        window.location.href = data.url;
+      }
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {

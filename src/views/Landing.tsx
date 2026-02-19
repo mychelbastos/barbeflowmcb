@@ -6,9 +6,11 @@ import { PLANS } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/badge";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { getDashboardUrl, getPublicUrl } from "@/lib/hostname";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { trackEvent } from "@/utils/metaTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CookieBanner } from "@/components/CookieBanner";
 const dashboardMockup = "/images/dashboard-mockup.png";
 const logoBranca = "/images/modoGESTOR_branca.png";
 const mobileMockup = "/images/mobile-mockup.png";
@@ -27,6 +29,20 @@ const Landing = () => {
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.95]);
+
+  // Track ViewContent when pricing section is viewed
+  const pricingRef = useRef<HTMLElement>(null);
+  const pricingInView = useInView(pricingRef, { once: true });
+  useEffect(() => {
+    if (pricingInView) {
+      trackEvent('ViewContent', {
+        content_name: 'Planos modoGESTOR',
+        content_category: 'pricing',
+        content_ids: ['essencial', 'profissional'],
+        content_type: 'product',
+      }, {}, { pixelOnly: true });
+    }
+  }, [pricingInView]);
 
   return (
     <div className="min-h-screen bg-[hsl(240,6%,4%)] text-zinc-100 overflow-x-hidden">
@@ -538,7 +554,7 @@ const Landing = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="preços" className="py-28 px-6 border-t border-zinc-800/30">
+      <section id="preços" ref={pricingRef} className="py-28 px-6 border-t border-zinc-800/30">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -874,6 +890,8 @@ const Landing = () => {
           </p>
         </div>
       </footer>
+
+      <CookieBanner />
     </div>
   );
 };
