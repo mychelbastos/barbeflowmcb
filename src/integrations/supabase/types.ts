@@ -1867,6 +1867,42 @@ export type Database = {
           },
         ]
       }
+      subscription_plan_staff: {
+        Row: {
+          created_at: string
+          id: string
+          plan_id: string
+          staff_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_id: string
+          staff_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plan_staff_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_plan_staff_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           active: boolean

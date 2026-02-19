@@ -14,6 +14,7 @@ export default function SubscriptionPlansPage() {
   const { toast } = useToast();
   const [plans, setPlans] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [staffMembers, setStaffMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
@@ -26,35 +27,32 @@ export default function SubscriptionPlansPage() {
     if (!currentTenant) return;
     try {
       setLoading(true);
-      const [plansRes, servicesRes] = await Promise.all([
+      const [plansRes, servicesRes, staffRes] = await Promise.all([
         supabase.from('subscription_plans').select('*').eq('tenant_id', currentTenant.id).order('name'),
         supabase.from('services').select('id, name, price_cents').eq('tenant_id', currentTenant.id).eq('active', true).order('name'),
+        supabase.from('staff').select('id, name, photo_url, color').eq('tenant_id', currentTenant.id).eq('active', true).order('name'),
       ]);
 
       const plansData = plansRes.data || [];
 
       // Load plan services
       if (plansData.length > 0) {
-        const { data: planServices } = await supabase
-          .from('subscription_plan_services')
-          .select('*, service:services(name)')
-          .in('plan_id', plansData.map(p => p.id));
-
-        // Load subscriber counts
-        const { data: subCounts } = await supabase
-          .from('customer_subscriptions')
-          .select('plan_id, status')
-          .in('plan_id', plansData.map(p => p.id))
-          .in('status', ['active', 'authorized']);
+        const [{ data: planServices }, { data: subCounts }, { data: planStaff }] = await Promise.all([
+          supabase.from('subscription_plan_services').select('*, service:services(name)').in('plan_id', plansData.map(p => p.id)),
+          supabase.from('customer_subscriptions').select('plan_id, status').in('plan_id', plansData.map(p => p.id)).in('status', ['active', 'authorized']),
+          supabase.from('subscription_plan_staff').select('plan_id, staff_id').in('plan_id', plansData.map(p => p.id)),
+        ]);
 
         for (const plan of plansData) {
           (plan as any).plan_services = (planServices || []).filter((ps: any) => ps.plan_id === plan.id);
           (plan as any).active_subscribers = (subCounts || []).filter((s: any) => s.plan_id === plan.id).length;
+          (plan as any).plan_staff = (planStaff || []).filter((ps: any) => ps.plan_id === plan.id);
         }
       }
 
       setPlans(plansData);
       setServices(servicesRes.data || []);
+      setStaffMembers(staffRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -169,6 +167,7 @@ export default function SubscriptionPlansPage() {
         onOpenChange={(open) => { if (!open) handleFormClose(); }}
         plan={editingPlan}
         services={services}
+        staffMembers={staffMembers}
         onSaved={handleFormSaved}
       />
     </div>
