@@ -1,63 +1,45 @@
 
 
-## O que e o `FRONT_BASE_URL` e o plano de migracao para `modogestor.com.br`
+## Corrigir redirect do OAuth do Mercado Pago
 
-### O que e `FRONT_BASE_URL`?
+### Problema
 
-E um secret usado pelas Edge Functions para saber para onde redirecionar o usuario apos operacoes no backend (ex: apos conectar Mercado Pago, apos checkout do Stripe, etc). Atualmente esta apontando para um dominio antigo ou com barra extra, causando o erro de URL dupla (`//app/settings`).
+O `mp-oauth-callback` redireciona para `https://www.modogestor.com.br/app/settings?mp_connected=1`, mas:
+- `www.modogestor.com.br` e o dominio **publico** (landing, agendamento) - nao tem rota `/app/settings`
+- O dashboard fica em `app.modogestor.com.br`, onde as rotas **nao usam** o prefixo `/app`
+- A URL correta e: `https://app.modogestor.com.br/settings?mp_connected=1`
 
-O valor correto sera: `https://www.modogestor.com.br` (sem barra final).
+### Solucao
 
----
+Alterar o `mp-oauth-callback` para redirecionar para o dominio do dashboard (`app.modogestor.com.br`) com a rota sem o prefixo `/app`.
 
-### Problema atual
+### Alteracoes
 
-Existem **referencias hardcoded a `barberflow.store`** espalhadas pelo codigo (frontend e edge functions), alem de fallbacks inconsistentes. Precisamos padronizar tudo para `modogestor.com.br`.
+**`supabase/functions/mp-oauth-callback/index.ts`**:
+- Trocar todas as URLs de redirect de `${frontBaseUrl}/app/settings` para usar o dominio do dashboard
+- Usar uma variavel separada ou hardcoded `https://app.modogestor.com.br/settings` para os redirects
+- Manter o fallback defensivo (protocolo, barra final)
 
----
+Redirects a corrigir (6 ocorrencias no arquivo):
+1. `?mp_error=missing_params`
+2. `?mp_error=invalid_state`
+3. `?mp_error=expired`
+4. `?mp_error=config_error`
+5. `?mp_error=token_exchange_failed`
+6. `?mp_error=no_token`
+7. `?mp_error=db_error`
+8. `?mp_connected=1` (sucesso)
+9. `?mp_error=server_error` (catch)
 
-### Plano de alteracoes
-
-#### 1. Atualizar o secret `FRONT_BASE_URL`
-
-Valor novo: `https://www.modogestor.com.br` (sem barra no final)
-
-#### 2. Atualizar `src/lib/hostname.ts`
-
-- Remover `barberflow.store` e `app.barberflow.store` dos arrays de hosts
-- Manter apenas `modogestor.com.br` e `app.modogestor.com.br`
-
-#### 3. Atualizar Edge Functions (fallbacks e hosts hardcoded)
-
-| Arquivo | Alteracao |
-|---|---|
-| `mp-oauth-callback/index.ts` | Fallback `'https://lovable.dev'` -> `'https://www.modogestor.com.br'` |
-| `mp-create-checkout/index.ts` | Fallback `'https://lovable.dev'` -> `'https://www.modogestor.com.br'` |
-| `mp-create-subscription/index.ts` | Fallback `'https://www.barberflow.store'` -> `'https://www.modogestor.com.br'` |
-| `create-checkout/index.ts` | Fallback `'https://barbeflowmcb.lovable.app'` -> `'https://www.modogestor.com.br'`; dashboardHosts `app.barberflow.store` -> `app.modogestor.com.br` |
-| `customer-portal/index.ts` | Fallback `'https://barbeflowmcb.lovable.app'` -> `'https://www.modogestor.com.br'` |
-
-#### 4. Atualizar Frontend (textos e emails)
-
-| Arquivo | Alteracao |
-|---|---|
-| `src/pages/Settings.tsx` | Texto `barberflow.store/` -> `modogestor.com.br/` no input de slug |
-| `src/pages/Landing.tsx` | URL mockup `app.barberflow.store/dashboard` -> `app.modogestor.com.br/dashboard`; email `contato@barberflow.store` -> `contato@modogestor.com.br` |
-| `src/pages/Terms.tsx` | Email `contato@barberflow.store` -> `contato@modogestor.com.br` |
-| `src/pages/Privacy.tsx` | Email `privacidade@barberflow.store` -> `privacidade@modogestor.com.br` |
-| `src/App.tsx` | Comentario `barberflow.store` -> `modogestor.com.br` |
-
-#### 5. Nao alterar
-
-- `src/hooks/useSubscription.ts` - o slug `"barberflow"` e um slug de tenant no banco, nao um dominio
-- `supabase/functions/test-all-notifications/index.ts` - dados de teste internos
-- Migracoes SQL existentes - sao historicas e nao devem ser alteradas
-
----
+Todas devem apontar para `https://app.modogestor.com.br/settings?...`
 
 ### Secao tecnica
 
-A correcao do bug do Mercado Pago (dupla barra `//app/settings`) sera resolvida pelo passo 1 (secret sem barra final). O `mp-oauth-callback` concatena `${frontBaseUrl}/app/settings`, entao o valor deve ser `https://www.modogestor.com.br` sem `/` no final.
+A abordagem mais limpa e usar um secret ou constante dedicada ao dashboard. Como o `FRONT_BASE_URL` e usado por outras funcoes para o dominio publico, vamos usar diretamente `https://app.modogestor.com.br` como base do redirect no callback, ja que o destino e sempre o painel administrativo.
 
-Apos aprovacao, todas as edge functions alteradas serao redeployadas automaticamente.
+```text
+Antes:  https://www.modogestor.com.br/app/settings?mp_connected=1  (404)
+Depois: https://app.modogestor.com.br/settings?mp_connected=1     (correto)
+```
 
+Apos a alteracao, a edge function sera redeployada automaticamente.
