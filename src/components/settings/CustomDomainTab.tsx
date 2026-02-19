@@ -286,7 +286,7 @@ export function CustomDomainTab() {
             </p>
 
             <div className="space-y-3">
-              {dnsRecords.map((record, i) => (
+              {dnsRecords.filter(r => r.name && r.value).map((record, i) => (
                 <div
                   key={i}
                   className="rounded-lg border border-border/50 bg-muted/30 p-4 space-y-2"
