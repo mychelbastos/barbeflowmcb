@@ -1,91 +1,136 @@
 
+# Dominio Personalizado (White Label) - Plano Profissional
 
-# Plano: Landing Page de Alta Conversao focada em Assinaturas e Receita Recorrente
-
-## Contexto
-
-A Landing Page atual (`src/pages/Landing.tsx`) e generica -- vende "agendamento + gestao". O sistema ja possui um motor completo de assinaturas recorrentes (Mercado Pago), pacotes de servicos, comissoes, caixa e WhatsApp. O que falta e uma narrativa de vendas focada no valor principal: **receita recorrente garantida**.
-
-Este plano transforma a Landing Page de "ferramenta de agendamento" para "sistema de receita recorrente para barbeiros empreendedores".
+## Resumo
+Criar uma aba "Dominio" nas Configuracoes onde barbeiros do plano Profissional podem conectar seu proprio dominio (ex: barbeariadoze.com.br) via Cloudflare for SaaS. Usuarios do plano Essencial verao uma tela de upsell com CTA para upgrade.
 
 ---
 
-## Mudancas Planejadas
+## Etapa 1: Secrets do Cloudflare
 
-### 1. Nova Secao Hero -- Copy focada em Receita Recorrente
+Antes de qualquer codigo, precisamos adicionar dois secrets:
+- `CLOUDFLARE_API_TOKEN` - Token da API Cloudflare com permissao "Zone: Edit"
+- `CLOUDFLARE_ZONE_ID` - ID da zona no Cloudflare onde o SaaS esta configurado
 
-Substituir o headline generico por copy que toca na dor financeira:
-
-- **Headline**: "Pare de matar um leao por dia. Garanta seu aluguel logo no dia 01."
-- **Subtitulo**: "Transforme clientes eventuais em membros fieis do seu clube. Crie planos de assinatura e pacotes de servicos em segundos."
-- **CTA principal**: "Quero Criar Meu Clube de Assinatura Agora"
-- **Badges abaixo**: "14 dias gratis", "Cobranca automatica", "Sem fiado"
-
-### 2. Calculadora de Receita Recorrente (novo componente interativo)
-
-Adicionar logo abaixo do hero uma secao com fundo diferenciado (gradiente gold/dark) contendo:
-
-- **Input 1**: "Quantos clientes fieis voce tem hoje?" (slider ou input numerico, default 30)
-- **Input 2**: "Valor do plano mensal?" (currency input, default R$ 80,00)
-- **Resultado dinamico**: "Voce pode comecar o mes com **R$ 2.400,00 GARANTIDOS** na conta."
-- Animacao nos numeros (contagem progressiva)
-- Botao CTA abaixo: "Comecar a Faturar Agora"
-
-Novo arquivo: `src/components/landing/RevenueCalculator.tsx`
-
-### 3. Secao "Clube de Assinatura" (nova secao dedicada)
-
-Secao com fundo escuro premium (preto/gold) entre Features e Depoimentos, com 4 bullets de beneficios:
-
-- "O Fim da Agenda Vazia" -- crie seu clube de assinatura
-- "Fidelizacao Automatica" -- quem assina nao corta no concorrente
-- "Cobranca no Piloto Automatico" -- sem fiado, debito automatico
-- "Previsibilidade de Caixa" -- saiba quanto entra antes de trabalhar
-
-Cada bullet com icone contextual e micro-animacao ao entrar na viewport.
-
-### 4. Mockup do Cliente Final (ajuste na secao Showcase)
-
-Atualizar a secao "Para seu Negocio" existente:
-
-- Trocar o floating card "Confirmado R$45" por um card mostrando **"Plano VIP Ativo -- Proximo agendamento: Gratis"**
-- Trocar o floating card "Novo agendamento" por **"Assinante desde Jan/2025 -- 4 cortes este mes"**
-- Reforcar a ideia de status/experiencia premium para o cliente final
-
-### 5. Depoimento Focado em Assinatura
-
-Substituir um dos depoimentos existentes por um focado em receita recorrente:
-
-- "Antes eu nao sabia se ia conseguir pagar as contas na semana fraca. Hoje, com 40 assinantes no modoGESTOR, eu ja pago o aluguel e a luz no dia 5. O resto e lucro." -- Barbearia do Joao
-
-### 6. Reordenacao das Features
-
-Mover "Pacotes e Assinaturas" para a primeira posicao no grid de features (atualmente e o ultimo item), renomear para **"Clube de Assinatura Recorrente"** e trocar o icone para `Crown` (VIP).
-
-### 7. FAQ Atualizado
-
-Adicionar 2 novas perguntas ao FAQ:
-
-- "Como funciona o Clube de Assinatura?" -- Explica que o barbeiro cria planos, o cliente paga automaticamente todo mes, e os agendamentos ficam como R$0,00.
-- "Posso usar meu proprio dominio?" -- Sim, no plano Profissional voce pode ter seudominio.com.br em vez de modogestor.com/seudominio.
+Voce precisara fornecer esses valores apos ativar o "Cloudflare for SaaS" no painel.
 
 ---
 
-## Detalhes Tecnicos
+## Etapa 2: Migracao do Banco de Dados
 
-### Arquivos a criar
-- `src/components/landing/RevenueCalculator.tsx` -- componente interativo com useState para clientes/valor, calculo dinamico, animacao de numeros com framer-motion
+Adicionar 3 colunas na tabela `tenants`:
 
-### Arquivos a modificar
-- `src/pages/Landing.tsx` -- reestruturacao do hero, reordenacao de features, nova secao Clube, ajuste dos floating cards, depoimento atualizado, FAQ expandido, import do RevenueCalculator
+```sql
+ALTER TABLE tenants
+  ADD COLUMN custom_domain text UNIQUE,
+  ADD COLUMN cloudflare_status text DEFAULT 'none',
+  ADD COLUMN cloudflare_hostname_id text;
+```
 
-### Dependencias
-- Nenhuma nova dependencia necessaria. Usa framer-motion (ja instalado), componentes UI existentes (Button, Badge, Input/Slider), e CurrencyInput existente.
+- `custom_domain`: dominio do cliente (ex: barbeariadoze.com.br)
+- `cloudflare_status`: 'none', 'pending', 'active', 'error'
+- `cloudflare_hostname_id`: ID retornado pela Cloudflare para gerenciamento
 
-### Padrao de design
-- Manter o dark mode premium ja existente (bg-[hsl(240,6%,4%)])
-- Secao da calculadora com gradiente gold sutil (from-primary/10)
-- Secao do clube com borda primary/30 para destaque
-- Numeros financeiros em tamanho grande com cor primary (gold)
-- Animacoes consistentes com as existentes (framer-motion, ease curves)
+---
 
+## Etapa 3: Edge Function `add-custom-domain`
+
+Nova edge function que:
+1. Valida autenticacao do usuario
+2. Verifica se o plano e "profissional" (via `stripe_subscriptions`)
+3. Chama `POST /zones/:zone_id/custom_hostnames` na API Cloudflare
+4. Salva o `hostname_id` e os registros DNS de validacao na tabela `tenants`
+5. Retorna os registros CNAME/TXT que o usuario precisa configurar
+
+---
+
+## Etapa 4: Edge Function `check-domain-status`
+
+Nova edge function que:
+1. Busca o `cloudflare_hostname_id` do tenant
+2. Chama `GET /zones/:zone_id/custom_hostnames/:id` na Cloudflare
+3. Atualiza `cloudflare_status` no banco
+4. Retorna o status atual
+
+---
+
+## Etapa 5: Edge Function `remove-custom-domain`
+
+Nova edge function para desconectar:
+1. Chama `DELETE /zones/:zone_id/custom_hostnames/:id` na Cloudflare
+2. Limpa `custom_domain`, `cloudflare_status`, `cloudflare_hostname_id` no banco
+
+---
+
+## Etapa 6: Componente `CustomDomainTab`
+
+Novo componente `src/components/settings/CustomDomainTab.tsx`:
+
+**Se plano != profissional:**
+- Card com icone de cadeado
+- Titulo: "Sua marca em primeiro lugar."
+- Texto: "Nao divulgue o nosso link. Tenha o seu proprio site (www.suabarbearia.com.br) e passe mais credibilidade."
+- Botao: "Quero fazer Upgrade" → navega para aba billing
+
+**Se plano == profissional e sem dominio:**
+- Input para digitar dominio (com validacao: sem protocolo, sem path)
+- Botao "Conectar Dominio"
+- Instrucoes claras sobre o que digitar
+
+**Se plano == profissional e dominio pendente:**
+- Badge "Verificando..." (amarelo)
+- Card com registros DNS em bloco de codigo com botao "Copiar"
+  - CNAME record
+  - TXT record para validacao
+- Botao "Verificar Status" para polling manual
+- Botao "Remover Dominio"
+
+**Se plano == profissional e dominio ativo:**
+- Badge "Ativo" (verde) com checkmark
+- Dominio exibido com link
+- Botao "Remover Dominio"
+
+---
+
+## Etapa 7: Integrar Tab nas Configuracoes
+
+Em `Settings.tsx`:
+- Adicionar nova aba "Dominio" com icone `Globe`
+- Renderizar `<CustomDomainTab />` condicionalmente
+- Importar `useSubscription` para verificacao de plano
+
+---
+
+## Etapa 8: Roteamento de Dominios Custom
+
+Atualizar `src/lib/hostname.ts`:
+- Adicionar logica para reconhecer dominios customizados (que nao sao os dominios conhecidos)
+- Tratar dominios custom como dominio publico, buscando o tenant pelo `custom_domain` no banco
+
+Atualizar `BookingPublic.tsx`:
+- Quando acessado via dominio custom, buscar tenant por `custom_domain` ao inves de slug na URL
+
+---
+
+## Arquivos Envolvidos
+
+| Arquivo | Acao |
+|---------|------|
+| `supabase/migrations/` | Nova migracao (3 colunas em tenants) |
+| `supabase/functions/add-custom-domain/index.ts` | Criar |
+| `supabase/functions/check-domain-status/index.ts` | Criar |
+| `supabase/functions/remove-custom-domain/index.ts` | Criar |
+| `supabase/config.toml` | Registrar 3 novas functions |
+| `src/components/settings/CustomDomainTab.tsx` | Criar |
+| `src/pages/Settings.tsx` | Adicionar aba "Dominio" |
+| `src/lib/hostname.ts` | Reconhecer dominios custom |
+| `src/pages/BookingPublic.tsx` | Resolver tenant por dominio custom |
+
+---
+
+## Pre-requisitos (Sua parte)
+
+1. **Ativar Cloudflare for SaaS** no painel Cloudflare (SSL/TLS → Custom Hostnames)
+2. Configurar o **Fallback Origin** (ex: `barberflow.store`)
+3. Criar **API Token** com permissao de Custom Hostnames
+4. Fornecer `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ZONE_ID` quando solicitado
