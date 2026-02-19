@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ interface SubscriptionPurchaseFlowProps {
 
 export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchaseFlowProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -46,8 +48,14 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
       });
       if (error) { const errorMessage = data?.error || error.message || 'Erro ao criar assinatura'; throw new Error(errorMessage); }
       if (data?.error) throw new Error(data.error);
-      if (data?.checkout_url) { window.location.href = data.checkout_url; }
-      else { toast({ title: "Assinatura criada!", description: "Aguardando confirmação de pagamento." }); setSelectedPlan(null); }
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else if (data?.activated) {
+        navigate(`/${tenant.slug}/subscription/callback?status=authorized&preapproval_id=${data.mp_preapproval_id || ''}`);
+      } else {
+        toast({ title: "Assinatura criada!", description: "Aguardando confirmação de pagamento." });
+        setSelectedPlan(null);
+      }
     } catch (err: any) {
       console.error('Subscription error:', err);
       toast({ title: "Erro ao criar assinatura", description: err.message, variant: "destructive" });
