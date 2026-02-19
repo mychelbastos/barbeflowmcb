@@ -171,6 +171,10 @@ serve(async (req) => {
           first_name: customerFirstName,
           last_name: customerLastName,
           identification: payer?.identification || undefined,
+          phone: booking.customer?.phone ? {
+            area_code: booking.customer.phone.substring(0, 2),
+            number: booking.customer.phone.substring(2),
+          } : undefined,
         },
         external_reference: paymentRecord.id,
         metadata: {
@@ -199,6 +203,10 @@ serve(async (req) => {
           first_name: customerFirstName,
           last_name: customerLastName,
           identification: payer?.identification || undefined,
+          phone: booking.customer?.phone ? {
+            area_code: booking.customer.phone.substring(0, 2),
+            number: booking.customer.phone.substring(2),
+          } : undefined,
         },
         external_reference: paymentRecord.id,
         metadata: {
