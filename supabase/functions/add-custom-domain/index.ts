@@ -134,6 +134,38 @@ Deno.serve(async (req) => {
 
     const hostname = cfData.result;
 
+    // Register domain in Vercel (both projects)
+    const vercelToken = Deno.env.get("VERCEL_API_TOKEN");
+    const vercelProjectApp = Deno.env.get("VERCEL_PROJECT_ID_APP");
+    const vercelProjectSite = Deno.env.get("VERCEL_PROJECT_ID_SITE");
+
+    if (vercelToken) {
+      const vercelProjects = [vercelProjectApp, vercelProjectSite].filter(Boolean);
+      for (const projectId of vercelProjects) {
+        try {
+          const vercelRes = await fetch(
+            `https://api.vercel.com/v10/projects/${projectId}/domains`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${vercelToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ name: cleanDomain }),
+            }
+          );
+          const vercelData = await vercelRes.json();
+          if (!vercelRes.ok) {
+            console.error(`Vercel domain error (project ${projectId}):`, JSON.stringify(vercelData));
+          } else {
+            console.log(`Vercel domain added (project ${projectId}):`, cleanDomain);
+          }
+        } catch (vercelErr) {
+          console.error(`Vercel API error (project ${projectId}):`, vercelErr);
+        }
+      }
+    }
+
     // Save to database
     const { error: dbError } = await supabase
       .from("tenants")

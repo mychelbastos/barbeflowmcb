@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("cloudflare_hostname_id")
+      .select("cloudflare_hostname_id, custom_domain")
       .eq("id", ut.tenant_id)
       .single();
 
@@ -66,6 +66,29 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${cfToken}` },
         }
       );
+    }
+
+    // Remove domain from Vercel (both projects)
+    const vercelToken = Deno.env.get("VERCEL_API_TOKEN");
+    const vercelProjectApp = Deno.env.get("VERCEL_PROJECT_ID_APP");
+    const vercelProjectSite = Deno.env.get("VERCEL_PROJECT_ID_SITE");
+
+    if (vercelToken && tenant?.custom_domain) {
+      const vercelProjects = [vercelProjectApp, vercelProjectSite].filter(Boolean);
+      for (const projectId of vercelProjects) {
+        try {
+          await fetch(
+            `https://api.vercel.com/v10/projects/${projectId}/domains/${tenant.custom_domain}`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${vercelToken}` },
+            }
+          );
+          console.log(`Vercel domain removed (project ${projectId}):`, tenant.custom_domain);
+        } catch (vercelErr) {
+          console.error(`Vercel API error (project ${projectId}):`, vercelErr);
+        }
+      }
     }
 
     // Clear DB
