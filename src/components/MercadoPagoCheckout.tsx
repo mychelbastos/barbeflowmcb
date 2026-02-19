@@ -287,10 +287,25 @@ export const MercadoPagoCheckout = ({
   // State for payment polling
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingAttemptsRef = useRef(0);
+  const MAX_POLLING_ATTEMPTS = 60; // 60 × 3s = 3 min
 
   // Poll for PIX payment status
   const pollPaymentStatus = useCallback(async (paymentIdToCheck: string) => {
     if (!isMountedRef.current) return;
+    
+    pollingAttemptsRef.current += 1;
+    
+    // Timeout after max attempts
+    if (pollingAttemptsRef.current > MAX_POLLING_ATTEMPTS) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setErrorMessage('Tempo esgotado aguardando confirmação do pagamento. Verifique seu app do banco.');
+      setStatus('error');
+      return;
+    }
     
     try {
       const { data: payment, error } = await supabase
@@ -304,18 +319,17 @@ export const MercadoPagoCheckout = ({
         return;
       }
       
-      console.log('Polled payment status:', payment?.status);
+      // Record not yet created, continue polling silently
+      if (!payment) return;
       
-      if (payment?.status === 'paid') {
-        // Payment confirmed!
+      if (payment.status === 'paid') {
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
         setStatus('success');
         onSuccess({ status: 'approved', payment_id: paymentIdToCheck });
-      } else if (payment?.status === 'failed' || payment?.status === 'cancelled') {
-        // Payment failed
+      } else if (payment.status === 'failed' || payment.status === 'cancelled') {
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
@@ -331,12 +345,12 @@ export const MercadoPagoCheckout = ({
   // Start polling when PIX is generated
   useEffect(() => {
     if (status === 'pix-waiting' && paymentId) {
-      console.log('Starting payment status polling for:', paymentId);
+      pollingAttemptsRef.current = 0;
       
-      // Poll every 5 seconds
+      // Poll every 3 seconds
       pollingIntervalRef.current = setInterval(() => {
         pollPaymentStatus(paymentId);
-      }, 5000);
+      }, 3000);
       
       // Also poll immediately
       pollPaymentStatus(paymentId);

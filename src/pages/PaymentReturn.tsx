@@ -60,9 +60,10 @@ const PaymentReturn = () => {
           )
         `)
         .eq('id', paymentId)
-        .single();
+        .maybeSingle();
 
       if (paymentError) throw paymentError;
+      if (!paymentData) return; // Not found yet, will retry on next poll
 
       setPayment(paymentData);
       setBooking(paymentData.booking);

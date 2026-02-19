@@ -165,6 +165,14 @@ serve(async (req) => {
         notification_url: webhookUrl || undefined,
         additional_info: {
           items: itemsArray,
+          payer: {
+            first_name: customerFirstName,
+            last_name: customerLastName || undefined,
+            phone: booking.customer?.phone ? {
+              area_code: booking.customer.phone.substring(0, 2),
+              number: booking.customer.phone.substring(2),
+            } : undefined,
+          },
         },
         payer: {
           email: payer?.email || booking.customer?.email || 'cliente@example.com',
@@ -197,6 +205,14 @@ serve(async (req) => {
         notification_url: webhookUrl || undefined,
         additional_info: {
           items: itemsArray,
+          payer: {
+            first_name: customerFirstName,
+            last_name: customerLastName || undefined,
+            phone: booking.customer?.phone ? {
+              area_code: booking.customer.phone.substring(0, 2),
+              number: booking.customer.phone.substring(2),
+            } : undefined,
+          },
         },
         payer: {
           email: payer?.email || booking.customer?.email || 'cliente@example.com',
