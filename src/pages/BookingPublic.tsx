@@ -1793,9 +1793,25 @@ END:VCALENDAR`;
                 </div>
               )}
 
+              {/* CPF — always show when phone is filled */}
+              {customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <label className="block text-sm text-zinc-400 mb-2">CPF *</label>
+                  <Input
+                    placeholder="000.000.000-00"
+                    value={customerCpf}
+                    onChange={(e) => setCustomerCpf(formatCpfInput(e.target.value))}
+                    inputMode="numeric"
+                    maxLength={14}
+                    className="h-12 bg-zinc-900/50 border-zinc-800 rounded-xl focus:border-zinc-600 placeholder:text-zinc-600"
+                  />
+                  {customerCpf.replace(/\D/g, '').length === 11 && !isValidCpf(customerCpf) && (
+                    <p className="text-xs text-red-400 mt-1">CPF inválido</p>
+                  )}
+                </div>
+              )}
 
 
-              
               <div className="pt-4 space-y-3">
                 <Button 
                   type="submit" 
@@ -1858,22 +1874,6 @@ END:VCALENDAR`;
                   <span className="text-zinc-400">{selectedTime}</span>
                 </div>
               </div>
-            </div>
-
-            {/* CPF Input */}
-            <div className="mb-4">
-              <label className="block text-sm text-zinc-400 mb-1.5">CPF *</label>
-              <Input
-                placeholder="000.000.000-00"
-                value={customerCpf}
-                onChange={(e) => setCustomerCpf(formatCpfInput(e.target.value))}
-                inputMode="numeric"
-                maxLength={14}
-                className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl"
-              />
-              {customerCpf.replace(/\D/g, '').length === 11 && !isValidCpf(customerCpf) && (
-                <p className="text-xs text-red-400 mt-1">CPF inválido</p>
-              )}
             </div>
 
             {/* MercadoPago Checkout */}
