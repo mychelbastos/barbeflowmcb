@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2 } from 'lucide-react';
+import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2, Lock, Shield } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface PayerInfo {
@@ -517,7 +517,7 @@ export const MercadoPagoCheckout = ({
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Você será redirecionado para o Mercado Pago para concluir o pagamento.
+            Você será redirecionado para concluir o pagamento.
           </p>
 
           <Button 
@@ -526,15 +526,20 @@ export const MercadoPagoCheckout = ({
             size="lg"
           >
             <CreditCard className="h-5 w-5" />
-            Pagar com Mercado Pago
+            Pagar agora
           </Button>
 
           {/* Security badge */}
-          <div className="flex items-center justify-center gap-2 pt-2">
-            <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-            </svg>
-            <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
+          <div className="flex items-center justify-center gap-4 pt-1">
+            <div className="flex items-center gap-1.5 text-muted-foreground/60">
+              <Lock className="h-3 w-3" />
+              <span className="text-[11px]">Criptografado</span>
+            </div>
+            <div className="w-px h-3 bg-border" />
+            <div className="flex items-center gap-1.5 text-muted-foreground/60">
+              <Shield className="h-3 w-3" />
+              <span className="text-[11px]">Pagamento seguro</span>
+            </div>
           </div>
         </div>
       );
@@ -574,11 +579,16 @@ export const MercadoPagoCheckout = ({
         </div>
 
         {/* Security badge */}
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-          </svg>
-          <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
+        <div className="flex items-center justify-center gap-4 pt-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground/60">
+            <Lock className="h-3 w-3" />
+            <span className="text-[11px]">Criptografado</span>
+          </div>
+          <div className="w-px h-3 bg-border" />
+          <div className="flex items-center gap-1.5 text-muted-foreground/60">
+            <Shield className="h-3 w-3" />
+            <span className="text-[11px]">Pagamento seguro</span>
+          </div>
         </div>
       </div>
     );
@@ -643,11 +653,16 @@ export const MercadoPagoCheckout = ({
         </Button>
 
         {/* Security badge */}
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-          </svg>
-          <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
+        <div className="flex items-center justify-center gap-4 pt-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground/60">
+            <Lock className="h-3 w-3" />
+            <span className="text-[11px]">Criptografado</span>
+          </div>
+          <div className="w-px h-3 bg-border" />
+          <div className="flex items-center gap-1.5 text-muted-foreground/60">
+            <Shield className="h-3 w-3" />
+            <span className="text-[11px]">Pagamento seguro</span>
+          </div>
         </div>
       </div>
     );
@@ -708,11 +723,16 @@ export const MercadoPagoCheckout = ({
         )}
 
         {/* Security badge */}
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <svg className="h-4 w-4 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-          </svg>
-          <span className="text-xs text-muted-foreground">Pagamento seguro via Mercado Pago</span>
+        <div className="flex items-center justify-center gap-4 pt-1">
+          <div className="flex items-center gap-1.5 text-muted-foreground/60">
+            <Lock className="h-3 w-3" />
+            <span className="text-[11px]">Criptografado</span>
+          </div>
+          <div className="w-px h-3 bg-border" />
+          <div className="flex items-center gap-1.5 text-muted-foreground/60">
+            <Shield className="h-3 w-3" />
+            <span className="text-[11px]">Pagamento seguro</span>
+          </div>
         </div>
       </div>
     );
