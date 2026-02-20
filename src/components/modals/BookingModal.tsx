@@ -33,8 +33,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Clock, Package, Repeat } from "lucide-react";
+import { Loader2, Clock, Package, Repeat, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const bookingFormSchema = z.object({
   customer_name: z.string().min(1, "Nome é obrigatório"),
@@ -98,6 +99,7 @@ export function BookingModal() {
   const [detectedBenefits, setDetectedBenefits] = useState<DetectedBenefit[]>([]);
   const [loadingBenefits, setLoadingBenefits] = useState(false);
   const [serviceBenefitsMap, setServiceBenefitsMap] = useState<Map<string, DetectedBenefit>>(new Map());
+  const [scheduleWarning, setScheduleWarning] = useState<string | null>(null);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -329,6 +331,38 @@ export function BookingModal() {
       form.setValue("time", "");
     }
   }, [watchedDate, watchedServiceId, watchedStaffId, currentTenant]);
+
+  // Check if selected staff has a schedule for the selected date's weekday
+  useEffect(() => {
+    if (!watchedDate || !watchedStaffId || watchedStaffId === "none" || !currentTenant) {
+      setScheduleWarning(null);
+      return;
+    }
+    const checkSchedule = async () => {
+      const targetDate = new Date(watchedDate + 'T12:00:00');
+      const weekday = targetDate.getDay();
+      const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      
+      const { data: schedules } = await supabase
+        .from('schedules')
+        .select('id')
+        .eq('tenant_id', currentTenant.id)
+        .eq('staff_id', watchedStaffId)
+        .eq('weekday', weekday)
+        .eq('active', true)
+        .limit(1);
+
+      if (!schedules || schedules.length === 0) {
+        const staffMember = staff.find(s => s.id === watchedStaffId);
+        setScheduleWarning(
+          `${staffMember?.name || 'Este profissional'} não possui horário configurado para ${dayNames[weekday]}. O agendamento será criado mesmo assim.`
+        );
+      } else {
+        setScheduleWarning(null);
+      }
+    };
+    checkSchedule();
+  }, [watchedDate, watchedStaffId, currentTenant, staff]);
 
   // Reset selected time when extra slots change (filtered slots change)
   useEffect(() => {
@@ -786,6 +820,16 @@ export function BookingModal() {
                 </FormItem>
               )}
             />
+
+            {/* Schedule warning */}
+            {scheduleWarning && (
+              <Alert variant="destructive" className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4 !text-amber-500" />
+                <AlertDescription className="text-sm">
+                  {scheduleWarning}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Duration control - custom or extra slots */}
             {watchedServiceId && (
