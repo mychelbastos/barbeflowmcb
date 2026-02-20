@@ -45,6 +45,8 @@ const bookingFormSchema = z.object({
   date: z.string().min(1, "Data é obrigatória"),
   time: z.string().min(1, "Horário é obrigatório"),
   extra_slots: z.number().min(0).optional(),
+  custom_duration: z.number().min(5).optional(),
+  use_custom_duration: z.boolean().optional(),
   notes: z.string().optional(),
 });
 
@@ -108,6 +110,8 @@ export function BookingModal() {
       date: "",
       time: "",
       extra_slots: 0,
+      custom_duration: undefined,
+      use_custom_duration: false,
       notes: "",
     },
   });
@@ -115,6 +119,8 @@ export function BookingModal() {
   const watchedDate = form.watch("date");
   const watchedServiceId = form.watch("service_id");
   const watchedStaffId = form.watch("staff_id");
+  const watchedUseCustomDuration = form.watch("use_custom_duration");
+  const watchedCustomDuration = form.watch("custom_duration");
   const watchedExtraSlots = form.watch("extra_slots") || 0;
 
   useEffect(() => {
@@ -205,8 +211,7 @@ export function BookingModal() {
           .select('id, status, payment_status, package:service_packages(name)')
           .eq('customer_id', selectedCustomerId)
           .eq('tenant_id', currentTenant.id)
-          .eq('status', 'active')
-          .eq('payment_status', 'confirmed');
+          .eq('status', 'active');
 
         if (pkgs) {
           for (const pkg of pkgs) {
@@ -286,8 +291,7 @@ export function BookingModal() {
           .select('id, status, payment_status, package:service_packages(name)')
           .eq('customer_id', selectedCustomerId)
           .eq('tenant_id', currentTenant.id)
-          .eq('status', 'active')
-          .eq('payment_status', 'confirmed');
+          .eq('status', 'active');
 
         if (pkgs) {
           for (const pkg of pkgs) {
@@ -429,8 +433,7 @@ export function BookingModal() {
               .select('customer_id, status, payment_status')
               .eq('tenant_id', currentTenant.id)
               .in('customer_id', customerIds)
-              .eq('status', 'active')
-              .eq('payment_status', 'confirmed'),
+              .eq('status', 'active'),
           ]);
           
           for (const c of customers) {
@@ -489,23 +492,28 @@ export function BookingModal() {
 
       const startsAt = new Date(`${data.date}T${data.time}`);
 
-      const { data: result, error } = await supabase.functions.invoke('create-booking', {
-        body: {
-          tenant_id: currentTenant.id,
-          service_id: data.service_id,
-          staff_id: data.staff_id === "none" ? null : data.staff_id,
-          customer_name: data.customer_name,
-          customer_phone: data.customer_phone,
-          customer_email: data.customer_email || undefined,
-          starts_at: startsAt.toISOString(),
-          notes: data.notes || undefined,
-          extra_slots: data.extra_slots || 0,
-          created_via: 'admin',
-          payment_method: 'onsite',
-          customer_package_id: customerPackageId || undefined,
-          customer_subscription_id: customerSubscriptionId || undefined,
-        },
-      });
+      const body: any = {
+        tenant_id: currentTenant.id,
+        service_id: data.service_id,
+        staff_id: data.staff_id === "none" ? null : data.staff_id,
+        customer_name: data.customer_name,
+        customer_phone: data.customer_phone,
+        customer_email: data.customer_email || undefined,
+        starts_at: startsAt.toISOString(),
+        notes: data.notes || undefined,
+        created_via: 'admin',
+        payment_method: 'onsite',
+        customer_package_id: customerPackageId || undefined,
+        customer_subscription_id: customerSubscriptionId || undefined,
+      };
+
+      if (data.use_custom_duration && data.custom_duration) {
+        body.custom_duration = data.custom_duration;
+      } else {
+        body.extra_slots = data.extra_slots || 0;
+      }
+
+      const { data: result, error } = await supabase.functions.invoke('create-booking', { body });
 
       if (error) throw error;
       if (!result?.success) throw new Error(result?.error || 'Erro ao criar agendamento');
@@ -779,48 +787,108 @@ export function BookingModal() {
               )}
             />
 
-            {/* Extra time - before time selection so slots adapt */}
+            {/* Duration control - custom or extra slots */}
             {watchedServiceId && (
-              <FormField
-                control={form.control}
-                name="extra_slots"
-                render={({ field }) => {
-                  const selectedService = services.find(s => s.id === watchedServiceId);
-                  const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
-                  const baseDuration = selectedService?.duration_minutes || 60;
-                  const totalDuration = baseDuration + (field.value || 0) * extraSlotDuration;
-                  return (
-                    <FormItem>
-                      <FormLabel>Tempo adicional</FormLabel>
-                      <div className="flex items-center gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={!field.value || field.value <= 0}
-                          onClick={() => field.onChange(Math.max(0, (field.value || 0) - 1))}
-                        >
-                          −
-                        </Button>
-                        <span className="text-sm font-medium min-w-[100px] text-center">
-                          +{(field.value || 0) * extraSlotDuration} min
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => field.onChange((field.value || 0) + 1)}
-                        >
-                          +
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Duração total: {totalDuration} min (base {baseDuration} min + {(field.value || 0) * extraSlotDuration} min extras)
-                      </p>
-                    </FormItem>
-                  );
-                }}
-              />
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <FormField
+                    control={form.control}
+                    name="use_custom_duration"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value || false}
+                            onChange={(e) => {
+                              field.onChange(e.target.checked);
+                              if (e.target.checked) {
+                                const svc = services.find(s => s.id === watchedServiceId);
+                                form.setValue("custom_duration", svc?.duration_minutes || 30);
+                                form.setValue("extra_slots", 0);
+                              }
+                              form.setValue("time", "");
+                            }}
+                            className="h-4 w-4 rounded border-border"
+                          />
+                        </FormControl>
+                        <FormLabel className="text-sm font-normal cursor-pointer">
+                          Duração personalizada
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {watchedUseCustomDuration ? (
+                  <FormField
+                    control={form.control}
+                    name="custom_duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duração (minutos)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={5}
+                            step={5}
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(parseInt(e.target.value) || 0);
+                              form.setValue("time", "");
+                            }}
+                            placeholder="Ex: 45"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Duração total: {field.value || 0} min (substitui a duração padrão do serviço)
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="extra_slots"
+                    render={({ field }) => {
+                      const selectedService = services.find(s => s.id === watchedServiceId);
+                      const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
+                      const baseDuration = selectedService?.duration_minutes || 60;
+                      const totalDuration = baseDuration + (field.value || 0) * extraSlotDuration;
+                      return (
+                        <FormItem>
+                          <FormLabel>Tempo adicional</FormLabel>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={!field.value || field.value <= 0}
+                              onClick={() => field.onChange(Math.max(0, (field.value || 0) - 1))}
+                            >
+                              −
+                            </Button>
+                            <span className="text-sm font-medium min-w-[100px] text-center">
+                              +{(field.value || 0) * extraSlotDuration} min
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => field.onChange((field.value || 0) + 1)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Duração total: {totalDuration} min (base {baseDuration} min + {(field.value || 0) * extraSlotDuration} min extras)
+                          </p>
+                        </FormItem>
+                      );
+                    }}
+                  />
+                )}
+              </div>
             )}
 
             {/* Available Time Slots - filtered by total duration */}
@@ -832,7 +900,9 @@ export function BookingModal() {
                 const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
                 const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
                 const baseDuration = selectedService?.duration_minutes || 60;
-                const totalDuration = baseDuration + (watchedExtraSlots || 0) * extraSlotDuration;
+                const totalDuration = watchedUseCustomDuration && watchedCustomDuration
+                  ? watchedCustomDuration
+                  : baseDuration + (watchedExtraSlots || 0) * extraSlotDuration;
 
                 // Filter slots: ensure enough consecutive available time
                 const filteredSlots = availableSlots.filter((slot) => {

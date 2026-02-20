@@ -40,6 +40,7 @@ interface CreateBookingRequest {
   customer_package_id?: string;
   customer_subscription_id?: string;
   extra_slots?: number;
+  custom_duration?: number;
   created_via?: string;
 }
 
@@ -98,18 +99,17 @@ function validatePayload(payload: any): { isValid: boolean; errors: string[] } {
 
 // --- Package session logic ---
 async function handlePackageSession(customerPackageId: string, serviceId: string, bookingId: string) {
-  // 1. Validate package
+  // 1. Validate package — allow both confirmed and pending payment
   const { data: pkg, error: pkgErr } = await supabase
     .from('customer_packages')
     .select('id, status, payment_status, sessions_used, sessions_total')
     .eq('id', customerPackageId)
     .eq('status', 'active')
-    .eq('payment_status', 'confirmed')
     .single();
 
   if (pkgErr || !pkg) {
     console.error('Package not found or invalid:', pkgErr);
-    return { valid: false, error: 'Package not active or not confirmed' };
+    return { valid: false, error: 'Package not active' };
   }
 
   // 2. Find service usage record
@@ -303,9 +303,9 @@ serve(async (req) => {
       const { data: pkg } = await supabase
         .from('customer_packages')
         .select('id, status, payment_status')
-        .eq('id', customer_package_id).eq('status', 'active').eq('payment_status', 'confirmed').single();
+        .eq('id', customer_package_id).eq('status', 'active').single();
       if (!pkg) {
-        return createErrorResponse(ErrorType.PACKAGE_INVALID, 'Package not active or not confirmed', 400);
+        return createErrorResponse(ErrorType.PACKAGE_INVALID, 'Package not active', 400);
       }
       const { data: pkgSvc } = await supabase
         .from('customer_package_services')
@@ -369,7 +369,9 @@ serve(async (req) => {
     const tenantSettings = tenant.settings || {};
     const extraSlotDuration = tenantSettings.extra_slot_duration || 5;
     const extraMinutes = (payload.extra_slots || 0) * extraSlotDuration;
-    const totalDuration = service.duration_minutes + extraMinutes;
+    const totalDuration = payload.custom_duration 
+      ? payload.custom_duration 
+      : service.duration_minutes + extraMinutes;
     const endsAtDate = new Date(startsAtDate.getTime() + (totalDuration * 60 * 1000));
     const ends_at = endsAtDate.toISOString();
 
@@ -469,8 +471,7 @@ serve(async (req) => {
           .select('id, status, payment_status')
           .eq('customer_id', customerId)
           .eq('tenant_id', tenant_id)
-          .eq('status', 'active')
-          .eq('payment_status', 'confirmed');
+          .eq('status', 'active');
 
         if (activePackages && activePackages.length > 0) {
           for (const pkg of activePackages) {

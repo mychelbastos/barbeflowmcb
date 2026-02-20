@@ -1297,6 +1297,7 @@ export type Database = {
           created_at: string
           customer_id: string
           duration_minutes: number
+          frequency: string
           id: string
           notes: string | null
           service_id: string | null
@@ -1312,6 +1313,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           duration_minutes: number
+          frequency?: string
           id?: string
           notes?: string | null
           service_id?: string | null
@@ -1327,6 +1329,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           duration_minutes?: number
+          frequency?: string
           id?: string
           notes?: string | null
           service_id?: string | null
@@ -2533,6 +2536,10 @@ export type Database = {
           p_staff_id: string
           p_tenant_id: string
         }
+        Returns: Json
+      }
+      reopen_comanda: {
+        Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
       }
       user_belongs_to_tenant: {

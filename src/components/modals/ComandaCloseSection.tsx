@@ -3,11 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Lock, Loader2, CheckCircle2 } from "lucide-react";
+import { Lock, Loader2, CheckCircle2, Unlock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { BookingItem } from "./ComandaItemsSection";
@@ -68,14 +67,58 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
     }
   };
 
+  const [reopening, setReopening] = useState(false);
+
+  const handleReopen = async () => {
+    setReopening(true);
+    try {
+      const { data, error } = await supabase.rpc("reopen_comanda", {
+        p_booking_id: bookingId,
+        p_tenant_id: tenantId,
+      });
+      if (error) throw error;
+      const result = data as any;
+      if (result && !result.success) throw new Error(result.error || "Erro ao reabrir");
+      const deleted = result?.commissions_deleted || 0;
+      toast.success(deleted > 0 ? `Comanda reaberta — ${deleted} comissão(ões) removida(s)` : "Comanda reaberta");
+      onClose();
+    } catch (err: any) {
+      toast.error("Erro ao reabrir comanda: " + (err.message || ""));
+    } finally {
+      setReopening(false);
+    }
+  };
+
   if (comandaClosed) {
     return (
-      <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-center gap-2 justify-center">
-        <Lock className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground font-medium">Comanda fechada</span>
-        <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-          Finalizada
-        </Badge>
+      <div className="space-y-3">
+        <div className="p-3 rounded-lg bg-muted/50 border border-border flex items-center gap-2 justify-center">
+          <Lock className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground font-medium">Comanda fechada</span>
+          <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+            Finalizada
+          </Badge>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full" disabled={reopening}>
+              {reopening ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+              Reabrir Comanda
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reabrir comanda?</AlertDialogTitle>
+              <AlertDialogDescription>
+                As comissões geradas serão removidas e poderão ser recalculadas ao fechar novamente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleReopen}>Reabrir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }

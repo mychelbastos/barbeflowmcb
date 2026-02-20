@@ -26,6 +26,16 @@ import {
 
 const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const FREQUENCY_LABELS: Record<string, string> = {
+  weekly: "Semanal",
+  biweekly: "Quinzenal",
+  monthly: "Mensal",
+};
+const FREQUENCY_SHORT: Record<string, string> = {
+  weekly: "Semanal",
+  biweekly: "Quinzenal",
+  monthly: "Mensal",
+};
 
 interface RecurringClient {
   id: string;
@@ -84,6 +94,7 @@ export default function RecurringClients() {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [isActive, setIsActive] = useState(true);
   const [notes, setNotes] = useState("");
+  const [frequency, setFrequency] = useState("weekly");
 
   const loadData = useCallback(async () => {
     if (!currentTenant) return;
@@ -163,6 +174,7 @@ export default function RecurringClients() {
     setStartDate(new Date().toISOString().slice(0, 10));
     setIsActive(true);
     setNotes("");
+    setFrequency("weekly");
     setEditingId(null);
   };
 
@@ -176,6 +188,7 @@ export default function RecurringClients() {
     setStartDate(r.start_date);
     setIsActive(r.active);
     setNotes(r.notes || "");
+    setFrequency((r as any).frequency || "weekly");
     setDialogOpen(true);
   };
 
@@ -204,6 +217,7 @@ export default function RecurringClients() {
         start_date: startDate,
         active: isActive,
         notes: notes.trim() || null,
+        frequency,
       };
 
       if (editingId) {
@@ -394,6 +408,20 @@ export default function RecurringClients() {
                 <Label>Observações (opcional)</Label>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: Corte + barba toda semana" className="resize-none" rows={2} />
               </div>
+
+              <div className="space-y-2">
+                <Label>Frequência</Label>
+                <Select value={frequency} onValueChange={setFrequency}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Semanal (toda semana)</SelectItem>
+                    <SelectItem value="biweekly">Quinzenal (a cada 2 semanas)</SelectItem>
+                    <SelectItem value="monthly">Mensal (1x por mês)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <DialogFooter>
@@ -458,6 +486,10 @@ export default function RecurringClients() {
                       <span>{getServiceName(r.service_id)}</span>
                       <span>•</span>
                       <span>{getStaffName(r.staff_id)}</span>
+                      <span>•</span>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {FREQUENCY_SHORT[(r as any).frequency || 'weekly']}
+                      </Badge>
                     </div>
                   </div>
                 </div>
