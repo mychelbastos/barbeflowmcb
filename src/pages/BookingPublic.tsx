@@ -1793,8 +1793,8 @@ END:VCALENDAR`;
                 </div>
               )}
 
-              {/* CPF — always show when phone is filled */}
-              {customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && (
+              {/* CPF — only required for online payment */}
+              {paymentMethod === 'online' && customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <label className="block text-sm text-zinc-400 mb-2">CPF *</label>
                   <Input
@@ -1815,7 +1815,7 @@ END:VCALENDAR`;
               <div className="pt-4 space-y-3">
                 <Button 
                   type="submit" 
-                  disabled={submitting || !customerName || !customerPhone || (!customerFound && (!customerEmail || !customerBirthday))}
+                  disabled={submitting || !customerName || !customerPhone || (!customerFound && (!customerEmail || !customerBirthday)) || (paymentMethod === 'online' && (!customerCpf || !isValidCpf(customerCpf)))}
                   className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium disabled:opacity-50"
                 >
                   {submitting ? (
