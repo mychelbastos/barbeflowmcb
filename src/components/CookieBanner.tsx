@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Cookie } from "lucide-react";
+import { Cookie, ShieldCheck } from "lucide-react";
 import { getConsentStatus, grantMarketingConsent, revokeMarketingConsent } from "@/utils/consent";
 
 export function CookieBanner() {
@@ -19,21 +19,32 @@ export function CookieBanner() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4">
-      <div className="max-w-3xl mx-auto bg-background border border-border rounded-2xl shadow-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <Cookie className="h-5 w-5 text-primary shrink-0 mt-0.5 sm:mt-0" />
-        <p className="text-sm text-muted-foreground flex-1">
-          Usamos cookies para melhorar sua experiência e medir resultados de campanhas.{" "}
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-2xl mx-4 mb-6 bg-background border border-border rounded-2xl shadow-2xl p-6 sm:p-8 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Cookie className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground">Sua privacidade importa</h3>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-2">
+          Utilizamos cookies para melhorar sua experiência, personalizar conteúdo e medir resultados de campanhas de marketing.
+        </p>
+        <p className="text-sm text-muted-foreground mb-6">
+          Para continuar navegando, escolha uma das opções abaixo.{" "}
           <a href="/privacidade" className="underline text-foreground hover:text-primary transition-colors">
-            Saiba mais
+            Política de Privacidade
           </a>
         </p>
-        <div className="flex gap-2 shrink-0 w-full sm:w-auto">
-          <Button variant="ghost" size="sm" onClick={handleDecline} className="flex-1 sm:flex-none">
-            Recusar
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" size="lg" onClick={handleDecline} className="flex-1 sm:flex-none">
+            Recusar cookies
           </Button>
-          <Button size="sm" onClick={handleAccept} className="flex-1 sm:flex-none">
-            Aceitar
+          <Button size="lg" onClick={handleAccept} className="flex-1 gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Aceitar e continuar
           </Button>
         </div>
       </div>
