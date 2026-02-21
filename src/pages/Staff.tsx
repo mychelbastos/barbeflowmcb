@@ -857,8 +857,8 @@ export default function Staff() {
             <AlertDialogTitle>Profissional adicional</AlertDialogTitle>
             <AlertDialogDescription>
               Você terá {extraCount + 1} profissional(is) ativo(s). Isso adicionará{" "}
-              <strong>R$ {(extraCount * 24.9).toFixed(2).replace(".", ",")}/mês</strong> por{" "}
-              {extraCount} profissional(is) extra(s) na sua assinatura (R$ 24,90 cada).
+              <strong>R$ {(extraCount * 14.9).toFixed(2).replace(".", ",")}/mês</strong> por{" "}
+              {extraCount} profissional(is) extra(s) na sua assinatura (R$ 14,90 cada).
               <br /><br />
               Deseja continuar?
             </AlertDialogDescription>

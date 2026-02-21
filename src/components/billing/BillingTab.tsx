@@ -188,7 +188,7 @@ export function BillingTab() {
                 </p>
                 {additionalProfessionals > 0 && (
                   <p className="text-muted-foreground text-xs mt-1">
-                    👥 {additionalProfessionals} profissional(is) adicional(is) — +R$ {(additionalProfessionals * 24.9).toFixed(2).replace(".", ",")}/mês
+                    👥 {additionalProfessionals} profissional(is) adicional(is) — +R$ {(additionalProfessionals * 14.9).toFixed(2).replace(".", ",")}/mês
                   </p>
                 )}
                 {subscription.cancel_at_period_end && (
