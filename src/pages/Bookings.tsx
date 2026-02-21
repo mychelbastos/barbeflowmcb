@@ -553,14 +553,17 @@ export default function Bookings() {
               ) : (
                 <>
                   {/* Mobile cards */}
-                  <div className="md:hidden space-y-3">
+                   <div className="md:hidden space-y-3">
                     {filteredBookings.length === 0 ? (
                       <p className="text-center py-8 text-muted-foreground text-sm">Nenhum agendamento</p>
                     ) : filteredBookings.map((booking) => (
                       <div key={booking.id} className="p-4 rounded-lg border border-border bg-card space-y-3">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: booking.service?.color || "#3B82F6" }} />
+                            <div
+                              className="w-1 h-10 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: booking.staff?.color || "#94a3b8" }}
+                            />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <p className="font-medium text-foreground truncate">{booking.customer?.name}</p>
@@ -575,7 +578,10 @@ export default function Bookings() {
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(parseISO(booking.starts_at), "HH:mm")} - {format(parseISO(booking.ends_at), "HH:mm")}</div>
-                          <div className="flex items-center gap-1"><User className="h-3 w-3" />{booking.staff?.name || "Qualquer"}</div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: booking.staff?.color || "#94a3b8" }} />
+                            <span>{booking.staff?.name || "Qualquer"}</span>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-border">
                           <span className="font-medium text-sm">R$ {((booking.service?.price_cents || 0) / 100).toFixed(2)}</span>
@@ -627,7 +633,12 @@ export default function Bookings() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>{booking.staff?.name || "Qualquer"}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: booking.staff?.color || "#94a3b8" }} />
+                                <span className="font-medium">{booking.staff?.name || "Qualquer"}</span>
+                              </div>
+                            </TableCell>
                             <TableCell>
                               <div className="text-sm">{format(parseISO(booking.starts_at), "HH:mm")} - {format(parseISO(booking.ends_at), "HH:mm")}</div>
                             </TableCell>
