@@ -56,40 +56,12 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Helper functions for duplicate detection
-const normalizePhoneNumbers = (phone: string): string => {
+// Helper: normalize phone for comparison
+const normalizePhoneForCheck = (phone: string): string => {
   let digits = phone.replace(/\D/g, '');
   if (digits.startsWith('55') && digits.length >= 12) digits = digits.slice(2);
   if (digits.length === 10) digits = digits.slice(0, 2) + '9' + digits.slice(2);
   return digits;
-};
-
-const normalizeNameForComparison = (name: string): string => {
-  return name.toLowerCase().trim();
-};
-
-const isCustomerDuplicate = (
-  name: string, 
-  phone: string, 
-  customers: any[], 
-  excludeId?: string
-): { isDuplicate: boolean; existingCustomer?: any } => {
-  const normalizedName = normalizeNameForComparison(name);
-  const normalizedPhone = normalizePhoneNumbers(phone);
-  
-  const existingCustomer = customers.find(customer => {
-    if (excludeId && customer.id === excludeId) return false;
-    
-    const customerName = normalizeNameForComparison(customer.name);
-    const customerPhone = normalizePhoneNumbers(customer.phone);
-    
-    return customerName === normalizedName && customerPhone === normalizedPhone;
-  });
-  
-  return {
-    isDuplicate: !!existingCustomer,
-    existingCustomer
-  };
 };
 
 const PAGE_SIZE = 50;
@@ -115,6 +87,11 @@ export default function Customers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Duplicate warning states
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateNames, setDuplicateNames] = useState('');
+  const [pendingAction, setPendingAction] = useState<'add' | 'edit'>('add');
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '' });
@@ -283,44 +260,39 @@ export default function Customers() {
     setShowEditModal(true);
   };
 
-  const handleAddCustomer = async () => {
+  // Check for duplicate phone in DB
+  const checkDuplicatePhone = async (phone: string, excludeId?: string): Promise<string[] | null> => {
+    if (!currentTenant) return null;
+    const normalized = normalizePhoneForCheck(phone);
+    if (!normalized) return null;
+
+    let query = supabase
+      .from('customers')
+      .select('name')
+      .eq('tenant_id', currentTenant.id)
+      .eq('phone', normalized);
+
+    if (excludeId) {
+      query = query.neq('id', excludeId);
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      return data.map((c: any) => c.name);
+    }
+    return null;
+  };
+
+  const executeAddCustomer = async () => {
     if (!currentTenant) return;
-    
-    const trimmedName = addForm.name.trim();
-    const trimmedPhone = addForm.phone.trim();
-    
-    if (!trimmedName || !trimmedPhone) {
-      toast({
-        title: "Erro",
-        description: "Nome e telefone são obrigatórios",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { isDuplicate, existingCustomer } = isCustomerDuplicate(
-      trimmedName,
-      trimmedPhone,
-      customers
-    );
-
-    if (isDuplicate) {
-      toast({
-        title: "Cliente duplicado",
-        description: `Já existe um cliente com esse nome e telefone: ${existingCustomer.name}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSaving(true);
     try {
-      const normalizedPhone = trimmedPhone.replace(/\D/g, '');
+      const normalizedPhone = addForm.phone.trim().replace(/\D/g, '');
       const { error } = await supabase
         .from('customers')
         .insert({
           tenant_id: currentTenant.id,
-          name: trimmedName,
+          name: addForm.name.trim(),
           phone: normalizedPhone,
           email: addForm.email.trim() || null,
           birthday: addForm.birthday || null,
@@ -341,50 +313,41 @@ export default function Customers() {
     }
   };
 
+  const handleAddCustomer = async () => {
+    if (!currentTenant) return;
+    const trimmedName = addForm.name.trim();
+    const trimmedPhone = addForm.phone.trim();
+
+    if (!trimmedName || !trimmedPhone) {
+      toast({ title: "Erro", description: "Nome e telefone são obrigatórios", variant: "destructive" });
+      return;
+    }
+
+    const names = await checkDuplicatePhone(trimmedPhone);
+    if (names) {
+      setDuplicateNames(names.join(', '));
+      setPendingAction('add');
+      setShowDuplicateWarning(true);
+      return;
+    }
+
+    await executeAddCustomer();
+  };
+
   const handleDeleteClick = (customer: any) => {
     setCustomerToDelete(customer);
     setShowDeleteDialog(true);
   };
 
-  const handleSaveEdit = async () => {
+  const executeEditCustomer = async () => {
     if (!customerToEdit || !currentTenant) return;
-    
-    const trimmedName = editForm.name.trim();
-    const trimmedPhone = editForm.phone.trim();
-    
-    if (!trimmedName || !trimmedPhone) {
-      toast({
-        title: "Erro",
-        description: "Nome e telefone são obrigatórios",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check for duplicates
-    const { isDuplicate, existingCustomer } = isCustomerDuplicate(
-      trimmedName,
-      trimmedPhone,
-      customers,
-      customerToEdit.id
-    );
-
-    if (isDuplicate) {
-      toast({
-        title: "Cliente duplicado",
-        description: `Já existe um cliente com esse nome e telefone: ${existingCustomer.name}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSaving(true);
     try {
       const { error } = await supabase
         .from('customers')
         .update({
-          name: trimmedName,
-          phone: trimmedPhone,
+          name: editForm.name.trim(),
+          phone: editForm.phone.trim(),
           email: editForm.email.trim() || null,
           birthday: editForm.birthday || null,
           notes: editForm.notes.trim() || null,
@@ -394,22 +357,44 @@ export default function Customers() {
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Cliente atualizado com sucesso",
-      });
-
+      toast({ title: "Sucesso", description: "Cliente atualizado com sucesso" });
       setShowEditModal(false);
       loadCustomers(0, true);
     } catch (error) {
       console.error('Error updating customer:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar cliente",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Erro ao atualizar cliente", variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!customerToEdit || !currentTenant) return;
+    const trimmedName = editForm.name.trim();
+    const trimmedPhone = editForm.phone.trim();
+
+    if (!trimmedName || !trimmedPhone) {
+      toast({ title: "Erro", description: "Nome e telefone são obrigatórios", variant: "destructive" });
+      return;
+    }
+
+    const names = await checkDuplicatePhone(trimmedPhone, customerToEdit.id);
+    if (names) {
+      setDuplicateNames(names.join(', '));
+      setPendingAction('edit');
+      setShowDuplicateWarning(true);
+      return;
+    }
+
+    await executeEditCustomer();
+  };
+
+  const handleConfirmDuplicate = async () => {
+    setShowDuplicateWarning(false);
+    if (pendingAction === 'add') {
+      await executeAddCustomer();
+    } else {
+      await executeEditCustomer();
     }
   };
 
@@ -745,7 +730,25 @@ export default function Customers() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Details Sheet/Dialog */}
+      {/* Duplicate Phone Warning */}
+      <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Telefone já cadastrado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Já existe(m) cliente(s) com este telefone: <strong>{duplicateNames}</strong>. 
+              Deseja cadastrar mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDuplicate}>
+              Cadastrar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
