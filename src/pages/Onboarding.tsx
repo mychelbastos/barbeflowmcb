@@ -232,7 +232,7 @@ export default function Onboarding() {
         </div>
 
         <div className="text-center space-y-1">
-          <p className="text-xs text-muted-foreground font-medium">+R$ 24,90/mês por profissional adicional</p>
+          <p className="text-xs text-muted-foreground font-medium">1 profissional incluso · +R$ 14,90/mês por profissional adicional</p>
           <p className="text-xs text-muted-foreground/70">
             Após 14 dias, a cobrança é automática. Cancele quando quiser pelo painel.
           </p>
