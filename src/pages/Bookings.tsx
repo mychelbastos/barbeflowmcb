@@ -1,6 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { BookingDetailsModal } from "@/components/modals/BookingDetailsModal";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { NoTenantState } from "@/components/NoTenantState";
@@ -85,10 +94,11 @@ export default function Bookings() {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ service_id: "", staff_id: "", date: "", time: "" });
+  const [editForm, setEditForm] = useState({ service_id: "", staff_id: "", date: "", time: "", end_time: "" });
   const [editLoading, setEditLoading] = useState(false);
   const [editServices, setEditServices] = useState<any[]>([]);
   const [editStaff, setEditStaff] = useState<any[]>([]);
+  const [conflictWarning, setConflictWarning] = useState<{ open: boolean; conflicts: any[] }>({ open: false, conflicts: [] });
   
 
   // List view state
@@ -308,11 +318,13 @@ export default function Bookings() {
       if (!realId) return;
       setSelectedBooking({ ...selectedBooking, id: realId });
     }
+    const endTime = format(parseISO(selectedBooking.ends_at), "HH:mm");
     setEditForm({
       service_id: selectedBooking.service_id,
       staff_id: selectedBooking.staff_id || "none",
       date: format(parseISO(selectedBooking.starts_at), "yyyy-MM-dd"),
       time: format(parseISO(selectedBooking.starts_at), "HH:mm"),
+      end_time: endTime,
     });
     // Load services and staff for editing
     const [sRes, stRes] = await Promise.all([
@@ -328,15 +340,39 @@ export default function Bookings() {
     if (!selectedBooking || !currentTenant) return;
     setEditLoading(true);
     try {
-      const service = editServices.find((s) => s.id === editForm.service_id);
       const startsAt = new Date(`${editForm.date}T${editForm.time}`);
-      const endsAt = new Date(startsAt.getTime() + (service?.duration_minutes || 30) * 60000);
+      const endsAt = new Date(`${editForm.date}T${editForm.end_time}`);
+
+      if (endsAt <= startsAt) {
+        toast({ title: "Erro", description: "Horário de término deve ser após o início", variant: "destructive" });
+        setEditLoading(false);
+        return;
+      }
+
+      // Check for conflicts
+      const staffId = editForm.staff_id === "none" ? null : editForm.staff_id;
+      if (staffId) {
+        const { data: conflicts } = await supabase
+          .from("bookings")
+          .select("id, starts_at, ends_at, customer:customers(name)")
+          .eq("staff_id", staffId)
+          .neq("id", selectedBooking.id)
+          .neq("status", "cancelled")
+          .lt("starts_at", endsAt.toISOString())
+          .gt("ends_at", startsAt.toISOString());
+
+        if (conflicts && conflicts.length > 0) {
+          setConflictWarning({ open: true, conflicts });
+          setEditLoading(false);
+          return;
+        }
+      }
 
       const { error } = await supabase
         .from("bookings")
         .update({
           service_id: editForm.service_id,
-          staff_id: editForm.staff_id === "none" ? null : editForm.staff_id,
+          staff_id: staffId,
           starts_at: startsAt.toISOString(),
           ends_at: endsAt.toISOString(),
         })
@@ -348,7 +384,6 @@ export default function Bookings() {
       setShowDetails(false);
       setEditMode(false);
       refetch();
-      // Data refreshes via refetch() above
     } catch (err: any) {
       toast({ title: "Erro", description: err.message || "Erro ao atualizar", variant: "destructive" });
     } finally {
@@ -657,7 +692,19 @@ export default function Bookings() {
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium">Serviço</Label>
-                <Select value={editForm.service_id} onValueChange={(v) => setEditForm((f) => ({ ...f, service_id: v }))}>
+                <Select value={editForm.service_id} onValueChange={(v) => {
+                  const svc = editServices.find((s) => s.id === v);
+                  setEditForm((f) => {
+                    if (svc && f.time) {
+                      const [h, m] = f.time.split(":").map(Number);
+                      const endMins = h * 60 + m + (svc.duration_minutes || 30);
+                      const endH = Math.floor(endMins / 60).toString().padStart(2, "0");
+                      const endM = (endMins % 60).toString().padStart(2, "0");
+                      return { ...f, service_id: v, end_time: `${endH}:${endM}` };
+                    }
+                    return { ...f, service_id: v };
+                  });
+                }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {editServices.map((s) => (
@@ -678,14 +725,31 @@ export default function Bookings() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-sm font-medium">Data</Label>
                   <Input type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Horário</Label>
-                  <Input type="time" value={editForm.time} onChange={(e) => setEditForm((f) => ({ ...f, time: e.target.value }))} />
+                  <Label className="text-sm font-medium">Início</Label>
+                  <Input type="time" value={editForm.time} onChange={(e) => {
+                    const newTime = e.target.value;
+                    setEditForm((f) => {
+                      const svc = editServices.find((s) => s.id === f.service_id);
+                      if (svc && newTime) {
+                        const [h, m] = newTime.split(":").map(Number);
+                        const endMins = h * 60 + m + (svc.duration_minutes || 30);
+                        const endH = Math.floor(endMins / 60).toString().padStart(2, "0");
+                        const endM = (endMins % 60).toString().padStart(2, "0");
+                        return { ...f, time: newTime, end_time: `${endH}:${endM}` };
+                      }
+                      return { ...f, time: newTime };
+                    });
+                  }} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Término</Label>
+                  <Input type="time" value={editForm.end_time} onChange={(e) => setEditForm((f) => ({ ...f, end_time: e.target.value }))} />
                 </div>
               </div>
               <div className="flex gap-2 pt-2 border-t border-border">
@@ -700,6 +764,35 @@ export default function Bookings() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Conflict Warning Dialog */}
+      <AlertDialog open={conflictWarning.open} onOpenChange={(open) => setConflictWarning((c) => ({ ...c, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Conflito de horário
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Não é possível salvar. Os seguintes agendamentos ocupam este horário:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  {conflictWarning.conflicts.map((c) => (
+                    <li key={c.id} className="text-sm">
+                      <span className="font-medium">{(c.customer as any)?.name || "Cliente"}</span>
+                      {" — "}
+                      {format(parseISO(c.starts_at), "HH:mm")} - {format(parseISO(c.ends_at), "HH:mm")}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Entendi</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
