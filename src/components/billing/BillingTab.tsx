@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription, PLANS } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,7 @@ import {
 
 export function BillingTab() {
   const { subscription, loading, hasActiveSubscription, isTrialing, isPastDue, needsSubscription, checkSubscription, planName } = useSubscription();
+  const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export function BillingTab() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
+  const [additionalProfessionals, setAdditionalProfessionals] = useState(0);
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
@@ -42,7 +45,10 @@ export function BillingTab() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (hasActiveSubscription || isPastDue) loadInvoices();
+    if (hasActiveSubscription || isPastDue) {
+      loadInvoices();
+      loadAdditionalProfessionals();
+    }
   }, [hasActiveSubscription, isPastDue]);
 
   const loadInvoices = async () => {
@@ -58,6 +64,20 @@ export function BillingTab() {
       console.error("Error loading invoices:", err);
     } finally {
       setInvoicesLoading(false);
+    }
+  };
+
+  const loadAdditionalProfessionals = async () => {
+    if (!currentTenant) return;
+    try {
+      const { data } = await supabase
+        .from("stripe_subscriptions")
+        .select("additional_professionals")
+        .eq("tenant_id", currentTenant.id)
+        .maybeSingle();
+      setAdditionalProfessionals(data?.additional_professionals || 0);
+    } catch (err) {
+      console.error("Error loading additional professionals:", err);
     }
   };
 
@@ -166,6 +186,11 @@ export function BillingTab() {
                 <p className="text-muted-foreground text-xs mt-1">
                   Taxa de transação: {plan.commission}
                 </p>
+                {additionalProfessionals > 0 && (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    👥 {additionalProfessionals} profissional(is) adicional(is) — +R$ {(additionalProfessionals * 24.9).toFixed(2).replace(".", ",")}/mês
+                  </p>
+                )}
                 {subscription.cancel_at_period_end && (
                   <p className="text-amber-400 text-sm mt-1">⚠️ Cancelamento programado para {endDate}</p>
                 )}

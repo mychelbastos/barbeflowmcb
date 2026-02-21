@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.remove-custom-domain]
 verify_jwt = false
+
+[functions.update-subscription-quantity]
+verify_jwt = false

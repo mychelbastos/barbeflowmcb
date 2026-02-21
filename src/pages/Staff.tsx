@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/useSubscription";
 import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,6 +74,7 @@ type StaffFormData = z.infer<typeof staffSchema>;
 export default function Staff() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
+  const { hasActiveSubscription } = useSubscription();
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,10 @@ export default function Staff() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingAction, setPendingAction] = useState<{ type: "save" | "activate"; data: any } | null>(null);
+  const [extraConfirmOpen, setExtraConfirmOpen] = useState(false);
+  const [extraCount, setExtraCount] = useState(0);
+  const [updatingSubscription, setUpdatingSubscription] = useState(false);
 
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffSchema),
@@ -169,7 +175,79 @@ export default function Staff() {
     setPhotoPreview(URL.createObjectURL(file));
   };
 
+  const getActiveStaffCount = (excludeId?: string, includeNew?: boolean) => {
+    let count = staff.filter(s => s.active && s.id !== excludeId).length;
+    if (includeNew) count++;
+    return count;
+  };
+
+  const updateSubscriptionQuantity = async (additionalCount: number) => {
+    const { data, error } = await supabase.functions.invoke("update-subscription-quantity", {
+      body: { additional_count: additionalCount },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
+  const checkAndConfirmExtra = (actionType: "save" | "activate", actionData: any, futureActiveCount: number) => {
+    const extras = Math.max(0, futureActiveCount - 1);
+    if (extras > 0 && hasActiveSubscription) {
+      setExtraCount(extras);
+      setPendingAction({ type: actionType, data: actionData });
+      setExtraConfirmOpen(true);
+      return true; // needs confirmation
+    }
+    return false; // no confirmation needed
+  };
+
+  const handleExtraConfirmed = async () => {
+    setExtraConfirmOpen(false);
+    if (!pendingAction) return;
+
+    setUpdatingSubscription(true);
+    try {
+      if (pendingAction.type === "save") {
+        await executeSave(pendingAction.data);
+      } else if (pendingAction.type === "activate") {
+        await executeToggle(pendingAction.data);
+      }
+      // Update subscription quantity
+      await updateSubscriptionQuantity(extraCount);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Erro ao atualizar assinatura", variant: "destructive" });
+    } finally {
+      setUpdatingSubscription(false);
+      setPendingAction(null);
+    }
+  };
+
   const handleSubmit = async (values: StaffFormData) => {
+    if (!currentTenant) return;
+
+    const isNewStaff = !editingStaff;
+    const isActivating = editingStaff && !editingStaff.active && values.active;
+    
+    if ((isNewStaff && values.active) || isActivating) {
+      const futureCount = getActiveStaffCount(editingStaff?.id, true);
+      if (checkAndConfirmExtra("save", values, futureCount)) return;
+    }
+
+    await executeSave(values);
+
+    // If deactivating, reduce subscription quantity
+    if (editingStaff && editingStaff.active && !values.active && hasActiveSubscription) {
+      const futureCount = getActiveStaffCount(editingStaff.id, false);
+      const extras = Math.max(0, futureCount - 1);
+      try {
+        await updateSubscriptionQuantity(extras);
+      } catch (err) {
+        console.error("Failed to update subscription quantity:", err);
+      }
+    }
+  };
+
+  const executeSave = async (values: StaffFormData) => {
     if (!currentTenant) return;
 
     try {
@@ -183,7 +261,6 @@ export default function Staff() {
 
         if (error) throw error;
 
-        // Upload photo if changed
         const photoUrl = await uploadPhoto(editingStaff.id);
         if (photoUrl) {
           await supabase.from('staff').update({ photo_url: photoUrl }).eq('id', editingStaff.id);
@@ -284,6 +361,7 @@ export default function Staff() {
 
   const handleDelete = async (staffId: string, staffName: string) => {
     try {
+      const deletedMember = staff.find(s => s.id === staffId);
       const { error } = await supabase
         .from('staff')
         .delete()
@@ -296,6 +374,17 @@ export default function Staff() {
         description: `${staffName} foi removido da equipe.`,
       });
 
+      // Update subscription if deleted member was active
+      if (deletedMember?.active && hasActiveSubscription) {
+        const futureCount = getActiveStaffCount(staffId, false);
+        const extras = Math.max(0, futureCount - 1);
+        try {
+          await updateSubscriptionQuantity(extras);
+        } catch (err) {
+          console.error("Failed to update subscription quantity:", err);
+        }
+      }
+
       loadData();
     } catch (error: any) {
       toast({
@@ -307,18 +396,42 @@ export default function Staff() {
   };
 
   const toggleStaffStatus = async (staffMember: any) => {
+    const willBeActive = !staffMember.active;
+    
+    if (willBeActive) {
+      // Activating - check if extras needed
+      const futureCount = getActiveStaffCount(undefined, false) + 1;
+      if (checkAndConfirmExtra("activate", staffMember, futureCount)) return;
+    }
+
+    await executeToggle(staffMember);
+  };
+
+  const executeToggle = async (staffMember: any) => {
+    const willBeActive = !staffMember.active;
     try {
       const { error } = await supabase
         .from('staff')
-        .update({ active: !staffMember.active })
+        .update({ active: willBeActive })
         .eq('id', staffMember.id);
 
       if (error) throw error;
 
       toast({
         title: "Status atualizado",
-        description: `Profissional ${!staffMember.active ? 'ativado' : 'desativado'} com sucesso.`,
+        description: `Profissional ${willBeActive ? 'ativado' : 'desativado'} com sucesso.`,
       });
+
+      // If deactivating, reduce subscription quantity
+      if (!willBeActive && hasActiveSubscription) {
+        const futureCount = getActiveStaffCount(staffMember.id, false);
+        const extras = Math.max(0, futureCount - 1);
+        try {
+          await updateSubscriptionQuantity(extras);
+        } catch (err) {
+          console.error("Failed to update subscription quantity:", err);
+        }
+      }
 
       loadData();
     } catch (error: any) {
@@ -736,6 +849,31 @@ export default function Staff() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Extra Professional Confirmation Dialog */}
+      <AlertDialog open={extraConfirmOpen} onOpenChange={setExtraConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Profissional adicional</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você terá {extraCount + 1} profissional(is) ativo(s). Isso adicionará{" "}
+              <strong>R$ {(extraCount * 24.9).toFixed(2).replace(".", ",")}/mês</strong> por{" "}
+              {extraCount} profissional(is) extra(s) na sua assinatura (R$ 24,90 cada).
+              <br /><br />
+              Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updatingSubscription} onClick={() => setPendingAction(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleExtraConfirmed} disabled={updatingSubscription}>
+              {updatingSubscription && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {selectedStaffForSchedule && (
         <StaffScheduleManager

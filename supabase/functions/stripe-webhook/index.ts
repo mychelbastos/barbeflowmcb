@@ -85,6 +85,16 @@ serve(async (req) => {
         const interval = sub.items.data[0]?.price?.recurring?.interval || "month";
         const { plan_name, commission_rate } = getPlanInfo(priceId);
 
+        // Count additional professionals from subscription items
+        const additionalPriceId = Deno.env.get("STRIPE_PRICE_ADDITIONAL_PROFESSIONAL") || "";
+        let additionalProfessionals = 0;
+        if (additionalPriceId) {
+          const addItem = sub.items.data.find((item: any) => item.price?.id === additionalPriceId);
+          if (addItem) {
+            additionalProfessionals = addItem.quantity || 0;
+          }
+        }
+
         await supabaseAdmin.from("stripe_subscriptions").upsert({
           tenant_id: tenantId,
           stripe_subscription_id: sub.id,
@@ -99,6 +109,7 @@ serve(async (req) => {
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           cancel_at_period_end: sub.cancel_at_period_end,
           canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+          additional_professionals: additionalProfessionals,
           updated_at: new Date().toISOString(),
         }, { onConflict: "tenant_id" });
 
