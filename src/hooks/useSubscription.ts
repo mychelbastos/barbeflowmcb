@@ -13,7 +13,6 @@ export interface SubscriptionData {
 }
 
 const SHARED_FEATURES = [
-  "1 profissional incluso (extras a partir de R$ 14,90/mês cada)",
   "Agendamento online",
   "Gestão de clientes",
   "Financeiro completo",
