@@ -63,7 +63,8 @@ export function ScheduleGrid({
   );
 
   const dateStr = format(date, "yyyy-MM-dd");
-  const slotDuration = settings.slot_duration || 15;
+  // Admin grid always uses 15min resolution for squeeze-in visibility
+  const slotDuration = 15;
 
   // Generate time slots
   const slots = useMemo(() => {
