@@ -351,6 +351,10 @@ const Dashboard = () => {
           open={!!selectedBooking}
           onOpenChange={(open) => { if (!open) { setSelectedBooking(null); } }}
           showActions
+          onEdit={() => {
+            setSelectedBooking(null);
+            navigate(dashPath("/app/bookings"));
+          }}
           onStatusChange={updateBookingStatus}
         />
       )}
