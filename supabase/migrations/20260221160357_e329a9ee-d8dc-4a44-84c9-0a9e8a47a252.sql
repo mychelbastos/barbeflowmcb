@@ -1,0 +1,1 @@
+ALTER TABLE public.services ADD COLUMN public boolean NOT NULL DEFAULT true;

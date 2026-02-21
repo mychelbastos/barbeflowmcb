@@ -71,6 +71,7 @@ const serviceSchema = z.object({
   price_cents: z.number().min(0, "Preço deve ser positivo"),
   color: z.string().min(1, "Cor é obrigatória"),
   active: z.boolean(),
+  public: z.boolean(),
 });
 
 type ServiceFormData = z.infer<typeof serviceSchema>;
@@ -147,6 +148,7 @@ export default function Services() {
       price_cents: 0,
       color: "#3B82F6",
       active: true,
+      public: true,
     },
   });
 
@@ -272,6 +274,7 @@ export default function Services() {
       price_cents: service.price_cents,
       color: service.color,
       active: service.active,
+      public: service.public ?? true,
     });
     setPhotoPreview(service.photo_url || null);
     setPhotoFile(null);
@@ -397,6 +400,9 @@ export default function Services() {
                   </div>
                 )}
                 <div className="flex items-center space-x-2">
+                  {!service.public && (
+                    <Badge variant="outline" className="text-xs">Oculto</Badge>
+                  )}
                   <Switch
                     checked={service.active}
                     onCheckedChange={() => toggleServiceStatus(service)}
@@ -698,7 +704,28 @@ export default function Services() {
                     <div>
                       <FormLabel>Serviço Ativo</FormLabel>
                       <p className="text-xs text-muted-foreground">
-                        Serviços ativos ficam visíveis para agendamento
+                        Serviços ativos ficam disponíveis para agendamento interno
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="public"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between">
+                    <div>
+                      <FormLabel>Visível na Página Pública</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Exibir este serviço na página de agendamento online
                       </p>
                     </div>
                     <FormControl>

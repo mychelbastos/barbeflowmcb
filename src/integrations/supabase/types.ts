@@ -1493,6 +1493,7 @@ export type Database = {
           name: string
           photo_url: string | null
           price_cents: number
+          public: boolean
           tenant_id: string
           updated_at: string
         }
@@ -1506,6 +1507,7 @@ export type Database = {
           name: string
           photo_url?: string | null
           price_cents?: number
+          public?: boolean
           tenant_id: string
           updated_at?: string
         }
@@ -1519,6 +1521,7 @@ export type Database = {
           name?: string
           photo_url?: string | null
           price_cents?: number
+          public?: boolean
           tenant_id?: string
           updated_at?: string
         }

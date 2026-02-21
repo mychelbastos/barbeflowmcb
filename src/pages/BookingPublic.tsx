@@ -199,6 +199,7 @@ const BookingPublic = () => {
         .select('*')
         .eq('tenant_id', tenantData.id)
         .eq('active', true)
+        .eq('public', true)
         .order('name'),
       
       supabase
