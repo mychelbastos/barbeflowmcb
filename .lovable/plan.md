@@ -1,53 +1,99 @@
 
 
-## Remover mencao ao Mercado Pago no checkout de servicos
+# Cobrança por Profissional Adicional via Stripe
 
-### O que muda
+## Visao Geral
 
-Substituir o badge "Pagamento seguro via Mercado Pago" (4 ocorrencias) no `MercadoPagoCheckout.tsx` pelo mesmo estilo usado na aba de assinaturas (`SubscriptionCardPayment.tsx`).
+Implementar a cobranca automatica de R$24,90/mes por profissional ativo alem do 1o incluso no plano. O admin recebe uma confirmacao antes de qualquer alteracao na assinatura.
 
-### De (atual)
+---
 
+## Passo 1 -- Criar Produto/Preco no Stripe
+
+Criar via ferramentas do Stripe:
+- **Produto**: "Profissional Adicional"
+- **Preco**: R$24,90/mes (2490 centavos BRL), recorrente mensal
+- Guardar o `price_id` resultante como constante no codigo
+
+---
+
+## Passo 2 -- Edge Function: `update-subscription-quantity`
+
+Nova edge function que:
+1. Autentica o usuario e identifica o tenant
+2. Busca a assinatura ativa no Stripe (via `stripe_customers`)
+3. Recebe o numero de profissionais extras desejado (`additional_count`)
+4. Usa `stripe.subscriptions.update()` para adicionar/atualizar o item de preco de profissional adicional com `quantity = additional_count`
+5. Se `additional_count === 0`, remove o item
+6. Atualiza `stripe_subscriptions.additional_professionals` no banco
+
+---
+
+## Passo 3 -- Frontend: Confirmacao ao Cadastrar/Ativar Profissional
+
+Na pagina **Staff** (`src/pages/Staff.tsx`):
+
+1. Ao salvar ou ativar um profissional, antes de confirmar:
+   - Contar quantos profissionais ativos o tenant tera apos a acao
+   - Se ultrapassar 1 (o incluso), exibir um `AlertDialog`:
+     - "Voce tera X profissionais ativos. Isso adicionara R$24,90/mes por Y profissional(is) extra(s) na sua assinatura. Deseja continuar?"
+   - Se confirmar: salva o profissional e chama `update-subscription-quantity` com a nova contagem
+   - Se cancelar: nao salva
+
+2. Ao **desativar/excluir** um profissional:
+   - Recalcular os extras e chamar `update-subscription-quantity` para reduzir
+
+---
+
+## Passo 4 -- Webhook: Sincronizar `additional_professionals`
+
+No `stripe-webhook/index.ts`, nos eventos `customer.subscription.updated`:
+- Verificar se existe um item com o price_id de profissional adicional
+- Salvar a `quantity` em `stripe_subscriptions.additional_professionals`
+
+---
+
+## Passo 5 -- BillingTab: Exibir Profissionais Extras
+
+No `BillingTab.tsx`, quando a assinatura estiver ativa:
+- Buscar `additional_professionals` da tabela `stripe_subscriptions`
+- Exibir: "X profissional(is) adicional(is) -- +R$ XX,XX/mes"
+- Incluir no valor total exibido da proxima cobranca
+
+---
+
+## Passo 6 -- Onboarding/Landing: Manter Texto Atual
+
+O texto "+R$24,90/mes por profissional adicional" ja existe. Nenhuma alteracao necessaria.
+
+---
+
+## Detalhes Tecnicos
+
+### Stripe Subscription com Multiplos Itens
+
+A assinatura tera 2 line items:
+1. Plano base (Essencial ou Profissional) -- quantity: 1
+2. Profissional adicional -- quantity: N (0 a muitos)
+
+O Stripe calcula automaticamente o prorate ao alterar quantidades mid-cycle.
+
+### Fluxo no `create-checkout`
+
+No checkout inicial, nao incluir o item de profissional adicional (o tenant comeca com 0 extras). O item sera adicionado depois via `update-subscription-quantity` conforme profissionais sao cadastrados.
+
+### Mapeamento de Precos
+
+Adicionar ao `useSubscription.ts` e nas edge functions:
 ```
-<svg shield-icon />
-<span>Pagamento seguro via Mercado Pago</span>
+STRIPE_PRICE_ADDITIONAL_PROFESSIONAL = "price_xxx" (a ser criado)
 ```
 
-### Para (novo - mesmo padrao da assinatura)
+Armazenar como secret do Supabase (`STRIPE_PRICE_ADDITIONAL_PROFESSIONAL`) para flexibilidade.
 
-```
-<div className="flex items-center justify-center gap-4 pt-1">
-  <div className="flex items-center gap-1.5 text-muted-foreground/60">
-    <Lock className="h-3 w-3" />
-    <span className="text-[11px]">Criptografado</span>
-  </div>
-  <div className="w-px h-3 bg-border" />
-  <div className="flex items-center gap-1.5 text-muted-foreground/60">
-    <Shield className="h-3 w-3" />
-    <span className="text-[11px]">Pagamento seguro</span>
-  </div>
-</div>
-```
+### Protecao contra estados inconsistentes
 
-### Locais alterados (4 ocorrencias no mesmo arquivo)
-
-| Arquivo | Linhas | Contexto |
-|---|---|---|
-| `src/components/MercadoPagoCheckout.tsx` | ~532-538 | Checkout redirect |
-| `src/components/MercadoPagoCheckout.tsx` | ~576-582 | Selecao de metodo (cartao/PIX) |
-| `src/components/MercadoPagoCheckout.tsx` | ~645-651 | Tela PIX (QR code) |
-| `src/components/MercadoPagoCheckout.tsx` | ~710-716 | Formulario de cartao |
-
-Tambem sera necessario adicionar `Lock` e `Shield` aos imports do lucide-react (ja importados parcialmente).
-
-### Texto do botao de redirect
-
-A linha 530 "Pagar com Mercado Pago" sera alterada para "Pagar agora" e a linha 520 "Voce sera redirecionado para o Mercado Pago..." sera alterada para "Voce sera redirecionado para concluir o pagamento."
-
-### Resumo
-
-- 4 badges substituidos pelo padrao visual da assinatura
-- 2 textos que mencionam "Mercado Pago" atualizados
-- Import de `Lock` e `Shield` adicionado
-- Nenhuma alteracao de logica ou backend
+- Se o tenant nao tiver assinatura ativa, o cadastro de profissionais continua funcionando normalmente (sem cobrar extras)
+- A cobranca so se aplica a tenants com assinatura Stripe ativa
+- Se a atualizacao no Stripe falhar, reverter a ativacao do profissional e mostrar erro
 
