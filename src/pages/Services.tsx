@@ -531,7 +531,7 @@ export default function Services() {
 
       {/* Service Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingService ? 'Editar Serviço' : 'Novo Serviço'}
