@@ -1705,16 +1705,19 @@ END:VCALENDAR`;
                     onChange={(e) => {
                       const formatted = formatPhoneInput(e.target.value);
                       setCustomerPhone(formatted);
-                      setCustomerFound(false);
-                      setCustomerName('');
-                      setCustomerEmail('');
-                      setCustomerBirthday('');
-                      const digits = formatted.replace(/\D/g, '');
-                      if (digits.length >= 10) {
-                        lookupCustomerByPhone(formatted);
-                        checkActivePackage(formatted);
-                        checkActiveSubscription(formatted);
-                        fetchCustomerBenefits(formatted);
+                      const newDigits = formatted.replace(/\D/g, '');
+                      const prevDigits = customerPhone.replace(/\D/g, '');
+                      if (newDigits !== prevDigits) {
+                        setCustomerFound(false);
+                        setCustomerName('');
+                        setCustomerEmail('');
+                        setCustomerBirthday('');
+                        if (newDigits.length >= 10) {
+                          lookupCustomerByPhone(formatted);
+                          checkActivePackage(formatted);
+                          checkActiveSubscription(formatted);
+                          fetchCustomerBenefits(formatted);
+                        }
                       }
                     }}
                     required
