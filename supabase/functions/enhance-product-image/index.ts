@@ -80,32 +80,42 @@ serve(async (req) => {
 
     // Build prompt based on table type
     const prompts: Record<AllowedTable, string> = {
-      products: `Transform this product photo into a professional premium product image. Make it look like a premium e-commerce product shot with:
-- Dark moody background with warm amber/gold lighting
-- Professional studio-quality lighting on the product
-- Subtle premium elements (wood texture, leather, warm tones)
-- Sharp focus and high contrast
-- The product "${item.name}" should be the hero, centered and prominent
-Keep the actual product exactly as it is, only enhance the presentation and background.`,
-      services: `Transform this service photo into a professional marketing image. Make it look like a premium promotional shot with:
-- Professional studio lighting with warm, inviting tones
-- Clean, elegant atmosphere
-- Sharp focus on the main subject
-- High-end professional aesthetic
-- The service "${item.name}" should be clearly represented
-Keep the main subject as is, enhance lighting, background and overall quality.`,
-      service_packages: `Transform this image into a professional promotional photo for a service package. Make it look premium and appealing with:
-- Clean, modern aesthetic with warm tones
-- Professional lighting and composition
-- High-end spa atmosphere
-- The package "${item.name}" should feel luxurious and valuable
-Enhance the overall quality while keeping the original subject intact.`,
-      subscription_plans: `Transform this image into a professional subscription plan promotional photo. Make it look premium with:
-- Elegant, modern aesthetic suggesting recurring premium service
-- Professional studio-quality lighting
-- Warm, inviting atmosphere
-- The plan "${item.name}" should convey exclusivity and value
-Enhance quality and presentation while keeping the original subject.`,
+      products: `CRITICAL: You MUST keep the EXACT same product "${item.name}" completely unchanged — same shape, same label, same colors, same design, same brand, same packaging. Do NOT alter, redesign, or replace the product in any way.
+
+ONLY change the BACKGROUND and LIGHTING around the product:
+- Replace the background with a dark moody studio backdrop with warm amber/gold accent lighting
+- Add professional studio lighting (rim light, key light) to make the product pop
+- Add subtle reflections on a glossy dark surface beneath the product
+- Keep the product pixel-perfect identical to the original
+
+The product must look EXACTLY like the uploaded photo, just placed in a premium studio setting.`,
+      services: `CRITICAL: Keep the EXACT same subject/person and action from this photo completely unchanged. Do NOT replace or alter the person or what they are doing.
+
+ONLY enhance:
+- Improve lighting to warm, professional studio quality
+- Clean up the background to look more premium and elegant
+- Sharpen focus on the main subject
+- Enhance colors and contrast slightly
+
+The subject performing "${item.name}" must remain identical to the original photo.`,
+      service_packages: `CRITICAL: Keep the EXACT same subjects and scene from this photo unchanged. Do NOT replace people or activities shown.
+
+ONLY enhance:
+- Improve overall lighting and color grading to premium warm tones
+- Clean up background elements for a more polished look
+- Sharpen focus and improve contrast
+- Make it feel more luxurious for the package "${item.name}"
+
+The original scene must remain recognizable and unchanged.`,
+      subscription_plans: `CRITICAL: Keep the EXACT same content of this image unchanged.
+
+ONLY enhance:
+- Improve lighting, contrast and color grading
+- Add a more premium, elegant feel to the atmosphere
+- Sharpen details and improve overall quality
+- Make it convey exclusivity for the plan "${item.name}"
+
+The original image content must remain identical.`,
     };
 
     // Call Gemini API directly for image editing
