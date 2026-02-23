@@ -597,7 +597,7 @@ const Landing = () => {
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {/* Essencial */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -630,10 +630,11 @@ const Landing = () => {
                   </li>
                 ))}
               </ul>
-              <div className="space-y-0.5 mb-6">
+              <div className="space-y-0.5 mb-4">
                 <p className="text-xs text-zinc-500">Taxa sobre transações: {PLANS.essencial.commission}</p>
                 <p className="text-[11px] text-zinc-600 leading-tight">{PLANS.essencial.commissionNote}</p>
               </div>
+              <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.essencial.staffLabel}</p>
               <a href={getDashboardUrl('/app/register')}>
                 <Button variant="outline" className="w-full rounded-xl h-12 border-zinc-700/50 text-zinc-100 hover:bg-zinc-800 font-semibold">
                   Escolher
@@ -683,7 +684,7 @@ const Landing = () => {
                 <>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex-1 h-px bg-primary/20" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Exclusivo do Profissional</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Exclusivo</span>
                     <div className="flex-1 h-px bg-primary/20" />
                   </div>
                   <ul className="space-y-2.5 mb-6">
@@ -696,10 +697,11 @@ const Landing = () => {
                   </ul>
                 </>
               )}
-              <div className="space-y-0.5 mb-6">
+              <div className="space-y-0.5 mb-4">
                 <p className="text-xs text-zinc-500">Taxa sobre transações: {PLANS.profissional.commission}</p>
                 <p className="text-[11px] text-zinc-600 leading-tight">{PLANS.profissional.commissionNote}</p>
               </div>
+              <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.profissional.staffLabel}</p>
               <a href={getDashboardUrl('/app/register')}>
                 <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-lg shadow-primary/20">
                   <Crown className="h-4 w-4 mr-2" />
@@ -707,11 +709,71 @@ const Landing = () => {
                 </Button>
               </a>
             </motion.div>
+
+            {/* Ilimitado */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
+            >
+              <p className="text-lg font-semibold text-zinc-100 mb-3">Ilimitado</p>
+              <div className="mb-1">
+                {billingCycle === 'annual' ? (
+                  <>
+                    <span className="text-sm text-zinc-500 line-through">R$ 109,90/mês</span>{" "}
+                    <span className="text-3xl font-bold text-zinc-100">R$ 87,90</span>
+                    <span className="text-zinc-400 text-sm">/mês</span>
+                    <p className="text-xs text-zinc-500 mt-1">Cobrado R$ 1.054,80/ano</p>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold text-zinc-100">R$ 109,90</span>
+                    <span className="text-zinc-400 text-sm">/mês</span>
+                  </>
+                )}
+              </div>
+              <ul className="space-y-2.5 my-6 flex-1">
+                {PLANS.ilimitado.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {PLANS.ilimitado.exclusiveFeatures.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex-1 h-px bg-primary/20" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Exclusivo</span>
+                    <div className="flex-1 h-px bg-primary/20" />
+                  </div>
+                  <ul className="space-y-2.5 mb-6">
+                    {PLANS.ilimitado.exclusiveFeatures.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
+                        <Star className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              <div className="space-y-0.5 mb-4">
+                <p className="text-xs text-zinc-500">Taxa sobre transações: {PLANS.ilimitado.commission}</p>
+                <p className="text-[11px] text-zinc-600 leading-tight">{PLANS.ilimitado.commissionNote}</p>
+              </div>
+              <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.ilimitado.staffLabel}</p>
+              <a href={getDashboardUrl('/app/register')}>
+                <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-lg shadow-primary/20">
+                  Começar grátis
+                </Button>
+              </a>
+            </motion.div>
           </div>
 
           {/* Footer info */}
-          <div className="text-center mt-8 space-y-1">
-            <p className="text-xs text-zinc-500 font-medium">1 profissional incluso · +R$ 14,90/mês por profissional adicional</p>
+          <div className="text-center mt-8">
             <p className="text-xs text-zinc-600">
               Após 14 dias, a cobrança é automática. Cancele quando quiser pelo painel.
             </p>

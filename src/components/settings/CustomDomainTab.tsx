@@ -43,7 +43,7 @@ export function CustomDomainTab() {
   const [domainStatus, setDomainStatus] = useState<string>("none");
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
 
-  const isProfessional = planName === "profissional";
+  const isProfessional = planName === "profissional" || planName === "ilimitado";
 
   useEffect(() => {
     if (currentTenant) {

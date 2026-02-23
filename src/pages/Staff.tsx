@@ -74,7 +74,7 @@ type StaffFormData = z.infer<typeof staffSchema>;
 export default function Staff() {
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
-  const { hasActiveSubscription } = useSubscription();
+  const { hasActiveSubscription, features } = useSubscription();
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,6 +191,8 @@ export default function Staff() {
   };
 
   const checkAndConfirmExtra = (actionType: "save" | "activate", actionData: any, futureActiveCount: number) => {
+    // Plano Ilimitado não cobra por profissionais adicionais
+    if (features.unlimitedStaff) return false;
     const extras = Math.max(0, futureActiveCount - 1);
     if (extras > 0 && hasActiveSubscription) {
       setExtraCount(extras);
