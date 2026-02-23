@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Package } from "lucide-react";
+import { Package, Check } from "lucide-react";
 
 export interface OrderBumpProduct {
   product_id: string;
@@ -116,10 +115,13 @@ export function OrderBumpSection({ tenantId, serviceId, onSelectionChange }: Pro
                 : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700"
             }`}
           >
-            <Checkbox
-              checked={selectedIds.has(product.product_id)}
-              className="pointer-events-none border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
-            />
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+              selectedIds.has(product.product_id)
+                ? "bg-emerald-500 border-emerald-500"
+                : "border-zinc-600"
+            }`}>
+              {selectedIds.has(product.product_id) && <Check className="h-3 w-3 text-white" />}
+            </div>
             {product.photo_url ? (
               <img
                 src={product.photo_url}

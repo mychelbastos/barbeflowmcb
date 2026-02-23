@@ -95,6 +95,7 @@ const settingsSchema = z.object({
   allow_online_payment: z.boolean(),
   require_prepayment: z.boolean(),
   prepayment_percentage: z.number().min(0).max(100),
+  max_consecutive_cancellations: z.number().min(1).max(10),
 });
 
 type TenantFormData = z.infer<typeof tenantSchema>;
@@ -179,6 +180,7 @@ export default function Settings() {
       allow_online_payment: false,
       require_prepayment: false,
       prepayment_percentage: 0,
+      max_consecutive_cancellations: 2,
     },
   });
 
@@ -350,6 +352,7 @@ export default function Settings() {
       allow_online_payment: settings.allow_online_payment ?? false,
       require_prepayment: settings.require_prepayment ?? false,
       prepayment_percentage: settings.prepayment_percentage ?? 0,
+      max_consecutive_cancellations: settings.max_consecutive_cancellations ?? 2,
     });
   };
 
@@ -976,6 +979,29 @@ export default function Settings() {
                           </FormControl>
                           <FormDescription>
                             Prazo mínimo para cancelamento
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={settingsForm.control}
+                      name="max_consecutive_cancellations"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cancelamentos para bloqueio</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={1} 
+                              max={10}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 2)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Após quantos cancelamentos consecutivos o cliente será obrigado a pagar online
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
