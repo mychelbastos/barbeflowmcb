@@ -1605,11 +1605,11 @@ END:VCALENDAR`;
               </button>
               
               {(forcedOnlinePayment || requirePrepayment) && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                  <p className="text-amber-400 text-xs text-center">
+                <div className="p-3 bg-zinc-800/50 border border-zinc-700/30 rounded-xl">
+                  <p className="text-zinc-400 text-xs text-center">
                     {forcedOnlinePayment 
-                      ? '⚠️ Pagamento antecipado obrigatório para este cliente.'
-                      : `⚠️ Este estabelecimento exige pagamento antecipado${prepaymentPercentage > 0 && prepaymentPercentage < 100 ? ` de ${prepaymentPercentage}%` : ''}.`
+                      ? '🔒 Para sua segurança, o pagamento antecipado é necessário neste agendamento.'
+                      : `🔒 Este estabelecimento solicita pagamento antecipado${prepaymentPercentage > 0 && prepaymentPercentage < 100 ? ` de ${prepaymentPercentage}%` : ''} para confirmar o agendamento.`
                     }
                   </p>
                 </div>
