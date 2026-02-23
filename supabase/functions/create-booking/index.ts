@@ -593,21 +593,43 @@ serve(async (req) => {
       }
     }
 
-    // 11. Send WhatsApp notification for confirmed bookings (skip recurring — they get weekly summaries)
+    // 11. Send notifications for confirmed bookings (skip recurring — they get weekly summaries)
     const createdVia = payload.created_via || 'public';
     if (bookingStatus === 'confirmed' && createdVia !== 'recurring') {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+      // WhatsApp notification
       try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
           body: JSON.stringify({ type: 'booking_confirmed', booking_id: booking.id, tenant_id }),
         });
       } catch (notifError) {
         console.error('WhatsApp notification error:', notifError);
+      }
+
+      // Push notification to admin
+      try {
+        const staffName = booking.staff?.name || 'Profissional';
+        const serviceName = booking.service?.name || 'Serviço';
+        const customerName = booking.customer?.name || 'Cliente';
+        const startTime = new Date(booking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+        await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          body: JSON.stringify({
+            tenant_id,
+            title: '📅 Novo agendamento!',
+            body: `${customerName} agendou ${serviceName} às ${startTime} com ${staffName}`,
+            url: '/app/bookings',
+            data: { booking_id: booking.id },
+          }),
+        });
+      } catch (pushError) {
+        console.error('Push notification error:', pushError);
       }
     }
 
