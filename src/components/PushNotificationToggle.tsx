@@ -1,6 +1,6 @@
 import { Bell, BellOff, BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePushNotifications, PushStatus } from "@/hooks/usePushNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
@@ -41,10 +41,10 @@ export function PushNotificationToggle({ tenantId }: Props) {
       size="sm"
       onClick={handleToggle}
       disabled={loading || status === 'denied'}
-      className="gap-2"
+      className="gap-2 shrink-0"
     >
       {icon}
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </Button>
   );
 }
