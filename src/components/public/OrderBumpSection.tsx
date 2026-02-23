@@ -5,6 +5,7 @@ import { Package, Check } from "lucide-react";
 export interface OrderBumpProduct {
   product_id: string;
   name: string;
+  description: string | null;
   sale_price_cents: number;
   purchase_price_cents: number;
   photo_url: string | null;
@@ -46,7 +47,7 @@ export function OrderBumpSection({ tenantId, serviceId, onSelectionChange }: Pro
     const productIds = data.map((d: any) => d.product_id);
     const { data: prods } = await supabase
       .from("products")
-      .select("id, name, sale_price_cents, purchase_price_cents, photo_url")
+      .select("id, name, description, sale_price_cents, purchase_price_cents, photo_url")
       .in("id", productIds)
       .eq("active", true);
 
@@ -64,6 +65,7 @@ export function OrderBumpSection({ tenantId, serviceId, onSelectionChange }: Pro
         return {
           product_id: p.id,
           name: p.name,
+          description: p.description || null,
           sale_price_cents: p.sale_price_cents,
           purchase_price_cents: p.purchase_price_cents,
           photo_url: p.photo_url,
@@ -135,6 +137,9 @@ export function OrderBumpSection({ tenantId, serviceId, onSelectionChange }: Pro
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{product.name}</p>
+              {product.description && (
+                <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">{product.description}</p>
+              )}
             </div>
             <span className="text-sm font-semibold text-emerald-400 whitespace-nowrap">
               + {fmt(product.sale_price_cents)}
