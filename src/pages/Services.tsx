@@ -55,6 +55,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { AiTextButton, AiGenerateImageButton } from "@/components/AiContentButtons";
+import { OrderBumpConfig } from "@/components/OrderBumpConfig";
 import {
   Form,
   FormControl,
@@ -737,6 +738,16 @@ export default function Services() {
                   </FormItem>
                 )}
               />
+
+              {/* Order Bump Config — only show when editing */}
+              {editingService && currentTenant && (
+                <div className="border-t border-border pt-4">
+                  <OrderBumpConfig
+                    tenantId={currentTenant.id}
+                    serviceId={editingService.id}
+                  />
+                </div>
+              )}
 
               <DialogFooter>
                 <Button 
