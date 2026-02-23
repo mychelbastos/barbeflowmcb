@@ -844,14 +844,8 @@ const Landing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="relative p-8 rounded-2xl bg-zinc-900/60 border border-primary/30 shadow-xl shadow-primary/5 flex flex-col"
+              className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
             >
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-primary text-primary-foreground">
-                  <Star className="h-3 w-3 mr-1" />
-                  Recomendado
-                </Badge>
-              </div>
               <p className="text-lg font-semibold text-zinc-100 mb-3">Profissional</p>
               <div className="mb-1">
                 {billingCycle === 'annual' ? (
@@ -899,21 +893,26 @@ const Landing = () => {
               </div>
               <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.profissional.staffLabel}</p>
               <a href={getDashboardUrl('/app/register')}>
-                <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-lg shadow-primary/20">
-                  <Crown className="h-4 w-4 mr-2" />
-                  Começar grátis
+                <Button variant="outline" className="w-full rounded-xl h-12 border-zinc-700/50 text-zinc-100 hover:bg-zinc-800 font-semibold">
+                  Escolher
                 </Button>
               </a>
             </motion.div>
 
-            {/* Ilimitado */}
+            {/* Ilimitado — Recomendado */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
+              transition={{ delay: 0.2 }}
+              className="relative p-8 rounded-2xl bg-zinc-900/60 border border-primary/30 shadow-xl shadow-primary/5 flex flex-col"
             >
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <Badge className="bg-primary text-primary-foreground">
+                  <Star className="h-3 w-3 mr-1" />
+                  Recomendado
+                </Badge>
+              </div>
               <p className="text-lg font-semibold text-zinc-100 mb-3">Ilimitado</p>
               <div className="mb-1">
                 {billingCycle === 'annual' ? (
@@ -962,6 +961,7 @@ const Landing = () => {
               <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.ilimitado.staffLabel}</p>
               <a href={getDashboardUrl('/app/register')}>
                 <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-lg shadow-primary/20">
+                  <Crown className="h-4 w-4 mr-2" />
                   Começar grátis
                 </Button>
               </a>
