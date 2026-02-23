@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isCustomDomain } from "@/lib/hostname";
@@ -983,8 +983,8 @@ END:VCALENDAR`;
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
-  const selectedServiceData = services.find(s => s.id === selectedService);
-  const selectedStaffData = staff.find(s => s.id === selectedStaff);
+  const selectedServiceData = useMemo(() => services.find(s => s.id === selectedService), [services, selectedService]);
+  const selectedStaffData = useMemo(() => staff.find(s => s.id === selectedStaff), [staff, selectedStaff]);
 
   // Calculate total steps based on payment settings
   const totalSteps = allowOnlinePayment && !requirePrepayment ? 5 : 4;
@@ -1081,6 +1081,8 @@ END:VCALENDAR`;
               src={tenant.cover_url}
               alt={`Capa ${tenant.name}`}
               className="w-full h-full object-cover"
+              fetchPriority="high"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-zinc-950" />
           </div>
@@ -1099,6 +1101,8 @@ END:VCALENDAR`;
                     src={tenant.logo_url} 
                     alt={`Logo ${tenant.name}`}
                     className="w-full h-full object-cover"
+                    fetchPriority="high"
+                    decoding="async"
                   />
                 ) : (
                   <Scissors className="h-7 w-7 text-white/80" />
@@ -1307,6 +1311,8 @@ END:VCALENDAR`;
                             src={service.photo_url} 
                             alt={service.name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
@@ -1458,7 +1464,7 @@ END:VCALENDAR`;
                       style={{ backgroundColor: `${member.color}20` }}
                     >
                       {member.photo_url ? (
-                        <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                        <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       ) : (
                         <User className="h-5 w-5" style={{ color: member.color }} />
                       )}
@@ -1494,7 +1500,7 @@ END:VCALENDAR`;
             <div className="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
               <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                 {selectedServiceData?.photo_url ? (
-                  <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" />
+                  <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 ) : (
                   <Scissors className="h-4 w-4 text-zinc-400" />
                 )}
@@ -1648,7 +1654,7 @@ END:VCALENDAR`;
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                   {selectedServiceData?.photo_url ? (
-                    <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" />
+                    <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <Scissors className="h-4 w-4 text-zinc-400" />
                   )}
@@ -1921,7 +1927,7 @@ END:VCALENDAR`;
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                   {selectedServiceData?.photo_url ? (
-                    <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" />
+                    <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <Scissors className="h-4 w-4 text-zinc-400" />
                   )}
