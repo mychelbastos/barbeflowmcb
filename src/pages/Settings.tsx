@@ -1478,10 +1478,10 @@ export default function Settings() {
           <WhatsAppConfigEmbed />
         </TabsContent>
 
-        {/* Custom Domain Tab */}
-        <TabsContent value="domain">
+        {/* Custom Domain Tab — hidden until feature is finalized */}
+        {/* <TabsContent value="domain">
           <CustomDomainTab />
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
 
       <NewTenantModal

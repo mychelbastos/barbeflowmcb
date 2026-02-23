@@ -132,7 +132,6 @@ const baseNavigationItems: NavItem[] = [
       { title: "Notificações", url: "/app/settings?tab=notifications", icon: MessageCircle },
       { title: "Pagamentos", url: "/app/settings?tab=payments", icon: CreditCard },
       { title: "Assinatura", url: "/app/settings?tab=billing", icon: Crown },
-      { title: "Domínio", url: "/app/settings?tab=domain", icon: Globe },
       { title: "WhatsApp", url: "/app/settings?tab=whatsapp", icon: MessageCircle, statusDot: true },
     ]
   },
