@@ -72,11 +72,23 @@ serve(async (req) => {
       );
     }
 
-    // Calculate amount
-    let amountCents = service.price_cents;
+    // Calculate amount including order bump products
+    let baseServiceCents = service.price_cents;
     if (settings.require_prepayment && settings.prepayment_percentage > 0 && settings.prepayment_percentage < 100) {
-      amountCents = Math.round(service.price_cents * (settings.prepayment_percentage / 100));
+      baseServiceCents = Math.round(service.price_cents * (settings.prepayment_percentage / 100));
     }
+
+    // Sum order bump product items
+    const { data: bumpItems } = await supabase
+      .from('booking_items')
+      .select('total_price_cents, title')
+      .eq('booking_id', booking_id)
+      .eq('type', 'product')
+      .eq('paid_status', 'unpaid');
+
+    const bumpTotal = (bumpItems || []).reduce((s: number, i: any) => s + (i.total_price_cents || 0), 0);
+    const amountCents = baseServiceCents + bumpTotal;
+    console.log(`Amount: service=${baseServiceCents} + bumps=${bumpTotal} = ${amountCents}`);
 
     // --- Platform commission (marketplace fee) ---
     const commissionRate = await getCommissionRate(supabase, tenant.id);
@@ -149,9 +161,17 @@ serve(async (req) => {
           description: `Agendamento em ${tenant.name}`,
           quantity: 1,
           currency_id: 'BRL',
-          unit_price: amountCents / 100,
+          unit_price: baseServiceCents / 100,
           category_id: 'services',
         },
+        ...(bumpItems || []).map((item: any, idx: number) => ({
+          id: `bump-${idx}`,
+          title: item.title,
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: (item.total_price_cents || 0) / 100,
+          category_id: 'others',
+        })),
       ],
       payer: {
         name: booking.customer?.name || '',
