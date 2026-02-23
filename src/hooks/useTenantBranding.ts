@@ -13,11 +13,12 @@ export function useTenantBranding(tenant: { name?: string; logo_url?: string; co
     const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     const appleTouchLink = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
     const titleEl = document.querySelector('title');
-    const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const appleWebAppTitle = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
 
     const originalFavicon = faviconLink?.href || '';
     const originalAppleTouch = appleTouchLink?.href || '';
     const originalTitle = titleEl?.textContent || '';
+    const originalAppleTitle = appleWebAppTitle?.content || '';
 
     if (tenant.logo_url) {
       if (faviconLink) faviconLink.href = tenant.logo_url;
@@ -26,6 +27,9 @@ export function useTenantBranding(tenant: { name?: string; logo_url?: string; co
 
     if (tenant.name) {
       document.title = `${tenant.name} — Agendamento Online`;
+      if (appleWebAppTitle) {
+        appleWebAppTitle.content = tenant.name;
+      }
     }
 
     // --- Dynamic PWA Manifest ---
@@ -68,6 +72,7 @@ export function useTenantBranding(tenant: { name?: string; logo_url?: string; co
       if (faviconLink && originalFavicon) faviconLink.href = originalFavicon;
       if (appleTouchLink && originalAppleTouch) appleTouchLink.href = originalAppleTouch;
       if (titleEl && originalTitle) document.title = originalTitle;
+      if (appleWebAppTitle && originalAppleTitle) appleWebAppTitle.content = originalAppleTitle;
       
       // Clean up dynamic manifest
       manifestLink.remove();
