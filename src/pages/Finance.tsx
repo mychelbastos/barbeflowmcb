@@ -380,7 +380,7 @@ export default function Finance() {
         <Section>
           <ChartCard icon={Zap} iconColor="text-primary" iconBg="bg-primary/10" title="Receita Diária" description="Baseado em cash_entries">
             <ResponsiveContainer width="100%" height={280} className="md:!h-[320px]">
-              <ComposedChart data={cashData.dailyIncome.filter((d) => d.income > 0)}>
+              <ComposedChart data={cashData.dailyIncome}>
                 <defs>
                   <linearGradient id="areaGradIncome" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
