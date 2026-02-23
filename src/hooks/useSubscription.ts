@@ -26,10 +26,6 @@ const SHARED_FEATURES = [
   "Proteção contra cancelamentos",
 ];
 
-const EXCLUSIVE_FEATURES = [
-  "Agendamento direto pelo WhatsApp (chatbot)",
-];
-
 export const PLANS = {
   essencial: {
     product_id: "prod_Ty1Jvoc0qpDOUu",
@@ -67,14 +63,16 @@ export const PLANS = {
       display_yearly: "R$ 862,80/ano",
     },
     features: SHARED_FEATURES,
-    exclusiveFeatures: EXCLUSIVE_FEATURES,
+    exclusiveFeatures: [
+      "Agendamento direto pelo WhatsApp (chatbot)",
+    ],
   },
   ilimitado: {
     product_id: "prod_U24ZNzDkfp2fU5",
     name: "Ilimitado",
     commission: "1,0%",
     commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
-    staffLabel: "Profissionais ilimitados incluso",
+    staffLabel: "Profissionais ilimitados inclusos",
     month: {
       price_monthly: 10990,
       display: "R$ 109,90/mês",
@@ -86,7 +84,10 @@ export const PLANS = {
       display_yearly: "R$ 1.054,80/ano",
     },
     features: SHARED_FEATURES,
-    exclusiveFeatures: EXCLUSIVE_FEATURES,
+    exclusiveFeatures: [
+      "Agendamento direto pelo WhatsApp (chatbot)",
+      "Profissionais ilimitados sem custo adicional",
+    ],
   },
 };
 
