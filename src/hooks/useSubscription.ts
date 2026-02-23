@@ -16,7 +16,7 @@ const SHARED_FEATURES = [
   "Agendamento online",
   "Gestão de clientes",
   "Financeiro completo",
-  "Notificações automáticas (WhatsApp e e-mail)",
+  "Notificações automáticas via WhatsApp",
   "Página pública de agendamento",
   "Pacotes e assinaturas",
   "Pagamentos online",
