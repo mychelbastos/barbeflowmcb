@@ -602,25 +602,19 @@ const BookingPublic = () => {
       return;
     }
     
-    // If forced online payment (risk policy), force online
-    if (forcedOnlinePayment && allowOnlinePayment) {
-      setPaymentMethod('online');
-      setStep(5);
+    // If online payment is available, always show the payment method step
+    if (allowOnlinePayment) {
+      // If forced or required, pre-select online but still show the step
+      if (forcedOnlinePayment || requirePrepayment) {
+        setPaymentMethod('online');
+      }
+      setStep(4);
       return;
     }
     
-    // If online payment is enabled and not required, show payment method selection
-    if (allowOnlinePayment && !requirePrepayment) {
-      setStep(4); // Payment method selection step
-    } else if (allowOnlinePayment && requirePrepayment) {
-      // Skip to contact info, payment is mandatory online
-      setPaymentMethod('online');
-      setStep(5);
-    } else {
-      // No online payment, go directly to contact info
-      setPaymentMethod('on_site');
-      setStep(5);
-    }
+    // No online payment, go directly to contact info
+    setPaymentMethod('on_site');
+    setStep(5);
   };
 
   const handlePaymentMethodSelect = (method: PaymentMethod) => {
@@ -629,7 +623,7 @@ const BookingPublic = () => {
   };
 
   const goToPreviousStep = () => {
-    if (step === 5 && allowOnlinePayment && !requirePrepayment) {
+    if (step === 5 && allowOnlinePayment) {
       setStep(4); // Go back to payment method selection
     } else if (step === 5) {
       setStep(3); // Go back to time selection
@@ -1558,8 +1552,8 @@ END:VCALENDAR`;
           </div>
         )}
 
-        {/* Step 4: Payment Method Selection (only if online payment enabled but not required) */}
-        {step === 4 && allowOnlinePayment && !requirePrepayment && (
+        {/* Step 4: Payment Method Selection */}
+        {step === 4 && allowOnlinePayment && (
           <div className="animate-in fade-in duration-300">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold mb-2">Como deseja pagar?</h2>
@@ -1567,7 +1561,7 @@ END:VCALENDAR`;
             </div>
             
             <div className="space-y-3">
-              {!forcedOnlinePayment && (
+              {!forcedOnlinePayment && !requirePrepayment && (
                 <button
                   onClick={() => handlePaymentMethodSelect('on_site')}
                   className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
@@ -1599,9 +1593,14 @@ END:VCALENDAR`;
                 </div>
               </button>
               
-              {forcedOnlinePayment && (
+              {(forcedOnlinePayment || requirePrepayment) && (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                  <p className="text-amber-400 text-xs text-center">⚠️ Pagamento antecipado obrigatório para este cliente.</p>
+                  <p className="text-amber-400 text-xs text-center">
+                    {forcedOnlinePayment 
+                      ? '⚠️ Pagamento antecipado obrigatório para este cliente.'
+                      : `⚠️ Este estabelecimento exige pagamento antecipado${prepaymentPercentage > 0 && prepaymentPercentage < 100 ? ` de ${prepaymentPercentage}%` : ''}.`
+                    }
+                  </p>
                 </div>
               )}
             </div>
