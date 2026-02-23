@@ -615,9 +615,10 @@ serve(async (req) => {
         const staffName = booking.staff?.name || 'Profissional';
         const serviceName = booking.service?.name || 'Serviço';
         const customerName = booking.customer?.name || 'Cliente';
-        const startTime = new Date(booking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        const tz = (tenantSettings as any)?.timezone || 'America/Sao_Paulo';
+        const startTime = new Date(booking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: tz });
 
-        await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
           body: JSON.stringify({
@@ -627,7 +628,7 @@ serve(async (req) => {
             url: '/app/bookings',
             data: { booking_id: booking.id },
           }),
-        });
+        }).catch(e => console.error('Push notification error:', e));
       } catch (pushError) {
         console.error('Push notification error:', pushError);
       }
