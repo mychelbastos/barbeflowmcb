@@ -63,7 +63,7 @@ serve(async (req) => {
     // Find Stripe subscription
     const { data: subData } = await supabaseAdmin
       .from("stripe_subscriptions")
-      .select("stripe_subscription_id, status")
+      .select("stripe_subscription_id, status, plan_name")
       .eq("tenant_id", tenantId)
       .maybeSingle();
 
@@ -72,6 +72,18 @@ serve(async (req) => {
     }
     if (!["active", "trialing"].includes(subData.status)) {
       throw new Error("SUBSCRIPTION_NOT_ACTIVE");
+    }
+
+    // Plano Ilimitado não cobra por profissionais adicionais
+    if (subData.plan_name === "ilimitado") {
+      logStep("Ilimitado plan - skipping Stripe quantity update");
+      await supabaseAdmin
+        .from("stripe_subscriptions")
+        .update({ additional_professionals: additional_count, updated_at: new Date().toISOString() })
+        .eq("tenant_id", tenantId);
+      return new Response(JSON.stringify({ success: true, additional_count, unlimited: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" });
