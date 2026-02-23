@@ -36,6 +36,7 @@ export const PLANS = {
     name: "Essencial",
     commission: "2,5%",
     commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
+    staffLabel: "1 profissional incluso · +R$ 14,90/mês por adicional",
     month: {
       price_monthly: 5990,
       display: "R$ 59,90/mês",
@@ -54,6 +55,7 @@ export const PLANS = {
     name: "Profissional",
     commission: "1,0%",
     commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
+    staffLabel: "1 profissional incluso · +R$ 14,90/mês por adicional",
     month: {
       price_monthly: 8990,
       display: "R$ 89,90/mês",
@@ -63,6 +65,25 @@ export const PLANS = {
       price_yearly: 86280,
       display: "R$ 71,90/mês",
       display_yearly: "R$ 862,80/ano",
+    },
+    features: SHARED_FEATURES,
+    exclusiveFeatures: EXCLUSIVE_FEATURES,
+  },
+  ilimitado: {
+    product_id: "prod_U24ZNzDkfp2fU5",
+    name: "Ilimitado",
+    commission: "1,0%",
+    commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
+    staffLabel: "Profissionais ilimitados incluso",
+    month: {
+      price_monthly: 10990,
+      display: "R$ 109,90/mês",
+    },
+    year: {
+      price_monthly: 8790,
+      price_yearly: 105480,
+      display: "R$ 87,90/mês",
+      display_yearly: "R$ 1.054,80/ano",
     },
     features: SHARED_FEATURES,
     exclusiveFeatures: EXCLUSIVE_FEATURES,
@@ -121,9 +142,10 @@ export function useSubscription() {
   const canWrite = hasActiveSubscription || isPastDue;
 
   const features = {
-    whatsappChatbot: planName === "profissional",
-    customDomain: planName === "profissional",
-    reducedRate: planName === "profissional",
+    whatsappChatbot: planName === "profissional" || planName === "ilimitado",
+    customDomain: planName === "profissional" || planName === "ilimitado",
+    reducedRate: planName === "profissional" || planName === "ilimitado",
+    unlimitedStaff: planName === "ilimitado",
   };
 
   return {

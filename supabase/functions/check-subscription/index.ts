@@ -24,6 +24,11 @@ const PLANS = {
     price_id: "price_1T05HvCxw1gIFu9guQDhSvfs",
     commission_rate: 0.010,
   },
+  ilimitado: {
+    product_id: "prod_U24ZNzDkfp2fU5",
+    price_id: "price_1T40Q1Cxw1gIFu9gQgXMbjrr",
+    commission_rate: 0.010,
+  },
 };
 
 serve(async (req) => {
@@ -106,7 +111,10 @@ serve(async (req) => {
     // Determine plan name
     let planName = "essencial";
     let commissionRate = 0.025;
-    if (productId === PLANS.profissional.product_id || priceId === PLANS.profissional.price_id) {
+    if (productId === PLANS.ilimitado.product_id || priceId === PLANS.ilimitado.price_id) {
+      planName = "ilimitado";
+      commissionRate = 0.010;
+    } else if (productId === PLANS.profissional.product_id || priceId === PLANS.profissional.price_id) {
       planName = "profissional";
       commissionRate = 0.010;
     }
