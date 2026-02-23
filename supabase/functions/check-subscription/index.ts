@@ -22,7 +22,7 @@ const PLANS = {
   profissional: {
     product_id: "prod_Ty1KYrBniQmXyi",
     price_id: "price_1T05HvCxw1gIFu9guQDhSvfs",
-    commission_rate: 0.010,
+    commission_rate: 0.015,
   },
   ilimitado: {
     product_id: "prod_U24ZNzDkfp2fU5",
@@ -116,7 +116,7 @@ serve(async (req) => {
       commissionRate = 0.010;
     } else if (productId === PLANS.profissional.product_id || priceId === PLANS.profissional.price_id) {
       planName = "profissional";
-      commissionRate = 0.010;
+      commissionRate = 0.015;
     }
 
     // Safe date helper — Stripe may return seconds (number) or ISO string depending on API version

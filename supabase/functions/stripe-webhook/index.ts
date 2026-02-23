@@ -19,7 +19,7 @@ function getPlanInfo(priceId: string) {
     return { plan_name: "ilimitado", commission_rate: 0.010 };
   }
   if (priceId === proMonthly || priceId === proYearly) {
-    return { plan_name: "profissional", commission_rate: 0.010 };
+    return { plan_name: "profissional", commission_rate: 0.015 };
   }
   return { plan_name: "essencial", commission_rate: 0.025 };
 }
