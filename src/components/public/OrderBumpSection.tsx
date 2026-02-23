@@ -129,6 +129,8 @@ export function OrderBumpSection({ tenantId, serviceId, onSelectionChange }: Pro
                 src={product.photo_url}
                 alt={product.name}
                 className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
