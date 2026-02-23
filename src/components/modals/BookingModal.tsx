@@ -39,7 +39,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const bookingFormSchema = z.object({
   customer_name: z.string().min(1, "Nome é obrigatório"),
-  customer_phone: z.string().min(1, "Telefone é obrigatório"),
+  customer_phone: z.string().min(1, "Telefone é obrigatório").refine(
+    (val) => val.replace(/\D/g, "").length >= 10,
+    "Telefone deve incluir DDD (mínimo 10 dígitos)"
+  ),
   customer_email: z.string().email("Email inválido").optional().or(z.literal("")),
   service_id: z.string().min(1, "Serviço é obrigatório"),
   staff_id: z.string().optional(),
