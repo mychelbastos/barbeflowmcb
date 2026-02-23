@@ -1,63 +1,76 @@
 
 
-## Edicao de horario e encaixe de servicos no painel administrativo
+# Novos recursos na Landing Page e nos Planos
 
-### Resumo
-
-Duas melhorias no painel de agendamentos:
-
-1. **Editar horario de inicio e termino** de agendamentos existentes, com validacao de conflitos antes de salvar
-2. **Visualizacao de encaixe** no grid administrativo, mostrando intervalos livres entre agendamentos (ex: 08:15-08:30) que nao aparecem na pagina publica
+## Resumo
+Adicionar 3 novos recursos na lista de features dos planos e criar 3 novas seções visuais dedicadas na Landing Page.
 
 ---
 
-### Detalhes tecnicos
+## Parte 1 — Adicionar aos planos (bullets nos cards)
 
-#### 1. Edicao de horario inicio/fim com validacao de conflitos
+No arquivo `src/hooks/useSubscription.ts`, adicionar ao array `SHARED_FEATURES`:
 
-**Arquivo: `src/pages/Bookings.tsx`**
+- "Caixa e controle financeiro diário"
+- "Comissões automáticas por profissional"
+- "App instalável no celular (PWA)"
 
-- Adicionar campo `end_time` ao `editForm` (atualmente so tem `time` para inicio)
-- Ao alterar `time` (inicio), auto-calcular `end_time` com base na duracao do servico selecionado
-- Permitir alteracao manual do `end_time` para ajustar livremente
-- Antes de salvar (`saveBookingEdit`):
-  - Consultar agendamentos existentes do mesmo `staff_id` no mesmo dia que colidam com o novo intervalo (excluindo o proprio booking sendo editado e status `cancelled`)
-  - Se houver conflito, exibir um `AlertDialog` listando os agendamentos conflitantes (nome do cliente, horario) e impedir a gravacao
-  - Se nao houver conflito, salvar normalmente com o novo `starts_at` e `ends_at`
-- A query de conflito sera:
-  ```
-  bookings onde staff_id = X
-  AND id != bookingAtual
-  AND status != 'cancelled'
-  AND starts_at < novoEndsAt
-  AND ends_at > novoStartsAt
-  ```
-
-#### 2. Grid administrativo com resolucao fina (encaixe)
-
-**Arquivo: `src/components/calendar/ScheduleGrid.tsx`**
-
-- Atualmente o grid usa `settings.slot_duration` (ex: 30min) para definir os intervalos visiveis
-- Alterar para usar uma resolucao fixa de **15 minutos** no grid administrativo, independente do `slot_duration` configurado pelo tenant
-- Isso faz com que gaps naturais (ex: 08:15-08:30 apos um servico de 15min) aparecam como slots clicaveis no painel
-- Nenhuma alteracao na pagina publica (`BookingPublic.tsx`) -- ela continua usando o `slot_duration` configurado pelo tenant via a Edge Function `get-available-slots`
-
-**Arquivo: `src/hooks/useBookingsByDate.ts`**
-
-- Ajustar o calculo de `timeRange` para considerar a resolucao de 15min quando necessario (nenhuma mudanca necessaria, ja funciona com qualquer granularidade)
-
-#### 3. Pagina publica inalterada
-
-A pagina publica (`BookingPublic.tsx`) e a Edge Function `get-available-slots` continuam usando o `slot_duration` do tenant (ex: 30min). Nenhuma alteracao necessaria.
+Isso fará com que apareçam automaticamente nos 3 cards de preço da Landing e no BillingTab.
 
 ---
 
-### Arquivos a modificar
+## Parte 2 — 3 novas seções na Landing Page
 
-1. **`src/pages/Bookings.tsx`** -- Adicionar campo end_time no formulario de edicao, validacao de conflitos antes de salvar
-2. **`src/components/calendar/ScheduleGrid.tsx`** -- Usar resolucao fixa de 15min no grid administrativo
+Serão inseridas **antes da seção de Preços** no arquivo `src/pages/Landing.tsx`.
 
-### Nenhuma migracao de banco necessaria
+### Seção 1: Caixa Financeiro
+- Titulo: "Controle total do seu caixa"
+- Subtitulo: explicar abertura/fechamento, entradas e saidas, separacao por metodo de pagamento
+- Layout visual com icones representando o fluxo (abrir caixa, registrar, fechar, relatorio)
+- Destaque: "Pagamentos online aparecem automaticamente no caixa"
 
-Todas as alteracoes sao apenas no frontend.
+### Seção 2: Comissoes Automaticas
+- Titulo: "Comissoes calculadas automaticamente"
+- Subtitulo: explicar que cada agendamento gera snapshot de comissao por profissional
+- Layout com icones mostrando: servico realizado, calculo automatico, relatorio por profissional
+- Destaque: "Sem planilhas. Sem erros."
+
+### Seção 3: App no Celular (PWA)
+- Titulo: "Seu negocio no bolso"
+- Subtitulo: instalar direto do navegador, sem loja de apps
+- Layout com mockup mobile ou icone de celular
+- Destaque: "Funciona offline e abre instantaneamente"
+
+---
+
+## Detalhes tecnicos
+
+### Arquivos modificados
+
+| Arquivo | Alteracao |
+|---|---|
+| `src/hooks/useSubscription.ts` | Adicionar 3 items ao `SHARED_FEATURES` |
+| `src/pages/Landing.tsx` | Inserir 3 novas secoes animadas antes de `#precos` |
+
+### Padrao visual
+As novas secoes seguirao o mesmo padrao das secoes existentes na Landing:
+- `motion.div` com `initial/whileInView` para animacao fade-up
+- Fundo `py-28 px-6 border-t border-zinc-800/30`
+- Icones do `lucide-react` (Wallet, Calculator, Smartphone)
+- Grid responsivo com cards ou bullets
+
+### Ordem das secoes na Landing (resultado final)
+1. Hero
+2. Social proof
+3. Features grid
+4. Clube de Assinaturas
+5. Experiencia mobile (Netflix cards)
+6. **Caixa Financeiro** (novo)
+7. **Comissoes Automaticas** (novo)
+8. **App no Celular** (novo)
+9. Depoimentos
+10. Precos
+11. Como funciona
+12. FAQ
+13. Footer
 
