@@ -1984,7 +1984,7 @@ END:VCALENDAR`;
             />
             
             <button
-              onClick={() => setStep(5)}
+              onClick={() => setStep(4)}
               className="flex items-center gap-2 text-zinc-500 hover:text-white mt-6 mx-auto transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
