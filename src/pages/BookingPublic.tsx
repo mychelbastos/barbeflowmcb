@@ -1487,8 +1487,12 @@ END:VCALENDAR`;
             
             {/* Mini summary */}
             <div className="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
-              <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center">
-                <Scissors className="h-4 w-4 text-zinc-400" />
+              <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                {selectedServiceData?.photo_url ? (
+                  <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Scissors className="h-4 w-4 text-zinc-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{selectedServiceData?.name}</p>
@@ -1637,8 +1641,12 @@ END:VCALENDAR`;
             {/* Summary */}
             <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
-                  <Scissors className="h-4 w-4 text-zinc-400" />
+                <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                  {selectedServiceData?.photo_url ? (
+                    <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Scissors className="h-4 w-4 text-zinc-400" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{selectedServiceData?.name}</p>
@@ -1841,6 +1849,25 @@ END:VCALENDAR`;
                 />
               )}
 
+              {/* Total order value when order bump items are selected */}
+              {orderBumpItems.length > 0 && !subscriptionCoveredService && !packageCoveredService && (
+                <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">Serviço</span>
+                    <span className="text-zinc-300">R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">Produtos ({orderBumpItems.length})</span>
+                    <span className="text-zinc-300">R$ {(orderBumpItems.reduce((s, p) => s + p.sale_price_cents, 0) / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="h-px bg-zinc-800" />
+                  <div className="flex items-center justify-between text-sm font-semibold">
+                    <span className="text-zinc-300">Total</span>
+                    <span className="text-emerald-400">R$ {(((selectedServiceData?.price_cents || 0) + orderBumpItems.reduce((s, p) => s + p.sale_price_cents, 0)) / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="pt-4 space-y-3">
                 <Button 
                   type="submit" 
@@ -1884,8 +1911,12 @@ END:VCALENDAR`;
             {/* Booking Summary */}
             <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
-                  <Scissors className="h-4 w-4 text-zinc-400" />
+                <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                  {selectedServiceData?.photo_url ? (
+                    <img src={selectedServiceData.photo_url} alt={selectedServiceData.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Scissors className="h-4 w-4 text-zinc-400" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{createdBooking.service?.name}</p>
@@ -1911,7 +1942,7 @@ END:VCALENDAR`;
               tenantSlug={slug || ''}
               amount={selectedPackage 
                 ? (selectedPackage.price_cents / 100) 
-                : (createdBooking.service?.price_cents || 0) / 100
+                : ((createdBooking.service?.price_cents || 0) + orderBumpItems.reduce((s: number, p: OrderBumpProduct) => s + p.sale_price_cents, 0)) / 100
               }
               serviceName={selectedPackage 
                 ? selectedPackage.name 
