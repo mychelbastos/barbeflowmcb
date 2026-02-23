@@ -1934,6 +1934,26 @@ END:VCALENDAR`;
                   <span className="text-zinc-400">{selectedTime}</span>
                 </div>
               </div>
+              {/* Order bump items in payment summary */}
+              {orderBumpItems.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">Serviço</span>
+                    <span className="text-zinc-300">R$ {((createdBooking.service?.price_cents || 0) / 100).toFixed(2)}</span>
+                  </div>
+                  {orderBumpItems.map((item) => (
+                    <div key={item.product_id} className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-500 truncate mr-2">{item.name}</span>
+                      <span className="text-zinc-300 whitespace-nowrap">R$ {(item.sale_price_cents / 100).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="h-px bg-zinc-800" />
+                  <div className="flex items-center justify-between text-sm font-semibold">
+                    <span className="text-zinc-300">Total</span>
+                    <span className="text-emerald-400">R$ {(((createdBooking.service?.price_cents || 0) + orderBumpItems.reduce((s: number, p: OrderBumpProduct) => s + p.sale_price_cents, 0)) / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* MercadoPago Checkout */}
@@ -1946,7 +1966,9 @@ END:VCALENDAR`;
               }
               serviceName={selectedPackage 
                 ? selectedPackage.name 
-                : (createdBooking.service?.name || 'Serviço')
+                : orderBumpItems.length > 0
+                  ? `${createdBooking.service?.name || 'Serviço'} + ${orderBumpItems.length} produto${orderBumpItems.length > 1 ? 's' : ''}`
+                  : (createdBooking.service?.name || 'Serviço')
               }
               payer={{
                 email: customerEmail || 'cliente@email.com',
