@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PackagePurchaseFlow } from "@/components/public/PackagePurchaseFlow";
 import { BenefitBadge } from "@/components/public/BenefitBadge";
 import { OrderBumpSection, type OrderBumpProduct } from "@/components/public/OrderBumpSection";
+import InstallPWA from "@/components/InstallPWA";
 
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
@@ -2020,6 +2021,7 @@ END:VCALENDAR`;
           slug={slug || ''}
         />
       )}
+      <InstallPWA />
     </div>
   );
 };
