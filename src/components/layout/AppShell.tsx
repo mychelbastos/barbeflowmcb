@@ -75,7 +75,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { BookingModal } from "@/components/modals/BookingModal";
-import InstallPWA from "@/components/InstallPWA";
+
 import { motion, AnimatePresence } from "framer-motion";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
 
@@ -606,7 +606,6 @@ export default function AppShell() {
         
         {/* Global Booking Modal */}
         <BookingModal />
-        <InstallPWA />
       </>
     );
   }
@@ -658,7 +657,7 @@ export default function AppShell() {
       
       {/* Global Booking Modal */}
       <BookingModal />
-      <InstallPWA />
+      
     </>
   );
 }
