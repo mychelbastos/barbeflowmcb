@@ -1,0 +1,1 @@
+CREATE POLICY "Public read active products" ON public.products FOR SELECT USING (active = true);
