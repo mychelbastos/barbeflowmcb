@@ -12,7 +12,12 @@ function getPlanInfo(priceId: string) {
   const essentialYearly = Deno.env.get("STRIPE_PRICE_ESSENCIAL_YEARLY") || "";
   const proMonthly = Deno.env.get("STRIPE_PRICE_PROFISSIONAL_MONTHLY") || "price_1T05HvCxw1gIFu9guQDhSvfs";
   const proYearly = Deno.env.get("STRIPE_PRICE_PROFISSIONAL_YEARLY") || "";
+  const ilimitadoMonthly = Deno.env.get("STRIPE_PRICE_ILIMITADO_MONTHLY") || "price_1T40Q1Cxw1gIFu9gQgXMbjrr";
+  const ilimitadoYearly = Deno.env.get("STRIPE_PRICE_ILIMITADO_YEARLY") || "price_1T40QcCxw1gIFu9g5oE9dpPM";
 
+  if (priceId === ilimitadoMonthly || priceId === ilimitadoYearly) {
+    return { plan_name: "ilimitado", commission_rate: 0.010 };
+  }
   if (priceId === proMonthly || priceId === proYearly) {
     return { plan_name: "profissional", commission_rate: 0.010 };
   }

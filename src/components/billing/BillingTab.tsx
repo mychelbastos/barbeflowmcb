@@ -18,6 +18,7 @@ import {
   CreditCard,
   RefreshCw,
   Download,
+  Infinity,
 } from "lucide-react";
 
 export function BillingTab() {
@@ -81,7 +82,7 @@ export function BillingTab() {
     }
   };
 
-  const handleSubscribe = async (plan: "essencial" | "profissional") => {
+  const handleSubscribe = async (plan: "essencial" | "profissional" | "ilimitado") => {
     const key = `${plan}-${billingInterval}`;
     setCheckoutLoading(key);
     try {
@@ -301,7 +302,7 @@ export function BillingTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Essencial */}
         <Card className="relative">
           <CardHeader>
@@ -335,6 +336,7 @@ export function BillingTab() {
               <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.essencial.commission}</p>
               <p className="text-[11px] text-muted-foreground/60 leading-tight">{PLANS.essencial.commissionNote}</p>
             </div>
+            <p className="text-xs text-muted-foreground font-medium">{PLANS.essencial.staffLabel}</p>
             <Button
               onClick={() => handleSubscribe("essencial")}
               disabled={!!checkoutLoading}
@@ -386,7 +388,7 @@ export function BillingTab() {
               <>
                 <div className="flex items-center gap-2 pt-1">
                   <div className="flex-1 h-px bg-primary/20" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Exclusivo do Profissional</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Exclusivo</span>
                   <div className="flex-1 h-px bg-primary/20" />
                 </div>
                 <ul className="space-y-2">
@@ -403,6 +405,7 @@ export function BillingTab() {
               <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.profissional.commission}</p>
               <p className="text-[11px] text-muted-foreground/60 leading-tight">{PLANS.profissional.commissionNote}</p>
             </div>
+            <p className="text-xs text-muted-foreground font-medium">{PLANS.profissional.staffLabel}</p>
             <Button
               onClick={() => handleSubscribe("profissional")}
               disabled={!!checkoutLoading}
@@ -412,6 +415,72 @@ export function BillingTab() {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Crown className="h-4 w-4 mr-2" />
+              )}
+              Começar trial grátis
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Ilimitado */}
+        <Card className="relative">
+          <CardHeader>
+            <CardTitle className="text-lg">Ilimitado</CardTitle>
+            <div className="mt-2">
+              {isYearly ? (
+                <>
+                  <span className="text-sm text-muted-foreground line-through">R$ 109,90/mês</span>{" "}
+                  <span className="text-3xl font-bold">R$ 87,90</span>
+                  <span className="text-muted-foreground text-sm">/mês</span>
+                  <p className="text-xs text-muted-foreground mt-1">Cobrado R$ 1.054,80/ano</p>
+                </>
+              ) : (
+                <>
+                  <span className="text-3xl font-bold">R$ 109,90</span>
+                  <span className="text-muted-foreground text-sm">/mês</span>
+                </>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-2">
+              {PLANS.ilimitado.features.map((f) => (
+                <li key={f} className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-primary shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            {PLANS.ilimitado.exclusiveFeatures.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 pt-1">
+                  <div className="flex-1 h-px bg-primary/20" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70">Exclusivo</span>
+                  <div className="flex-1 h-px bg-primary/20" />
+                </div>
+                <ul className="space-y-2">
+                  {PLANS.ilimitado.exclusiveFeatures.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm">
+                      <Star className="h-4 w-4 text-amber-400 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <div className="space-y-0.5">
+              <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.ilimitado.commission}</p>
+              <p className="text-[11px] text-muted-foreground/60 leading-tight">{PLANS.ilimitado.commissionNote}</p>
+            </div>
+            <p className="text-xs text-muted-foreground font-medium">{PLANS.ilimitado.staffLabel}</p>
+            <Button
+              onClick={() => handleSubscribe("ilimitado")}
+              disabled={!!checkoutLoading}
+              className="w-full"
+            >
+              {checkoutLoading === `ilimitado-${billingInterval}` ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Infinity className="h-4 w-4 mr-2" />
               )}
               Começar trial grátis
             </Button>

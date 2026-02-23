@@ -22,6 +22,10 @@ const PRICE_MAP: Record<string, Record<string, string>> = {
     month: "STRIPE_PRICE_PROFISSIONAL_MONTHLY",
     year: "STRIPE_PRICE_PROFISSIONAL_YEARLY",
   },
+  ilimitado: {
+    month: "STRIPE_PRICE_ILIMITADO_MONTHLY",
+    year: "STRIPE_PRICE_ILIMITADO_YEARLY",
+  },
 };
 
 // Fallback price IDs (test mode)
@@ -30,6 +34,8 @@ const FALLBACK_PRICES: Record<string, string> = {
   STRIPE_PRICE_ESSENCIAL_YEARLY: "price_1T05VNCxw1gIFu9gm1teleab",
   STRIPE_PRICE_PROFISSIONAL_MONTHLY: "price_1T05HvCxw1gIFu9guQDhSvfs",
   STRIPE_PRICE_PROFISSIONAL_YEARLY: "price_1T05W3Cxw1gIFu9gKCNzmSvM",
+  STRIPE_PRICE_ILIMITADO_MONTHLY: "price_1T40Q1Cxw1gIFu9gQgXMbjrr",
+  STRIPE_PRICE_ILIMITADO_YEARLY: "price_1T40QcCxw1gIFu9g5oE9dpPM",
 };
 
 serve(async (req) => {
