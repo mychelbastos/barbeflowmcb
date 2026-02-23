@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isCustomDomain } from "@/lib/hostname";
+import { useTenantBranding } from "@/hooks/useTenantBranding";
 import { useToast } from "@/hooks/use-toast";
 import { TenantNotFound } from "@/components/TenantNotFound";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,9 @@ const BookingPublic = () => {
   
   // Order Bump
   const [orderBumpItems, setOrderBumpItems] = useState<OrderBumpProduct[]>([]);
+
+  // Dynamic favicon + PWA manifest per tenant
+  useTenantBranding(tenant);
 
   useEffect(() => {
     if (isCustomDomain()) {
