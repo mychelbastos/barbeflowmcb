@@ -763,7 +763,7 @@ const Landing = () => {
                 <p className="text-xs text-zinc-500">Taxa sobre transações: {PLANS.ilimitado.commission}</p>
                 <p className="text-[11px] text-zinc-600 leading-tight">{PLANS.ilimitado.commissionNote}</p>
               </div>
-              <div className="mb-6" />
+              <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.ilimitado.staffLabel}</p>
               <a href={getDashboardUrl('/app/register')}>
                 <Button className="w-full rounded-xl h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-bold shadow-lg shadow-primary/20">
                   Começar grátis
