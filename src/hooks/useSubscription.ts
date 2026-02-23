@@ -24,6 +24,9 @@ const SHARED_FEATURES = [
   "IA para melhoria de imagens",
   "Order bump de produtos",
   "Proteção contra cancelamentos",
+  "Caixa e controle financeiro diário",
+  "Comissões automáticas por profissional",
+  "App instalável no celular (PWA)",
 ];
 
 export const PLANS = {
