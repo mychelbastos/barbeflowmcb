@@ -6,6 +6,7 @@ import { NoTenantState } from "@/components/NoTenantState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Select,
@@ -39,6 +40,7 @@ import { AiGenerateImageButton, AiTextButton } from "@/components/AiContentButto
 interface Product {
   id: string;
   name: string;
+  description: string | null;
   photo_url: string | null;
   purchase_price_cents: number;
   sale_price_cents: number;
@@ -66,6 +68,7 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState({
     name: '',
+    description: '',
     photo_url: '',
     purchase_price: '',
     sale_price: '',
@@ -190,13 +193,14 @@ const Products = () => {
       setEditingProduct(product);
       setProductForm({
         name: product.name,
+        description: product.description || '',
         photo_url: product.photo_url || '',
         purchase_price: (product.purchase_price_cents / 100).toFixed(2),
         sale_price: (product.sale_price_cents / 100).toFixed(2),
       });
     } else {
       setEditingProduct(null);
-      setProductForm({ name: '', photo_url: '', purchase_price: '', sale_price: '' });
+      setProductForm({ name: '', description: '', photo_url: '', purchase_price: '', sale_price: '' });
     }
     setShowProductModal(true);
   };
@@ -220,6 +224,7 @@ const Products = () => {
       const productData = {
         tenant_id: currentTenant.id,
         name: productForm.name,
+        description: productForm.description || null,
         photo_url: productForm.photo_url || null,
         purchase_price_cents: purchaseCents,
         sale_price_cents: saleCents,
@@ -667,13 +672,25 @@ const Products = () => {
                 <AiTextButton
                   table="products"
                   currentName={productForm.name}
-                  onResult={(title) => setProductForm(prev => ({ ...prev, name: title }))}
+                  currentDescription={productForm.description}
+                  onResult={(title, desc) => setProductForm(prev => ({ ...prev, name: title, description: desc }))}
                 />
               </div>
               <Input
                 value={productForm.name}
                 onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Ex: Pomada Modeladora"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-muted-foreground mb-2">Descrição</label>
+              <Textarea
+                value={productForm.description}
+                onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descrição do produto para exibição na página de agendamento"
+                rows={3}
+                className="resize-none"
               />
             </div>
 
