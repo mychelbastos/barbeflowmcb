@@ -52,7 +52,7 @@ export const PLANS = {
   profissional: {
     product_id: "prod_Ty1KYrBniQmXyi",
     name: "Profissional",
-    commission: "1,0%",
+    commission: "1,5%",
     commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
     staffLabel: "1 profissional incluso",
     month: {
