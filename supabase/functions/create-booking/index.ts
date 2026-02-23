@@ -42,6 +42,7 @@ interface CreateBookingRequest {
   extra_slots?: number;
   custom_duration?: number;
   created_via?: string;
+  order_bump_items?: Array<{ product_id: string; quantity?: number }>;
 }
 
 interface ErrorResponse {
@@ -546,6 +547,49 @@ serve(async (req) => {
       const result = await handleSubscriptionSession(resolvedSubscriptionId, service_id, booking.id);
       if (!result.valid) {
         console.error('Subscription session error (booking already created):', result.error);
+      }
+    }
+
+    // 10b. Insert order bump items as booking_items
+    const orderBumpItems = payload.order_bump_items;
+    if (orderBumpItems && Array.isArray(orderBumpItems) && orderBumpItems.length > 0) {
+      // Fetch product details for all bump items
+      const productIds = orderBumpItems.map(item => item.product_id);
+      const { data: bumpProducts } = await supabase
+        .from('products')
+        .select('id, name, sale_price_cents, purchase_price_cents')
+        .in('id', productIds)
+        .eq('tenant_id', tenant_id)
+        .eq('active', true);
+
+      if (bumpProducts && bumpProducts.length > 0) {
+        const bumpInserts = bumpProducts.map(product => {
+          const item = orderBumpItems.find(i => i.product_id === product.id);
+          const qty = item?.quantity || 1;
+          return {
+            tenant_id,
+            booking_id: bookingId,
+            type: 'product',
+            ref_id: product.id,
+            title: product.name,
+            quantity: qty,
+            unit_price_cents: product.sale_price_cents,
+            total_price_cents: product.sale_price_cents * qty,
+            purchase_price_cents: product.purchase_price_cents || 0,
+            staff_id: finalStaffId,
+            paid_status: 'unpaid',
+          };
+        });
+
+        const { error: bumpError } = await supabase
+          .from('booking_items')
+          .insert(bumpInserts);
+
+        if (bumpError) {
+          console.error('Error inserting order bump items:', bumpError);
+        } else {
+          console.log(`Inserted ${bumpInserts.length} order bump item(s) for booking ${bookingId}`);
+        }
       }
     }
 

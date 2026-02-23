@@ -1425,6 +1425,58 @@ export type Database = {
           },
         ]
       }
+      service_order_bumps: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          product_id: string
+          service_id: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          product_id: string
+          service_id: string
+          sort_order?: number
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          product_id?: string
+          service_id?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_bumps_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_bumps_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_order_bumps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_packages: {
         Row: {
           active: boolean

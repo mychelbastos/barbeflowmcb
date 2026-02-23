@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PackagePurchaseFlow } from "@/components/public/PackagePurchaseFlow";
 import { BenefitBadge } from "@/components/public/BenefitBadge";
+import { OrderBumpSection, type OrderBumpProduct } from "@/components/public/OrderBumpSection";
 
 import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
@@ -115,6 +116,9 @@ const BookingPublic = () => {
   const [earlyIdentifiedName, setEarlyIdentifiedName] = useState('');
   const [earlyLoading, setEarlyLoading] = useState(false);
   const [forcedOnlinePayment, setForcedOnlinePayment] = useState(false);
+  
+  // Order Bump
+  const [orderBumpItems, setOrderBumpItems] = useState<OrderBumpProduct[]>([]);
 
   useEffect(() => {
     if (isCustomDomain()) {
@@ -664,6 +668,7 @@ const BookingPublic = () => {
     setEarlyIdentifiedName('');
     setBenefitsMap(new Map());
     setForcedOnlinePayment(false);
+    setOrderBumpItems([]);
     setStep(1);
   };
 
@@ -803,6 +808,10 @@ const BookingPublic = () => {
           payment_method: effectivePaymentMethod,
           customer_package_id: (packageCoveredService && activeCustomerPackage) ? activeCustomerPackage.id : undefined,
           customer_subscription_id: (subscriptionCoveredService && activeSubscription) ? activeSubscription.id : undefined,
+          order_bump_items: orderBumpItems.length > 0 ? orderBumpItems.map(item => ({
+            product_id: item.product_id,
+            quantity: 1,
+          })) : undefined,
         },
       });
 
@@ -1812,6 +1821,15 @@ END:VCALENDAR`;
                 </div>
               )}
 
+
+              {/* Order Bump Section */}
+              {selectedService && tenant && (
+                <OrderBumpSection
+                  tenantId={tenant.id}
+                  serviceId={selectedService}
+                  onSelectionChange={setOrderBumpItems}
+                />
+              )}
 
               <div className="pt-4 space-y-3">
                 <Button 
