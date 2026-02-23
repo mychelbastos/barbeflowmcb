@@ -778,6 +778,17 @@ const BookingPublic = () => {
       return;
     }
 
+    // If booking was already created (user went back from payment step), reuse it
+    if (createdBooking) {
+      if (paymentMethod === 'online') {
+        setStep(7);
+      } else {
+        setStep(6);
+        toast({ title: "Agendamento confirmado!", description: "Você receberá uma confirmação em breve." });
+      }
+      return;
+    }
+
     try {
       setSubmitting(true);
       
