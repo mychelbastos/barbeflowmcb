@@ -1750,7 +1750,7 @@ END:VCALENDAR`;
                 </div>
               )}
 
-              {!customerFound && customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && !customerName && (
+              {!customerFound && customerPhone.replace(/\D/g, '').length >= 10 && !lookingUpCustomer && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="p-3 bg-zinc-800/30 border border-zinc-700/40 rounded-xl">
                     <p className="text-xs text-zinc-400">
