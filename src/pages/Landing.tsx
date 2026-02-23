@@ -773,7 +773,10 @@ const Landing = () => {
           </div>
 
           {/* Footer info */}
-          <div className="text-center mt-8">
+          <div className="text-center mt-8 space-y-1.5">
+            <p className="text-xs text-zinc-500">
+              +R$ 14,90/mês por profissional adicional (planos Essencial e Profissional)
+            </p>
             <p className="text-xs text-zinc-600">
               Após 14 dias, a cobrança é automática. Cancele quando quiser pelo painel.
             </p>
