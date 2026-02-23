@@ -499,7 +499,7 @@ const Landing = () => {
 
       {/* Caixa Financeiro Section */}
       <section className="py-28 px-6 border-t border-zinc-800/30 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.03] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
         <div className="max-w-5xl mx-auto relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -508,13 +508,13 @@ const Landing = () => {
             className="text-center mb-16"
           >
             <div className="flex items-center gap-3 justify-center mb-6">
-              <div className="w-8 h-px bg-emerald-500/40" />
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-[0.2em]">Caixa Financeiro</span>
-              <div className="w-8 h-px bg-emerald-500/40" />
+              <div className="w-8 h-px bg-primary/40" />
+              <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">Caixa Financeiro</span>
+              <div className="w-8 h-px bg-primary/40" />
             </div>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
               Controle total do{" "}
-              <span className="text-emerald-400">seu caixa</span>
+              <span className="text-primary">seu caixa</span>
             </h2>
             <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
               Abertura, fechamento, entradas e saídas separadas por método de pagamento. Tudo registrado, sem papel.
@@ -533,15 +533,18 @@ const Landing = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                className="p-5 rounded-2xl bg-zinc-900/50 border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300 text-center"
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="group relative p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300"
               >
-                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 mx-auto">
-                  <item.icon className="h-5 w-5 text-emerald-400" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-base font-semibold text-zinc-100 mb-2">{item.title}</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{item.description}</p>
                 </div>
-                <h3 className="text-sm font-semibold text-zinc-100 mb-1.5">{item.title}</h3>
-                <p className="text-zinc-500 text-xs leading-relaxed">{item.description}</p>
               </motion.div>
             ))}
           </div>
@@ -552,9 +555,9 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <Zap className="h-4 w-4 text-emerald-400" />
-              <span className="text-sm text-emerald-300 font-medium">Pagamentos online aparecem automaticamente no caixa</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="text-sm text-primary font-medium">Pagamentos online aparecem automaticamente no caixa</span>
             </div>
           </motion.div>
         </div>
@@ -562,7 +565,7 @@ const Landing = () => {
 
       {/* Comissões Automáticas Section */}
       <section className="py-28 px-6 border-t border-zinc-800/30 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-violet-500/[0.03] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
         <div className="max-w-5xl mx-auto relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -571,20 +574,20 @@ const Landing = () => {
             className="text-center mb-16"
           >
             <div className="flex items-center gap-3 justify-center mb-6">
-              <div className="w-8 h-px bg-violet-500/40" />
-              <span className="text-xs font-semibold text-violet-400 uppercase tracking-[0.2em]">Comissões</span>
-              <div className="w-8 h-px bg-violet-500/40" />
+              <div className="w-8 h-px bg-primary/40" />
+              <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">Comissões</span>
+              <div className="w-8 h-px bg-primary/40" />
             </div>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
               Comissões calculadas{" "}
-              <span className="text-violet-400">automaticamente</span>
+              <span className="text-primary">automaticamente</span>
             </h2>
             <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
               Cada atendimento gera um snapshot de comissão por profissional. Relatório pronto, sem planilhas.
             </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-3 gap-5 max-w-3xl mx-auto mb-10">
+          <div className="grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto mb-10">
             {[
               { icon: CalendarCheck, title: "Serviço Realizado", description: "O atendimento é concluído e o valor registrado" },
               { icon: Calculator, title: "Cálculo Automático", description: "A comissão é calculada com base no percentual de cada profissional" },
@@ -595,15 +598,18 @@ const Landing = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                className="p-6 rounded-2xl bg-zinc-900/50 border border-violet-500/20 hover:border-violet-500/40 transition-all duration-300 text-center"
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="group relative p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300"
               >
-                <div className="w-11 h-11 rounded-xl bg-violet-500/10 flex items-center justify-center mb-4 mx-auto">
-                  <item.icon className="h-5 w-5 text-violet-400" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-base font-semibold text-zinc-100 mb-2">{item.title}</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{item.description}</p>
                 </div>
-                <h3 className="text-sm font-semibold text-zinc-100 mb-1.5">{item.title}</h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">{item.description}</p>
               </motion.div>
             ))}
           </div>
@@ -614,9 +620,9 @@ const Landing = () => {
             viewport={{ once: true }}
             className="text-center"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20">
-              <Sparkles className="h-4 w-4 text-violet-400" />
-              <span className="text-sm text-violet-300 font-medium">Sem planilhas. Sem erros.</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm text-primary font-medium">Sem planilhas. Sem erros.</span>
             </div>
           </motion.div>
         </div>
@@ -624,7 +630,7 @@ const Landing = () => {
 
       {/* App no Celular (PWA) Section */}
       <section className="py-28 px-6 border-t border-zinc-800/30 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/[0.03] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent" />
         <div className="max-w-5xl mx-auto relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -633,56 +639,57 @@ const Landing = () => {
             className="text-center mb-16"
           >
             <div className="flex items-center gap-3 justify-center mb-6">
-              <div className="w-8 h-px bg-blue-500/40" />
-              <span className="text-xs font-semibold text-blue-400 uppercase tracking-[0.2em]">App no Celular</span>
-              <div className="w-8 h-px bg-blue-500/40" />
+              <div className="w-8 h-px bg-primary/40" />
+              <span className="text-xs font-semibold text-primary uppercase tracking-[0.2em]">App no Celular</span>
+              <div className="w-8 h-px bg-primary/40" />
             </div>
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5">
               Seu negócio{" "}
-              <span className="text-blue-400">no bolso</span>
+              <span className="text-primary">no bolso</span>
             </h2>
             <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
               Instale direto do navegador, sem loja de apps. Acesse sua agenda, caixa e clientes de qualquer lugar.
             </p>
           </motion.div>
 
-          <div className="flex flex-col items-center gap-8">
-            <div className="grid sm:grid-cols-3 gap-5 max-w-3xl mx-auto">
-              {[
-                { icon: Smartphone, title: "Instale em 1 Toque", description: "Sem App Store, sem Google Play. Abra no navegador e adicione à tela inicial" },
-                { icon: Zap, title: "Abre Instantaneamente", description: "Como um app nativo, sem esperar carregamento do navegador" },
-                { icon: Download, title: "Sempre Atualizado", description: "Sem precisar atualizar manualmente. Sempre a versão mais recente" },
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                  className="p-6 rounded-2xl bg-zinc-900/50 border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300 text-center"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 mx-auto">
-                    <item.icon className="h-5 w-5 text-blue-400" />
+          <div className="grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto mb-10">
+            {[
+              { icon: Smartphone, title: "Instale em 1 Toque", description: "Sem App Store, sem Google Play. Abra no navegador e adicione à tela inicial" },
+              { icon: Zap, title: "Abre Instantaneamente", description: "Como um app nativo, sem esperar carregamento do navegador" },
+              { icon: Download, title: "Sempre Atualizado", description: "Sem precisar atualizar manualmente. Sempre a versão mais recente" },
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="group relative p-6 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 hover:border-zinc-700/60 hover:bg-zinc-900/60 transition-all duration-300"
+              >
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                    <item.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="text-sm font-semibold text-zinc-100 mb-1.5">{item.title}</h3>
+                  <h3 className="text-base font-semibold text-zinc-100 mb-2">{item.title}</h3>
                   <p className="text-zinc-500 text-sm leading-relaxed">{item.description}</p>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <Smartphone className="h-4 w-4 text-blue-400" />
-                <span className="text-sm text-blue-300 font-medium">Funciona offline e abre instantaneamente</span>
-              </div>
-            </motion.div>
+                </div>
+              </motion.div>
+            ))}
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+              <Smartphone className="h-4 w-4 text-primary" />
+              <span className="text-sm text-primary font-medium">Funciona offline e abre instantaneamente</span>
+            </div>
+          </motion.div>
         </div>
       </section>
 
