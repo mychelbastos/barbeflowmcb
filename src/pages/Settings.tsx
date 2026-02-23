@@ -1135,28 +1135,6 @@ export default function Settings() {
             <CardContent>
               <Form {...settingsForm}>
                 <form onSubmit={settingsForm.handleSubmit(handleSettingsSubmit)} className="space-y-6">
-                  <FormField
-                    control={settingsForm.control}
-                    name="email_notifications"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">
-                            Notificações por Email
-                          </FormLabel>
-                          <FormDescription>
-                            Receber confirmações e lembretes por email
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
 
                   <WhatsAppNotificationStatus />
 
