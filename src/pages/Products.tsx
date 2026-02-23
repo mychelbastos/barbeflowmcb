@@ -34,7 +34,7 @@ import {
   Sparkles,
   Wand2
 } from "lucide-react";
-import { AiGenerateImageButton } from "@/components/AiContentButtons";
+import { AiGenerateImageButton, AiTextButton } from "@/components/AiContentButtons";
 
 interface Product {
   id: string;
@@ -662,7 +662,14 @@ const Products = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-muted-foreground mb-2">Nome do Produto *</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm text-muted-foreground">Nome do Produto *</label>
+                <AiTextButton
+                  table="products"
+                  currentName={productForm.name}
+                  onResult={(title) => setProductForm(prev => ({ ...prev, name: title }))}
+                />
+              </div>
               <Input
                 value={productForm.name}
                 onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}

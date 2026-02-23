@@ -92,6 +92,22 @@ serve(async (req) => {
       amountCents = Math.round(servicePriceCents * prepaymentPercentage / 100);
     }
 
+    // Add order bump product items to amount (unless it's a package purchase)
+    if (!customer_package_id) {
+      const { data: bumpItems } = await supabase
+        .from('booking_items')
+        .select('total_price_cents, title')
+        .eq('booking_id', booking_id)
+        .eq('type', 'product')
+        .eq('paid_status', 'unpaid');
+
+      const bumpTotal = (bumpItems || []).reduce((s: number, i: any) => s + (i.total_price_cents || 0), 0);
+      if (bumpTotal > 0) {
+        amountCents += bumpTotal;
+        console.log(`Added order bump products: +${bumpTotal} cents, total: ${amountCents}`);
+      }
+    }
+
     // --- Platform commission (marketplace fee) ---
     const commissionRate = await getCommissionRate(supabase, booking.tenant_id);
     const transactionAmount = amountCents / 100;
