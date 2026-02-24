@@ -5,9 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   tenantId: string | undefined;
+  compact?: boolean;
 }
 
-export function PushNotificationToggle({ tenantId }: Props) {
+export function PushNotificationToggle({ tenantId, compact }: Props) {
   const { status, loading, subscribe, unsubscribe } = usePushNotifications(tenantId);
   const { toast } = useToast();
 
@@ -38,13 +39,14 @@ export function PushNotificationToggle({ tenantId }: Props) {
   return (
     <Button
       variant={status === 'subscribed' ? 'secondary' : 'outline'}
-      size="sm"
+      size={compact ? 'icon' : 'sm'}
       onClick={handleToggle}
       disabled={loading || status === 'denied'}
-      className="gap-2 shrink-0"
+      className={compact ? 'h-8 w-8 shrink-0' : 'gap-2 shrink-0'}
+      title={label}
     >
       {icon}
-      <span className="hidden sm:inline">{label}</span>
+      {!compact && <span className="hidden sm:inline">{label}</span>}
     </Button>
   );
 }

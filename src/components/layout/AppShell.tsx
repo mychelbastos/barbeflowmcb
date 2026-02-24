@@ -75,6 +75,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { BookingModal } from "@/components/modals/BookingModal";
+import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 
 import { motion, AnimatePresence } from "framer-motion";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
@@ -559,6 +560,7 @@ export default function AppShell() {
               </div>
               
               <div className="flex items-center gap-2">
+                <PushNotificationToggle tenantId={currentTenant?.id} compact />
                 <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums">
                   {format(new Date(), "dd/MM", { locale: ptBR })}
                 </span>
@@ -630,6 +632,7 @@ export default function AppShell() {
                 </div>
                 
                 <div className="flex items-center gap-3">
+                  <PushNotificationToggle tenantId={currentTenant?.id} />
                   <motion.div whileHover={{ scale: 1.04, transition: { type: "spring", stiffness: 300, damping: 20 } }} whileTap={{ scale: 0.94, transition: { duration: 0.08 } }}>
                     <Button 
                       size="sm" 
