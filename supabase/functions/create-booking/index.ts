@@ -412,9 +412,10 @@ serve(async (req) => {
       customerId = newCustomer.id;
     }
 
-    // 6b. Enforce risk policy: if customer has forced_online_payment and is not using benefit
+    // 6b. Enforce risk policy: only on PUBLIC bookings (not admin-created)
+    const isPublicBooking = !payload.tenant_id; // admin always sends tenant_id, public sends slug
     const riskEnabled = COALESCE_bool((tenantSettings as any)?.enable_risk_policy, true);
-    if (riskEnabled && existingCustomer?.forced_online_payment && !customer_package_id && !customer_subscription_id && payment_method !== 'online') {
+    if (isPublicBooking && riskEnabled && existingCustomer?.forced_online_payment && !customer_package_id && !customer_subscription_id && payment_method !== 'online') {
       return createErrorResponse(ErrorType.FORCED_ONLINE_PAYMENT, 'Este cliente precisa pagar online antecipadamente.', 403);
     }
 
