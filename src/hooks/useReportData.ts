@@ -207,8 +207,10 @@ export function useBirthdayClientsReport(tenantId: string, month: number) {
 
       const filtered = customers.filter((c) => {
         if (!c.birthday) return false;
-        const d = new Date(c.birthday);
-        return d.getMonth() + 1 === month;
+        // Parse as local date to avoid UTC shift (e.g. "2000-03-01" → Feb 29 in UTC-3)
+        const parts = c.birthday.split("-");
+        const m = parseInt(parts[1], 10);
+        return m === month;
       });
 
       // Get last booking for each
@@ -229,8 +231,8 @@ export function useBirthdayClientsReport(tenantId: string, month: number) {
       return filtered
         .map((c) => ({ ...c, lastVisit: lastVisit[c.id] || null }))
         .sort((a, b) => {
-          const da = new Date(a.birthday!).getDate();
-          const db = new Date(b.birthday!).getDate();
+          const da = parseInt(a.birthday!.split("-")[2], 10);
+          const db = parseInt(b.birthday!.split("-")[2], 10);
           return da - db;
         });
     },
