@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
 
 const TZ = "America/Bahia";
@@ -235,7 +235,10 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       if (!isRecurringSlotActiveOnDate(rc, dateStr)) continue;
 
       // Build the starts_at/ends_at for this recurring slot on this date
-      const startsAt = new Date(`${dateStr}T${rc.start_time}-03:00`);
+      // Use fromZonedTime for proper timezone conversion instead of hardcoded offset
+      const timeStr = rc.start_time.slice(0, 5); // "HH:MM"
+      const tz = settings.timezone || TZ;
+      const startsAt = fromZonedTime(`${dateStr} ${timeStr}:00`, tz);
       const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
 
       // Check if ANY real booking (including cancelled) exists for this staff+customer at this time
@@ -268,7 +271,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
     }
 
     return real;
-  }, [bookings, recurringSlots, dateStr, allDayBookings]);
+  }, [bookings, recurringSlots, dateStr, allDayBookings, settings]);
 
   return {
     staff,
