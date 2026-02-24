@@ -19,7 +19,7 @@ export interface SubscriptionCardPaymentProps {
   customerPhone: string;
   customerEmail: string;
   customerCpf?: string;
-  onSuccess: () => void;
+  onSuccess: (subscriptionId?: string) => void;
   onBack: () => void;
 }
 
@@ -188,13 +188,15 @@ export function SubscriptionCardPayment({
       if (data?.error) throw new Error(data.error);
 
       if (data?.activated) {
+        const subId = data?.subscription_id || data?.customer_subscription_id;
         setStatus('success');
-        setTimeout(() => onSuccess(), 2000);
+        setTimeout(() => onSuccess(subId), 2000);
       } else if (data?.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
+        const subId = data?.subscription_id || data?.customer_subscription_id;
         setStatus('success');
-        setTimeout(() => onSuccess(), 2000);
+        setTimeout(() => onSuccess(subId), 2000);
       }
     } catch (err: any) {
       if (!isMountedRef.current) return;
