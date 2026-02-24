@@ -6,22 +6,29 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X } from "lucide-react";
+import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, Trash2, AlertTriangle, DollarSign, RotateCcw } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   completed: 'bg-muted text-muted-foreground border-border',
+  cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
 };
 
 const paymentColors: Record<string, string> = {
   confirmed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  refunded: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
 };
 
 interface ServiceUsage {
@@ -46,6 +53,11 @@ export function PackageCustomersList() {
   const [editingCp, setEditingCp] = useState<any | null>(null);
   const [editServices, setEditServices] = useState<ServiceUsage[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Cancel package
+  const [cancellingCp, setCancellingCp] = useState<any | null>(null);
+  const [cancelWithRefund, setCancelWithRefund] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (currentTenant) loadData();
@@ -134,6 +146,40 @@ export function PackageCustomersList() {
     }
   };
 
+  const handleCancelPackage = async () => {
+    if (!cancellingCp) return;
+    setCancelling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('mp-cancel-package', {
+        body: {
+          customer_package_id: cancellingCp.id,
+          refund: cancelWithRefund,
+        },
+      });
+
+      if (error) throw new Error(data?.error || error.message);
+      if (data?.error) throw new Error(data.error);
+
+      const refundMsg = data?.refund?.success
+        ? ` Estorno de R$ ${data.refund.amount?.toFixed(2)} realizado.`
+        : cancelWithRefund
+          ? ' Estorno não foi possível — verifique manualmente no Mercado Pago.'
+          : '';
+
+      toast({
+        title: "Pacote cancelado",
+        description: `Pacote de ${cancellingCp.customer?.name} foi cancelado.${refundMsg}`,
+      });
+
+      setCancellingCp(null);
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao cancelar", description: err.message, variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const filtered = customerPackages.filter(cp => {
     if (filterPackage !== 'all' && cp.package_id !== filterPackage) return false;
     if (filterStatus !== 'all' && cp.status !== filterStatus) return false;
@@ -158,6 +204,7 @@ export function PackageCustomersList() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativo</SelectItem>
             <SelectItem value="completed">Esgotado</SelectItem>
+            <SelectItem value="cancelled">Cancelado</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -180,11 +227,13 @@ export function PackageCustomersList() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm text-foreground truncate">{cp.customer?.name}</span>
                     <Badge className={statusColors[cp.status] || statusColors.active}>
-                      {cp.status === 'completed' ? 'Esgotado' : 'Ativo'}
+                      {cp.status === 'completed' ? 'Esgotado' : cp.status === 'cancelled' ? 'Cancelado' : 'Ativo'}
                     </Badge>
                     <Badge className={paymentColors[cp.payment_status] || paymentColors.pending}>
                       {cp.payment_status === 'confirmed' ? (
                         <><CheckCircle className="h-3 w-3 mr-1" /> Pago</>
+                      ) : cp.payment_status === 'refunded' ? (
+                        <><RotateCcw className="h-3 w-3 mr-1" /> Estornado</>
                       ) : (
                         <><Clock className="h-3 w-3 mr-1" /> Pendente</>
                       )}
@@ -205,9 +254,25 @@ export function PackageCustomersList() {
                     </div>
                   )}
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => openEditSessions(cp)} title="Editar sessões usadas">
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => openEditSessions(cp)} title="Editar sessões usadas">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  {cp.status !== 'cancelled' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCancellingCp(cp);
+                        setCancelWithRefund(cp.payment_status === 'confirmed');
+                      }}
+                      title="Cancelar pacote"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -253,6 +318,54 @@ export function PackageCustomersList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Package Dialog */}
+      <AlertDialog open={!!cancellingCp} onOpenChange={(open) => { if (!open) setCancellingCp(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cancelar pacote
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Tem certeza que deseja cancelar o pacote <strong>{cancellingCp?.package?.name}</strong> de <strong>{cancellingCp?.customer?.name}</strong>?
+                </p>
+                <p className="text-destructive">
+                  O cliente perderá acesso a todas as sessões restantes.
+                </p>
+                {cancellingCp?.payment_status === 'confirmed' && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                    <Checkbox
+                      id="refund-check"
+                      checked={cancelWithRefund}
+                      onCheckedChange={(c) => setCancelWithRefund(!!c)}
+                    />
+                    <label htmlFor="refund-check" className="cursor-pointer">
+                      <span className="text-sm font-medium text-foreground">Estornar pagamento via Mercado Pago</span>
+                      <span className="block text-xs text-muted-foreground">
+                        R$ {((cancellingCp?.package?.price_cents || 0) / 100).toFixed(2)} será devolvido ao cliente
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter pacote</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelPackage}
+              disabled={cancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              {cancelWithRefund ? 'Cancelar e estornar' : 'Cancelar pacote'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
