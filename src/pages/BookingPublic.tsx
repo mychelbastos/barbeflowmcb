@@ -95,6 +95,7 @@ const BookingPublic = () => {
   // Packages
   const [packages, setPackages] = useState<any[]>([]);
   const initialTab = searchParams.get('tab') as BookingTab | null;
+  const initialPlanId = searchParams.get('plan');
   const [bookingTab, setBookingTab] = useState<BookingTab>(
     initialTab && ['services', 'packages', 'subscriptions'].includes(initialTab) ? initialTab : 'services'
   );
@@ -1370,6 +1371,7 @@ END:VCALENDAR`;
               <PublicSubscriptionPlans
                 tenant={tenant}
                 plans={subscriptionPlans}
+                initialPlanId={initialPlanId}
               />
             ) : bookingTab === 'packages' ? (
               /* Packages Tab — purchase without forced booking */

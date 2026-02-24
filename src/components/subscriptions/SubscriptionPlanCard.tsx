@@ -47,9 +47,9 @@ export function SubscriptionPlanCard({ plan, tenantSlug, onEdit, onDelete, onTog
       toast({ title: "Slug não encontrado", variant: "destructive" });
       return;
     }
-    const url = getPublicUrl(`/${tenantSlug}?tab=subscriptions`);
+    const url = getPublicUrl(`/${tenantSlug}?tab=subscriptions&plan=${plan.id}`);
     navigator.clipboard.writeText(url).then(() => {
-      toast({ title: "Link copiado!", description: "Envie para o cliente assinar o plano." });
+      toast({ title: "Link copiado!", description: `Envie para o cliente assinar o plano "${plan.name}".` });
     }).catch(() => {
       toast({ title: "Erro ao copiar", variant: "destructive" });
     });
