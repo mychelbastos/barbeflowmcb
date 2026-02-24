@@ -1531,16 +1531,40 @@ END:VCALENDAR`;
                 <PackagePurchaseFlow
                   tenant={tenant}
                   pkg={purchasingPackage}
-                  onSuccess={() => { setPurchasingPackage(null); }}
+                  onSuccess={(cpId) => {
+                    setPurchasingPackage(null);
+                    // Recarregar benefícios para badges atualizados
+                    if (earlyPhone) fetchCustomerBenefits(earlyPhone);
+                  }}
                   onCancel={() => setPurchasingPackage(null)}
-                  onScheduleNow={() => {
-                    const firstSvc = purchasingPackage.package_services?.[0];
-                    if (firstSvc) {
-                      setPurchasingPackage(null);
-                      handleServiceSelect(firstSvc.service_id);
-                    } else {
-                      setPurchasingPackage(null);
-                    }
+                  onScheduleNow={(cpId) => {
+                    const firstSvc = purchasingPackage?.package_services?.[0];
+                    setPurchasingPackage(null);
+                    if (!firstSvc) return;
+
+                    // Forçar benefício do pacote recém-comprado
+                    setSelectedService(firstSvc.service_id);
+                    setSelectedPackage(null);
+                    setSelectedTime(null);
+                    setAvailableSlots([]);
+                    setOccupiedSlots([]);
+                    setAllTimeSlots([]);
+                    setPackageCoveredService(true);
+                    setActiveCustomerPackage({
+                      id: cpId,
+                      serviceUsage: { sessions_total: firstSvc.sessions_count, sessions_used: 0 },
+                    });
+                    setSubscriptionCoveredService(false);
+                    setSubscriptionAllowedStaff([]);
+                    setActiveSubscription(null);
+
+                    // Ir para step 2 (seleção de data)
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                    setSelectedDate(tomorrowStr);
+                    setSelectedCalendarDate(parseDate(tomorrowStr));
+                    setStep(2);
                   }}
                 />
               ) : (
