@@ -15,13 +15,14 @@ import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { 
   Calendar, Plus, Clock, Users, TrendingUp, Scissors, Phone,
-  ArrowUpRight, Sparkles, UserCheck, User,
+  ArrowUpRight, Sparkles, UserCheck, User, Cake,
 } from "lucide-react";
 import { useCashRevenue } from "@/hooks/useCashRevenue";
 import { WeeklyScheduleGrid } from "@/components/dashboard/WeeklyScheduleGrid";
 import { WeeklyBarChart } from "@/components/dashboard/WeeklyBarChart";
 import { RevenueLineChart } from "@/components/dashboard/RevenueLineChart";
 import { ClientRevenuePanel } from "@/components/dashboard/ClientRevenuePanel";
+import { BirthdayPanel } from "@/components/dashboard/BirthdayPanel";
 import { BookingDetailsModal } from "@/components/modals/BookingDetailsModal";
 
 const spring = { type: "spring" as const, stiffness: 200, damping: 26, mass: 0.6 };
@@ -45,6 +46,7 @@ const Dashboard = () => {
   const [recurringClients, setRecurringClients] = useState<any[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [birthdayCount, setBirthdayCount] = useState(0);
 
 
   const { user, signOut, loading: authLoading } = useAuth();
@@ -132,7 +134,7 @@ const Dashboard = () => {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
       
-      const [todayBookingsRes, periodBookingsRes, servicesRes, staffRes, recurringRes] = await Promise.all([
+      const [todayBookingsRes, periodBookingsRes, servicesRes, staffRes, recurringRes, customersRes] = await Promise.all([
         supabase.from('bookings').select(`*, service:services(name, color, price_cents), staff:staff(name), customer:customers(name, phone)`)
           .eq('tenant_id', currentTenant.id).gte('starts_at', startOfDay.toISOString()).lt('starts_at', endOfDay.toISOString()).order('starts_at'),
         supabase.from('bookings').select(`*, service:services(name, color, price_cents, duration_minutes), staff:staff(name, color), customer:customers(name, phone)`)
@@ -140,7 +142,8 @@ const Dashboard = () => {
         supabase.from('services').select('*').eq('tenant_id', currentTenant.id).eq('active', true),
         supabase.from('staff').select('*').eq('tenant_id', currentTenant.id).eq('active', true),
         supabase.from('recurring_clients').select('*, staff:staff(name, color), service:services(name, color, duration_minutes, price_cents), customer:customers(name, phone)')
-          .eq('tenant_id', currentTenant.id).eq('active', true)
+          .eq('tenant_id', currentTenant.id).eq('active', true),
+        supabase.from('customers').select('id, birthday').eq('tenant_id', currentTenant.id).not('birthday', 'is', null),
       ]);
 
       if (todayBookingsRes.error) throw todayBookingsRes.error;
@@ -153,6 +156,14 @@ const Dashboard = () => {
       setServices(servicesRes.data || []);
       setStaff(staffRes.data || []);
       setRecurringClients(recurringRes.data || []);
+
+      // Count birthdays this month
+      const currentMonth = new Date().getMonth() + 1;
+      const bdays = (customersRes.data || []).filter((c: any) => {
+        if (!c.birthday) return false;
+        return parseInt(c.birthday.split("-")[1], 10) === currentMonth;
+      });
+      setBirthdayCount(bdays.length);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -253,14 +264,14 @@ const Dashboard = () => {
       href: dashPath('/app/services'),
     },
     {
-      label: "Profissionais",
-      value: loading ? "—" : String(staff.length),
-      sub: "na equipe",
-      icon: Users,
-      gradient: "from-violet-500/20 to-violet-600/5",
-      iconColor: "text-violet-500",
-      glowColor: "group-hover:shadow-violet-500/10",
-      href: dashPath('/app/staff'),
+      label: "Aniversariantes",
+      value: loading ? "—" : String(birthdayCount),
+      sub: "do mês",
+      icon: Cake,
+      gradient: "from-pink-500/20 to-pink-600/5",
+      iconColor: "text-pink-500",
+      glowColor: "group-hover:shadow-pink-500/10",
+      href: dashPath('/app/reports'),
     },
     {
       label: "Faturamento",
@@ -369,8 +380,8 @@ const Dashboard = () => {
 
         {/* Right Column: Revenue Panel + Bar Chart */}
         <div className="space-y-4">
-          {!loading && (
-            <ClientRevenuePanel bookings={allBookings} totalRevenue={cashData?.totalIncome || 0} />
+          {!loading && currentTenant && (
+            <BirthdayPanel tenantId={currentTenant.id} />
           )}
 
           {!loading && (
