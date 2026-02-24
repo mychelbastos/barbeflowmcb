@@ -30,24 +30,29 @@ export function DateRangeSelector({ className, showTitle = true }: DateRangeSele
 
   return (
     <div className={`bg-card border border-border rounded-xl md:rounded-2xl ${className}`}>
-      <div className="p-3 md:p-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+      <div className="p-3 md:px-5 md:py-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
           {showTitle && (
-            <div className="flex items-center gap-2 md:mr-2 flex-shrink-0">
-              <div className="w-7 h-7 md:w-8 md:h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Filter className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Filter className="h-4 w-4 text-primary" />
               </div>
-              <h2 className="text-sm md:text-base font-semibold text-foreground whitespace-nowrap">
+              <span className="text-sm font-semibold text-foreground whitespace-nowrap">
                 Período de Análise
-              </h2>
+              </span>
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-1">
-            <div className="space-y-1 sm:min-w-[180px] sm:max-w-[220px]">
-              <Label className="text-muted-foreground text-xs">Período</Label>
+          {/* Divider on desktop */}
+          {showTitle && (
+            <div className="hidden sm:block w-px h-8 bg-border flex-shrink-0" />
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Label className="text-muted-foreground text-xs whitespace-nowrap hidden sm:inline">Período</Label>
               <Select value={preset} onValueChange={setPreset}>
-                <SelectTrigger className="h-9 md:h-10 text-sm">
+                <SelectTrigger className="h-9 text-sm w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -61,30 +66,25 @@ export function DateRangeSelector({ className, showTitle = true }: DateRangeSele
             </div>
 
             {preset === 'custom' && (
-              <>
-                <div className="space-y-1 sm:min-w-[160px]">
-                  <Label className="text-muted-foreground text-xs">Data Inicial</Label>
-                  <Input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="h-9 md:h-10 text-sm"
-                  />
-                </div>
-                <div className="space-y-1 sm:min-w-[160px]">
-                  <Label className="text-muted-foreground text-xs">Data Final</Label>
-                  <Input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="h-9 md:h-10 text-sm"
-                  />
-                </div>
-              </>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="h-9 text-sm w-[150px]"
+                />
+                <span className="text-xs text-muted-foreground">até</span>
+                <Input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="h-9 text-sm w-[150px]"
+                />
+              </div>
             )}
 
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 border border-border whitespace-nowrap sm:ml-auto">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 border border-border/60 whitespace-nowrap sm:ml-auto">
+              <Calendar className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
               <span>De</span>
               <strong className="text-primary">{format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })}</strong>
               <span>até</span>
