@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
@@ -70,6 +71,7 @@ interface Conversation {
 }
 
 export default function WhatsAppInbox() {
+  usePageTitle("WhatsApp Inbox");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentTenant, loading: tenantLoading } = useTenant();

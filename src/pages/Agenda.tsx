@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { fromZonedTime } from "date-fns-tz";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { NoTenantState } from "@/components/NoTenantState";
 
 export default function Agenda() {
+  usePageTitle("Agenda");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const [bookings, setBookings] = useState<any[]>([]);
   const [recurringClients, setRecurringClients] = useState<any[]>([]);

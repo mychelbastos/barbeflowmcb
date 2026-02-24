@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,7 @@ import { Plus, CreditCard, Loader2 } from "lucide-react";
 
 // Subscription Plans page – tabs removed, subscribers are at /subscriptions/members
 export default function SubscriptionPlansPage() {
+  usePageTitle("Planos de Assinatura");
   const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [plans, setPlans] = useState<any[]>([]);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +79,7 @@ const serviceSchema = z.object({
 type ServiceFormData = z.infer<typeof serviceSchema>;
 
 export default function Services() {
+  usePageTitle("Serviços");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
   const [services, setServices] = useState<any[]>([]);

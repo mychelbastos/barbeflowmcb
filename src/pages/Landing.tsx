@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { getDashboardUrl, getPublicUrl } from "@/lib/hostname";
 import { useRef, useState, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { trackEvent } from "@/utils/metaTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -19,6 +20,7 @@ import testimonialE from "@/assets/testimonial-e.jpg";
 import RevenueCalculator from "@/components/landing/RevenueCalculator";
 
 const Landing = () => {
+  usePageTitle("Sistema para Barbearias e Salões");
   const heroRef = useRef(null);
   const { user } = useAuth();
   const isLoggedIn = !!user;

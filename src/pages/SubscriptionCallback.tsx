@@ -1,4 +1,5 @@
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, CalendarPlus, ArrowLeft, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -6,6 +7,7 @@ import { motion } from "framer-motion";
 const ease = [0.16, 1, 0.3, 1] as const;
 
 export default function SubscriptionCallback() {
+  usePageTitle("Assinatura");
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

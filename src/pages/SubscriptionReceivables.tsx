@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { useReceivables } from "@/hooks/useSubscriptionInsights";
 import { MonthNavigator } from "@/components/subscriptions/MonthNavigator";
@@ -19,6 +20,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 export default function SubscriptionReceivables() {
+  usePageTitle("Recebíveis");
   const { currentTenant } = useTenant();
   const [month, setMonth] = useState(new Date());
   const { data, isLoading } = useReceivables(currentTenant?.id, month);

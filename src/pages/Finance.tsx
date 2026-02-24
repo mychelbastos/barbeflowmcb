@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
 import { useDateRange } from "@/contexts/DateRangeContext";
@@ -134,6 +135,7 @@ function ChartCard({ icon: Icon, iconColor, iconBg, title, description, children
 }
 
 export default function Finance() {
+  usePageTitle("Financeiro");
   const { user } = useAuth();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { dateRange } = useDateRange();

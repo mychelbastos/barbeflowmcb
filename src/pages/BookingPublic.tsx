@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isCustomDomain } from "@/lib/hostname";
@@ -51,6 +52,7 @@ const BookingPublic = () => {
   const { toast } = useToast();
   
   const [tenant, setTenant] = useState<any>(null);
+  usePageTitle(tenant ? `${tenant.name} — Agendamento Online` : "Agendamento Online");
   const [services, setServices] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<string | null>(null);

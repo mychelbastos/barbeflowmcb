@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +68,7 @@ const normalizePhoneForCheck = (phone: string): string => {
 const PAGE_SIZE = 50;
 
 export default function Customers() {
+  usePageTitle("Clientes");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
   const [customers, setCustomers] = useState<any[]>([]);

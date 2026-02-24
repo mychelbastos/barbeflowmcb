@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { useAuth } from "@/hooks/useAuth";
@@ -89,6 +90,7 @@ type StaffMember = {
 };
 
 export default function CashRegister() {
+  usePageTitle("Caixa");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
