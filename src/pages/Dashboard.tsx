@@ -298,11 +298,11 @@ const Dashboard = () => {
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate(dashPath('/app/finance'))}
+            onClick={() => navigate(dashPath('/app/caixa'))}
             className="h-full min-h-[48px] rounded-xl text-sm gap-2 px-5"
           >
-            <TrendingUp className="h-4 w-4" />
-            Financeiro
+            <Clock className="h-4 w-4" />
+            Caixa
           </Button>
         </div>
       </div>
