@@ -157,11 +157,14 @@ const Dashboard = () => {
       setStaff(staffRes.data || []);
       setRecurringClients(recurringRes.data || []);
 
-      // Count birthdays this month
+      // Count birthdays today
       const currentMonth = new Date().getMonth() + 1;
+      const currentDay = new Date().getDate();
       const bdays = (customersRes.data || []).filter((c: any) => {
         if (!c.birthday) return false;
-        return parseInt(c.birthday.split("-")[1], 10) === currentMonth;
+        const m = parseInt(c.birthday.split("-")[1], 10);
+        const d = parseInt(c.birthday.split("-")[2], 10);
+        return m === currentMonth && d === currentDay;
       });
       setBirthdayCount(bdays.length);
     } catch (error) {
@@ -266,7 +269,7 @@ const Dashboard = () => {
     {
       label: "Aniversariantes",
       value: loading ? "—" : String(birthdayCount),
-      sub: "do mês",
+      sub: "hoje",
       icon: Cake,
       gradient: "from-pink-500/20 to-pink-600/5",
       iconColor: "text-pink-500",
