@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
+import { fromZonedTime } from "date-fns-tz";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,9 +131,9 @@ export default function Agenda() {
         return diffWeeks % interval === 0;
       })
       .map(r => {
-        const [h, m] = r.start_time.split(':').map(Number);
-        const startsAt = new Date(dayStart);
-        startsAt.setHours(h, m, 0, 0);
+        const timeStr = r.start_time.slice(0, 5);
+        const dateFormatted = format(date, 'yyyy-MM-dd');
+        const startsAt = fromZonedTime(`${dateFormatted} ${timeStr}:00`, 'America/Bahia');
         const duration = r.service?.duration_minutes || r.duration_minutes;
         const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
         const serviceName = r.service?.name || 'Cliente Fixo';

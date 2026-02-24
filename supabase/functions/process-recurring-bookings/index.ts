@@ -74,7 +74,9 @@ Deno.serve(async (req) => {
       const customerName = rc.customer?.name || "Cliente Fixo";
       const duration = rc.service?.duration_minutes || rc.duration_minutes;
 
-      const slotStartLocal = new Date(`${todayLocal}T${rc.start_time}:00`);
+      // Properly construct time - start_time from DB may be "HH:MM:SS" or "HH:MM"
+      const timeStr = (rc.start_time || "00:00").slice(0, 5); // Extract "HH:MM"
+      const slotStartLocal = new Date(`${todayLocal}T${timeStr}:00`);
       const slotStartUTC = new Date(slotStartLocal.getTime() - TZ_OFFSET * 60 * 60 * 1000);
       const slotEndUTC = new Date(slotStartUTC.getTime() + duration * 60 * 1000);
 
