@@ -20,24 +20,44 @@ interface Props {
 }
 
 export function BirthdayClientsReport({ tenantId }: Props) {
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1));
-  const { data, isLoading } = useBirthdayClientsReport(tenantId, parseInt(month));
+  const today = new Date();
+  const [filter, setFilter] = useState("today");
+  const [month, setMonth] = useState(String(today.getMonth() + 1));
+
+  const isToday = filter === "today";
+  const activeMonth = isToday ? today.getMonth() + 1 : parseInt(month);
+  const activeDay = isToday ? today.getDate() : null;
+
+  const { data, isLoading } = useBirthdayClientsReport(tenantId, activeMonth, activeDay);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <Select value={month} onValueChange={setMonth}>
-          <SelectTrigger className="h-9 text-sm w-full sm:w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {months.map((m) => (
-              <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={filter} onValueChange={(v) => setFilter(v)}>
+            <SelectTrigger className="h-9 text-sm w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="month">Por mês</SelectItem>
+            </SelectContent>
+          </Select>
+          {filter === "month" && (
+            <Select value={month} onValueChange={setMonth}>
+              <SelectTrigger className="h-9 text-sm w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
         <ExportCSVButton
-          data={(data || []).map((d) => ({ Cliente: d.name, Telefone: d.phone, Email: d.email || "", Aniversário: d.birthday ? format(new Date(d.birthday), "dd/MM") : "—", "Último Atendimento": d.lastVisit ? format(new Date(d.lastVisit), "dd/MM/yy") : "—" }))}
+          data={(data || []).map((d) => ({ Cliente: d.name, Telefone: d.phone, Email: d.email || "", Aniversário: d.birthday ? format(new Date(d.birthday + "T12:00:00"), "dd/MM") : "—", "Último Atendimento": d.lastVisit ? format(new Date(d.lastVisit), "dd/MM/yy") : "—" }))}
           columns={[{ key: "Cliente", label: "Cliente" }, { key: "Telefone", label: "Telefone" }, { key: "Email", label: "Email" }, { key: "Aniversário", label: "Aniversário" }, { key: "Último Atendimento", label: "Último Atendimento" }]}
           filename="aniversariantes"
         />
@@ -48,11 +68,11 @@ export function BirthdayClientsReport({ tenantId }: Props) {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <ReportCard icon={Cake} label="Aniversariantes" value={String(data?.length || 0)} />
+            <ReportCard icon={Cake} label={isToday ? "Aniversariantes hoje" : "Aniversariantes do mês"} value={String(data?.length || 0)} />
           </div>
 
           {!data?.length ? (
-            <div className="text-sm text-muted-foreground p-4">Nenhum aniversariante neste mês.</div>
+            <div className="text-sm text-muted-foreground p-4">{isToday ? "Nenhum aniversariante hoje." : "Nenhum aniversariante neste mês."}</div>
           ) : (
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <Table>

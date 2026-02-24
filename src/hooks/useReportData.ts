@@ -193,9 +193,9 @@ export function useStaffClientsReport(tenantId: string, start: string, end: stri
 }
 
 // ── Birthday Clients ──
-export function useBirthdayClientsReport(tenantId: string, month: number) {
+export function useBirthdayClientsReport(tenantId: string, month: number, day?: number | null) {
   return useQuery({
-    queryKey: ["rpt-birthdays", tenantId, month],
+    queryKey: ["rpt-birthdays", tenantId, month, day ?? "all"],
     queryFn: async () => {
       const { data: customers } = await supabase
         .from("customers")
@@ -207,10 +207,14 @@ export function useBirthdayClientsReport(tenantId: string, month: number) {
 
       const filtered = customers.filter((c) => {
         if (!c.birthday) return false;
-        // Parse as local date to avoid UTC shift (e.g. "2000-03-01" → Feb 29 in UTC-3)
         const parts = c.birthday.split("-");
         const m = parseInt(parts[1], 10);
-        return m === month;
+        if (m !== month) return false;
+        if (day) {
+          const d = parseInt(parts[2], 10);
+          if (d !== day) return false;
+        }
+        return true;
       });
 
       // Get last booking for each
