@@ -1524,6 +1524,34 @@ END:VCALENDAR`;
                 tenant={tenant}
                 plans={subscriptionPlans}
                 initialPlanId={initialPlanId}
+                onScheduleNow={(planServices: any[], customerSubscriptionId: string) => {
+                  const firstSvc = planServices?.[0];
+                  if (!firstSvc) return;
+
+                  setSelectedService(firstSvc.service_id);
+                  setSelectedPackage(null);
+                  setSelectedTime(null);
+                  setAvailableSlots([]);
+                  setOccupiedSlots([]);
+                  setAllTimeSlots([]);
+
+                  setSubscriptionCoveredService(true);
+                  setActiveSubscription({ id: customerSubscriptionId, usage: { used: 0, limit: firstSvc.sessions_per_cycle } });
+                  setSubscriptionAllowedStaff(firstSvc.allowed_staff_ids || []);
+                  setActiveCustomerPackage(null);
+                  setPackageCoveredService(false);
+
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                  setSelectedDate(tomorrowStr);
+                  setSelectedCalendarDate(parseDate(tomorrowStr));
+                  setStep(2);
+                  setBookingTab('services');
+                }}
+                onSubscribed={() => {
+                  if (earlyPhone) fetchCustomerBenefits(earlyPhone);
+                }}
               />
             ) : bookingTab === 'packages' ? (
               /* Packages Tab — purchase without forced booking */

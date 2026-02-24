@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Check, CreditCard, Loader2, ChevronLeft, Repeat, XCircle } from "lucide-react";
+import { Check, CreditCard, Loader2, ChevronLeft, Repeat, XCircle, Calendar } from "lucide-react";
 import { SubscriptionCardPayment, type SubscriptionCardPaymentProps } from "./SubscriptionCardPayment";
 
 interface PublicSubscriptionPlansProps {
@@ -12,9 +12,11 @@ interface PublicSubscriptionPlansProps {
   plans: any[];
   onBack?: () => void;
   initialPlanId?: string | null;
+  onScheduleNow?: (planServices: any[], customerSubscriptionId: string) => void;
+  onSubscribed?: () => void;
 }
 
-export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }: PublicSubscriptionPlansProps) {
+export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId, onScheduleNow, onSubscribed }: PublicSubscriptionPlansProps) {
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [phone, setPhone] = useState('');
@@ -25,6 +27,8 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
   const [showCardPayment, setShowCardPayment] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
+  const [subscriptionSuccess, setSubscriptionSuccess] = useState(false);
+  const [createdSubscriptionId, setCreatedSubscriptionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialPlanId && plans.length > 0 && !selectedPlan) {
@@ -108,6 +112,54 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
     setShowCardPayment(true);
   };
 
+  // Success screen after subscription
+  if (subscriptionSuccess && selectedPlan) {
+    return (
+      <div className="text-center space-y-6 py-8 animate-in fade-in duration-300">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto">
+          <Check className="h-8 w-8 text-emerald-400" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold">Assinatura ativada!</h2>
+          <p className="text-muted-foreground text-sm mt-2">
+            Seu plano <strong>{selectedPlan.name}</strong> está ativo.
+            {selectedPlan.plan_services?.length > 0 && (
+              <> Agende agora seu primeiro atendimento!</>
+            )}
+          </p>
+        </div>
+
+        <div className="space-y-3 max-w-xs mx-auto">
+          {selectedPlan.plan_services?.length > 0 && onScheduleNow && (
+            <Button
+              onClick={() => {
+                onScheduleNow(selectedPlan.plan_services, createdSubscriptionId || '');
+              }}
+              className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Agendar agora
+            </Button>
+          )}
+
+          <button
+            onClick={() => {
+              setSubscriptionSuccess(false);
+              setSelectedPlan(null);
+              setPhone('');
+              setEmail('');
+              setName('');
+              setCpf('');
+            }}
+            className="text-sm text-zinc-500 hover:text-foreground transition-colors"
+          >
+            Voltar aos planos
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Card payment step
   if (showCardPayment && selectedPlan) {
     return (
@@ -122,14 +174,11 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
           customerPhone={phone.replace(/\D/g, '')}
           customerEmail={email.trim()}
           customerCpf={cpf.replace(/\D/g, '')}
-          onSuccess={() => {
+          onSuccess={(subscriptionId?: string) => {
             setShowCardPayment(false);
-            setSelectedPlan(null);
-            setPhone('');
-            setEmail('');
-            setName('');
-            setCpf('');
-            toast({ title: "Assinatura ativada!", description: "Sua assinatura está ativa." });
+            setCreatedSubscriptionId(subscriptionId || null);
+            setSubscriptionSuccess(true);
+            onSubscribed?.();
           }}
           onBack={() => setShowCardPayment(false)}
         />
