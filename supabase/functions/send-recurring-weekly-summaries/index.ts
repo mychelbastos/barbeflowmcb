@@ -43,7 +43,7 @@ serve(async (req) => {
     const { data: recurringClients, error } = await supabase
       .from('recurring_clients')
       .select(`
-        id, weekday, start_time, duration_minutes, notes,
+        id, weekday, start_time, duration_minutes, notes, frequency, start_date,
         customer:customers!customer_id(id, name, phone),
         service:services!service_id(id, name, duration_minutes, price_cents),
         staff:staff!staff_id(id, name),
@@ -120,10 +120,27 @@ serve(async (req) => {
         continue;
       }
 
-      // Filter entries whose weekday falls within this week (all active entries for the week)
-      const weekEntries = group.entries.filter(e => {
-        // All active entries are relevant - they repeat every week
-        return true;
+      // Filter entries whose frequency allows them to appear this week
+      const frequencyToInterval = (f: string): number => {
+        switch (f) { case 'weekly': return 1; case 'biweekly': return 2; case 'triweekly': return 3; case 'monthly': return 4; default: return 1; }
+      };
+
+      const weekEntries = group.entries.filter((e: any) => {
+        const interval = frequencyToInterval(e.frequency || 'weekly');
+        if (interval === 1) return true;
+
+        // Calculate the date this weekday falls on this week
+        const now = new Date();
+        const currentDay = now.getDay();
+        const diff = e.weekday - currentDay;
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() + diff);
+
+        const slotStart = new Date(e.start_date + 'T00:00:00');
+        const diffMs = targetDate.getTime() - slotStart.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+        return diffWeeks % interval === 0;
       });
 
       if (weekEntries.length === 0) continue;
