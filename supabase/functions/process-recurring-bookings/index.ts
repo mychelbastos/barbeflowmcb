@@ -52,6 +52,25 @@ Deno.serve(async (req) => {
     let skipped = 0;
 
     for (const rc of recurringClients) {
+      // Check frequency: skip if not the right week
+      if (rc.frequency !== 'weekly') {
+        const slotStart = new Date(rc.start_date + 'T00:00:00');
+        const diffMs = nowLocal.getTime() - slotStart.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+
+        if (rc.frequency === 'biweekly' && diffWeeks % 2 !== 0) {
+          console.log(`Skipping biweekly client ${rc.customer?.name} - not this week (week ${diffWeeks})`);
+          skipped++;
+          continue;
+        }
+        if (rc.frequency === 'monthly' && diffWeeks % 4 !== 0) {
+          console.log(`Skipping monthly client ${rc.customer?.name} - not this week (week ${diffWeeks})`);
+          skipped++;
+          continue;
+        }
+      }
+
       const customerName = rc.customer?.name || "Cliente Fixo";
       const duration = rc.service?.duration_minutes || rc.duration_minutes;
 

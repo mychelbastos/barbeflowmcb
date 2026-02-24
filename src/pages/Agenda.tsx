@@ -111,7 +111,23 @@ export default function Agenda() {
 
     // Add recurring clients as pseudo-bookings for this day
     const recurringForDay = recurringClients
-      .filter(r => r.weekday === dayOfWeek && new Date(r.start_date) <= date)
+      .filter(r => {
+        if (r.weekday !== dayOfWeek) return false;
+        if (new Date(r.start_date) > date) return false;
+
+        // Check frequency
+        if (r.frequency === 'weekly') return true;
+
+        const slotStart = new Date(r.start_date + 'T00:00:00');
+        const diffMs = date.getTime() - slotStart.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+
+        if (r.frequency === 'biweekly') return diffWeeks % 2 === 0;
+        if (r.frequency === 'monthly') return diffWeeks % 4 === 0;
+
+        return true;
+      })
       .map(r => {
         const [h, m] = r.start_time.split(':').map(Number);
         const startsAt = new Date(dayStart);
