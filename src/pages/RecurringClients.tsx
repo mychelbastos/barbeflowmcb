@@ -97,6 +97,7 @@ export default function RecurringClients() {
   const [isActive, setIsActive] = useState(true);
   const [notes, setNotes] = useState("");
   const [frequency, setFrequency] = useState("weekly");
+  const [customDuration, setCustomDuration] = useState("");
 
   const loadData = useCallback(async () => {
     if (!currentTenant) return;
@@ -177,6 +178,7 @@ export default function RecurringClients() {
     setIsActive(true);
     setNotes("");
     setFrequency("weekly");
+    setCustomDuration("");
     setEditingId(null);
   };
 
@@ -191,6 +193,8 @@ export default function RecurringClients() {
     setIsActive(r.active);
     setNotes(r.notes || "");
     setFrequency((r as any).frequency || "weekly");
+    const svcDuration = services.find(s => s.id === r.service_id)?.duration_minutes || 30;
+    setCustomDuration(r.duration_minutes !== svcDuration ? String(r.duration_minutes) : "");
     setDialogOpen(true);
   };
 
@@ -207,7 +211,7 @@ export default function RecurringClients() {
 
     try {
       setSaving(true);
-      const duration = getServiceDuration(selectedService);
+      const duration = customDuration ? Number(customDuration) : getServiceDuration(selectedService);
       const payload = {
         tenant_id: currentTenant.id,
         staff_id: selectedStaff,
@@ -368,9 +372,24 @@ export default function RecurringClients() {
                 </Select>
                 {selectedService && (
                   <p className="text-xs text-muted-foreground">
-                    Duração: {getServiceDuration(selectedService)} minutos
+                    Duração padrão: {getServiceDuration(selectedService)} minutos
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Duração personalizada (minutos)</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  step={5}
+                  placeholder={selectedService ? `${getServiceDuration(selectedService)} (padrão do serviço)` : "Selecione um serviço"}
+                  value={customDuration}
+                  onChange={(e) => setCustomDuration(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deixe vazio para usar a duração padrão do serviço
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
