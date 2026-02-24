@@ -289,18 +289,26 @@ const BookingPublic = () => {
     setServices(servicesRes.data || []);
     setStaff(staffRes.data || []);
 
-    const pkgQuery = supabase
-      .from("service_packages")
-      .select("*")
-      .eq("tenant_id", tenantData.id)
-      .eq("active", true);
-
-    // If deep link targets a specific package, don't filter by public
-    if (!initialPackageId) {
-      pkgQuery.eq("public", true);
+    let pkgsData: any[] = [];
+    if (initialPackageId) {
+      const { data } = await supabase
+        .from("service_packages")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .eq("active", true)
+        .or(`public.eq.true,id.eq.${initialPackageId}`)
+        .order("name");
+      pkgsData = data || [];
+    } else {
+      const { data } = await supabase
+        .from("service_packages")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .eq("active", true)
+        .eq("public", true)
+        .order("name");
+      pkgsData = data || [];
     }
-
-    const { data: pkgsData } = await pkgQuery.order("name");
 
     if (pkgsData && pkgsData.length > 0) {
       const { data: pkgSvcs } = await supabase
@@ -315,13 +323,26 @@ const BookingPublic = () => {
       setPackages([]);
     }
 
-    const { data: subPlansData } = await supabase
-      .from("subscription_plans")
-      .select("*")
-      .eq("tenant_id", tenantData.id)
-      .eq("active", true)
-      .eq("public", true)
-      .order("name");
+    let subPlansData: any[] = [];
+    if (initialPlanId) {
+      const { data } = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .eq("active", true)
+        .or(`public.eq.true,id.eq.${initialPlanId}`)
+        .order("name");
+      subPlansData = data || [];
+    } else {
+      const { data } = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("tenant_id", tenantData.id)
+        .eq("active", true)
+        .eq("public", true)
+        .order("name");
+      subPlansData = data || [];
+    }
 
     if (subPlansData && subPlansData.length > 0) {
       const planIds = subPlansData.map(p => p.id);
