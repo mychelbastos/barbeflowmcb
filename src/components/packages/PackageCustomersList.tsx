@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, Trash2, AlertTriangle, DollarSign, RotateCcw } from "lucide-react";
+import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, XCircle, Trash2, AlertTriangle, DollarSign, RotateCcw, MoreVertical } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -18,6 +18,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -254,25 +258,34 @@ export function PackageCustomersList() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => openEditSessions(cp)} title="Editar sessões usadas">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  {cp.status !== 'cancelled' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setCancellingCp(cp);
-                        setCancelWithRefund(cp.payment_status === 'confirmed');
-                      }}
-                      title="Cancelar pacote"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4" />
                     </Button>
-                  )}
-                </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openEditSessions(cp)}>
+                      <Pencil className="h-3.5 w-3.5 mr-2" />
+                      Editar sessões
+                    </DropdownMenuItem>
+                    {cp.status !== 'cancelled' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setCancellingCp(cp);
+                            setCancelWithRefund(cp.payment_status === 'confirmed');
+                          }}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-2" />
+                          Cancelar pacote
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           })}

@@ -5,7 +5,7 @@ import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2, AlertTriangle, MoreVertical } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -14,6 +14,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AssignSubscriptionDialog } from "@/components/subscriptions/AssignSubscriptionDialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -223,36 +227,61 @@ export function SubscribersList() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                {(sub.status === 'active' || sub.status === 'authorized') && (
-                  <Button variant="ghost" size="sm" title="Agendar" onClick={() => openBookingModal({
-                    customerSubscriptionId: sub.id,
-                    preselectedCustomerId: sub.customer_id,
-                  })}>
-                    <Calendar className="h-3.5 w-3.5 text-emerald-400" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
-                )}
-                {sub.status === 'active' && (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={() => handlePause(sub)} title="Pausar">
-                      <Pause className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setCancelTarget(sub)} title="Cancelar">
-                      <XCircle className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </>
-                )}
-                {sub.status === 'paused' && (
-                  <Button variant="ghost" size="sm" onClick={() => handleResume(sub)} title="Reativar">
-                    <Play className="h-3.5 w-3.5 text-emerald-400" />
-                  </Button>
-                )}
-                {(sub.status === 'pending' || sub.status === 'cancelled') && (
-                  <Button variant="ghost" size="sm" title="Excluir assinatura" onClick={() => setDeleteTarget(sub)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                )}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {(sub.status === 'active' || sub.status === 'authorized') && (
+                    <DropdownMenuItem onClick={() => openBookingModal({
+                      customerSubscriptionId: sub.id,
+                      preselectedCustomerId: sub.customer_id,
+                    })}>
+                      <Calendar className="h-3.5 w-3.5 mr-2" />
+                      Agendar atendimento
+                    </DropdownMenuItem>
+                  )}
+
+                  {sub.status === 'active' && (
+                    <>
+                      <DropdownMenuItem onClick={() => handlePause(sub)}>
+                        <Pause className="h-3.5 w-3.5 mr-2" />
+                        Pausar assinatura
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setCancelTarget(sub)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-2" />
+                        Cancelar assinatura
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  {sub.status === 'paused' && (
+                    <DropdownMenuItem onClick={() => handleResume(sub)}>
+                      <Play className="h-3.5 w-3.5 mr-2" />
+                      Reativar assinatura
+                    </DropdownMenuItem>
+                  )}
+
+                  {(sub.status === 'pending' || sub.status === 'cancelled') && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeleteTarget(sub)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Excluir registro
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ))}
         </div>
