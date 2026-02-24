@@ -285,25 +285,29 @@ const Dashboard = () => {
   return (
     <div className="space-y-5 px-3 md:px-0 overflow-x-hidden">
       {/* Date Range + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-stretch">
-        <DateRangeSelector />
-        <div className="flex flex-row gap-2">
-          <Button
-            variant="outline"
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+        <div className="flex-1">
+          <DateRangeSelector />
+        </div>
+        <div className="flex flex-row gap-2 flex-shrink-0">
+          <button
             onClick={() => navigate(dashPath('/app/customers'))}
-            className="h-full min-h-[48px] rounded-xl text-sm gap-2 px-5"
+            className="group flex items-center gap-2.5 px-5 py-3 bg-card border border-border rounded-xl md:rounded-2xl hover:border-primary/30 hover:bg-primary/5 transition-all duration-300"
           >
-            <UserCheck className="h-4 w-4" />
-            Clientes
-          </Button>
-          <Button
-            variant="outline"
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <UserCheck className="h-4 w-4 text-violet-500" />
+            </div>
+            <span className="text-sm font-medium text-foreground">Clientes</span>
+          </button>
+          <button
             onClick={() => navigate(dashPath('/app/caixa'))}
-            className="h-full min-h-[48px] rounded-xl text-sm gap-2 px-5"
+            className="group flex items-center gap-2.5 px-5 py-3 bg-card border border-border rounded-xl md:rounded-2xl hover:border-primary/30 hover:bg-primary/5 transition-all duration-300"
           >
-            <Clock className="h-4 w-4" />
-            Caixa
-          </Button>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock className="h-4 w-4 text-emerald-500" />
+            </div>
+            <span className="text-sm font-medium text-foreground">Caixa</span>
+          </button>
         </div>
       </div>
 
