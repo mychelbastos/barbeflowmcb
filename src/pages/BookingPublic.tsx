@@ -825,7 +825,11 @@ const BookingPublic = () => {
         },
       });
 
-      if (error) throw error;
+      // Handle structured error responses (e.g. 403 forced_online_payment)
+      if (error) {
+        const msg = data?.message || data?.error || error.message;
+        throw new Error(msg || 'Erro ao criar agendamento');
+      }
 
       if (data.success) {
         const booking = data.booking;

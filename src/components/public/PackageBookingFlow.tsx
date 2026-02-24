@@ -115,7 +115,10 @@ export function PackageBookingFlow({
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = data?.message || data?.error || error.message;
+        throw new Error(msg || 'Erro ao criar agendamento');
+      }
       if (data?.success) {
         toast({ title: "Agendamento confirmado!", description: `Sessão do ${benefitLabel} utilizada.` });
         onSuccess(data.booking);
