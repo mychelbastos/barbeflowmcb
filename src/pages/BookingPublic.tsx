@@ -36,7 +36,9 @@ import {
   Package,
   Repeat,
   Search,
-  X
+  X,
+  Filter,
+  ChevronDown
 } from "lucide-react";
 import { PublicSubscriptionPlans } from "@/components/subscriptions/PublicSubscriptionPlans";
 import { MyPackagesSection } from "@/components/public/MyPackagesSection";
@@ -128,6 +130,7 @@ const BookingPublic = () => {
   // Order Bump
   const [orderBumpItems, setOrderBumpItems] = useState<OrderBumpProduct[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
+  const [showCategories, setShowCategories] = useState(false);
 
   // Dynamic favicon + PWA manifest per tenant
   useTenantBranding(tenant);
@@ -1226,7 +1229,7 @@ END:VCALENDAR`;
           <div className="animate-in fade-in duration-300">
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold mb-2">Escolha o serviço</h2>
-              <p className="text-zinc-500 text-sm">Selecione o que você precisa</p>
+              <p className="text-zinc-500 text-sm">{services.length} serviços disponíveis</p>
             </div>
 
             {/* Tabs - show when packages or subscription plans exist */}
@@ -1387,21 +1390,34 @@ END:VCALENDAR`;
                   </div>
                 )}
 
-                {/* Category filter chips */}
+                {/* Category filter chips — collapsible */}
                 {serviceCategories.length > 1 && !serviceSearch && (
-                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-                    {serviceCategories.map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }}
-                        className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
-                      >
-                        {cat}
-                        <span className="ml-1 text-zinc-500">{groupedServices[cat].length}</span>
-                      </button>
-                    ))}
+                  <div>
+                    <button
+                      onClick={() => setShowCategories(!showCategories)}
+                      className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors mx-auto"
+                    >
+                      <Filter className="h-3 w-3" />
+                      <span>Filtrar por categoria</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showCategories ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {showCategories && (
+                      <div className="flex gap-2 overflow-x-auto mt-2 pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        {serviceCategories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => {
+                              document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                            className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 transition-colors"
+                          >
+                            {cat}
+                            <span className="ml-1.5 text-zinc-600">{groupedServices[cat].length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
