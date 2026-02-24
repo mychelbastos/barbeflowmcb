@@ -51,21 +51,21 @@ Deno.serve(async (req) => {
     let created = 0;
     let skipped = 0;
 
+    const frequencyToInterval = (f: string): number => {
+      switch (f) { case 'weekly': return 1; case 'biweekly': return 2; case 'triweekly': return 3; case 'monthly': return 4; default: return 1; }
+    };
+
     for (const rc of recurringClients) {
       // Check frequency: skip if not the right week
-      if (rc.frequency !== 'weekly') {
+      const interval = frequencyToInterval(rc.frequency || 'weekly');
+      if (interval > 1) {
         const slotStart = new Date(rc.start_date + 'T00:00:00');
         const diffMs = nowLocal.getTime() - slotStart.getTime();
         const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
         const diffWeeks = Math.floor(diffDays / 7);
 
-        if (rc.frequency === 'biweekly' && diffWeeks % 2 !== 0) {
-          console.log(`Skipping biweekly client ${rc.customer?.name} - not this week (week ${diffWeeks})`);
-          skipped++;
-          continue;
-        }
-        if (rc.frequency === 'monthly' && diffWeeks % 4 !== 0) {
-          console.log(`Skipping monthly client ${rc.customer?.name} - not this week (week ${diffWeeks})`);
+        if (diffWeeks % interval !== 0) {
+          console.log(`Skipping ${rc.customer?.name} - frequency ${rc.frequency}, not this week (week ${diffWeeks})`);
           skipped++;
           continue;
         }

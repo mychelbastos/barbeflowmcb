@@ -217,7 +217,7 @@ serve(async (req) => {
     // Get recurring clients for this weekday (include service for duration)
     const { data: recurringClients, error: recurringError } = await supabase
       .from('recurring_clients')
-      .select('id, staff_id, start_time, duration_minutes, start_date, service_id, service:services(duration_minutes)')
+      .select('id, staff_id, start_time, duration_minutes, start_date, frequency, service_id, service:services(duration_minutes)')
       .eq('tenant_id', tenant_id)
       .eq('weekday', dayOfWeek)
       .eq('active', true)
@@ -254,7 +254,20 @@ serve(async (req) => {
       // Get bookings for this staff
       const staffBookings = allBookings?.filter(b => b.staff_id === staff.id) || [];
       const staffBlocks = allBlocks?.filter(b => b.staff_id === staff.id || b.staff_id === null) || [];
-      const staffRecurring = recurringClients?.filter(r => r.staff_id === staff.id) || [];
+      // Filter recurring clients by frequency for this specific date
+      const frequencyToInterval = (f: string): number => {
+        switch (f) { case 'weekly': return 1; case 'biweekly': return 2; case 'triweekly': return 3; case 'monthly': return 4; default: return 1; }
+      };
+      const staffRecurring = (recurringClients?.filter(r => {
+        if (r.staff_id !== staff.id) return false;
+        const interval = frequencyToInterval(r.frequency || 'weekly');
+        if (interval === 1) return true;
+        const slotStart = new Date(r.start_date + 'T00:00:00');
+        const targetDate = new Date(date + 'T00:00:00');
+        const diffDays = Math.round((targetDate.getTime() - slotStart.getTime()) / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+        return diffWeeks % interval === 0;
+      }) || []);
 
       for (const schedule of schedules) {
         // Schedule times are in local timezone

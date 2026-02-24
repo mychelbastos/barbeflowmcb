@@ -164,12 +164,29 @@ const Dashboard = () => {
 
 
   const allBookings = useMemo(() => {
+    const frequencyToInterval = (f: string): number => {
+      switch (f) { case 'weekly': return 1; case 'biweekly': return 2; case 'triweekly': return 3; case 'monthly': return 4; default: return 1; }
+    };
+
     const virtualRecurring = recurringClients.flatMap(r => {
       const { from, to } = dateRange;
       const result: any[] = [];
+      const interval = frequencyToInterval(r.frequency || 'weekly');
       const current = new Date(from);
       while (current <= to) {
         if (current.getDay() === r.weekday && new Date(r.start_date) <= current) {
+          // Check frequency
+          if (interval > 1) {
+            const slotStart = new Date(r.start_date + 'T00:00:00');
+            const diffMs = current.getTime() - slotStart.getTime();
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+            const diffWeeks = Math.floor(diffDays / 7);
+            if (diffWeeks % interval !== 0) {
+              current.setDate(current.getDate() + 1);
+              continue;
+            }
+          }
+
           const [h, m] = r.start_time.split(':').map(Number);
           const startsAt = new Date(current.getFullYear(), current.getMonth(), current.getDate(), h, m);
           const duration = r.service?.duration_minutes || r.duration_minutes;

@@ -29,11 +29,13 @@ const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const FREQUENCY_LABELS: Record<string, string> = {
   weekly: "Semanal",
   biweekly: "Quinzenal",
+  triweekly: "A cada 3 semanas",
   monthly: "Mensal",
 };
 const FREQUENCY_SHORT: Record<string, string> = {
   weekly: "Semanal",
   biweekly: "Quinzenal",
+  triweekly: "3 semanas",
   monthly: "Mensal",
 };
 
@@ -418,7 +420,8 @@ export default function RecurringClients() {
                   <SelectContent>
                     <SelectItem value="weekly">Semanal (toda semana)</SelectItem>
                     <SelectItem value="biweekly">Quinzenal (a cada 2 semanas)</SelectItem>
-                    <SelectItem value="monthly">Mensal (1x por mês)</SelectItem>
+                    <SelectItem value="triweekly">A cada 3 semanas</SelectItem>
+                    <SelectItem value="monthly">Mensal (a cada 4 semanas)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

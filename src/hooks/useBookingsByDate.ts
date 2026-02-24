@@ -68,9 +68,21 @@ export interface RecurringSlot {
   notes: string | null;
 }
 
+/** Map frequency string to week interval */
+function frequencyToWeekInterval(frequency: string): number {
+  switch (frequency) {
+    case 'weekly': return 1;
+    case 'biweekly': return 2;
+    case 'triweekly': return 3;
+    case 'monthly': return 4;
+    default: return 1;
+  }
+}
+
 /** Check if a recurring slot should appear on a given date based on its frequency */
 function isRecurringSlotActiveOnDate(rc: RecurringSlot, dateStr: string): boolean {
-  if (rc.frequency === 'weekly') return true;
+  const interval = frequencyToWeekInterval(rc.frequency);
+  if (interval === 1) return true;
 
   const slotStart = new Date(rc.start_date + 'T00:00:00');
   const targetDate = new Date(dateStr + 'T00:00:00');
@@ -78,16 +90,7 @@ function isRecurringSlotActiveOnDate(rc: RecurringSlot, dateStr: string): boolea
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   const diffWeeks = Math.floor(diffDays / 7);
 
-  if (rc.frequency === 'biweekly') {
-    return diffWeeks % 2 === 0;
-  }
-
-  if (rc.frequency === 'monthly') {
-    // Same weekday, check if it's approximately 4-week intervals
-    return diffWeeks % 4 === 0;
-  }
-
-  return true;
+  return diffWeeks % interval === 0;
 }
 
 export function useBookingsByDate(tenantId: string | undefined, date: Date) {
