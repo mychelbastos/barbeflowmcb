@@ -132,8 +132,8 @@ export default function Agenda() {
       })
       .map(r => {
         const timeStr = r.start_time.slice(0, 5);
-        const dateFormatted = format(date, 'yyyy-MM-dd');
-        const startsAt = fromZonedTime(`${dateFormatted} ${timeStr}:00`, 'America/Bahia');
+        const [rH, rM] = timeStr.split(':').map(Number);
+        const startsAt = fromZonedTime(new Date(date.getFullYear(), date.getMonth(), date.getDate(), rH, rM, 0, 0), 'America/Bahia');
         const duration = r.service?.duration_minutes || r.duration_minutes;
         const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
         const serviceName = r.service?.name || 'Cliente Fixo';
