@@ -237,10 +237,9 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       // Build the starts_at/ends_at for this recurring slot on this date
       // Use explicit Date construction to avoid string parsing ambiguity across browsers
       const timeStr = rc.start_time.slice(0, 5); // "HH:MM"
-      const [rcH, rcM] = timeStr.split(':').map(Number);
-      const [rcY, rcMo, rcD] = dateStr.split('-').map(Number);
       const tz = settings.timezone || TZ;
-      const startsAt = fromZonedTime(new Date(rcY, rcMo - 1, rcD, rcH, rcM, 0, 0), tz);
+      // Pass an ISO string WITHOUT timezone suffix so fromZonedTime interprets it as local time in `tz`
+      const startsAt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
       const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
 
       // Check if ANY real booking (including cancelled) exists for this staff+customer at this time
