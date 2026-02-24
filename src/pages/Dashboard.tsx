@@ -284,9 +284,28 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-5 px-3 md:px-0 overflow-x-hidden">
-      {/* Date Range */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Date Range + Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-stretch">
         <DateRangeSelector />
+        <div className="flex flex-row lg:flex-col gap-2 justify-start">
+          <Button
+            onClick={() => navigate(dashPath('/app/bookings'))}
+            className="h-full min-h-[48px] flex-1 lg:flex-none rounded-xl text-sm gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Novo Agendamento</span>
+            <span className="sm:hidden">Agendar</span>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate(dashPath('/app/customers'))}
+            className="h-full min-h-[48px] flex-1 lg:flex-none rounded-xl text-sm gap-2"
+          >
+            <UserCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Novo Cliente</span>
+            <span className="sm:hidden">Cliente</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stat Cards */}
