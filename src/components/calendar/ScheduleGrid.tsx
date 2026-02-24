@@ -331,39 +331,53 @@ export function ScheduleGrid({
   if (isMobile) {
     return (
       <div className="space-y-3">
-        {/* Staff selector */}
-        <Select value={mobileStaff?.id || ""} onValueChange={(id) => {
-          const idx = filteredStaff.findIndex((s) => s.id === id);
-          if (idx >= 0) setMobileStaffIndex(idx);
-        }}>
-          <SelectTrigger className="h-10">
-            <SelectValue placeholder="Selecione profissional" />
-          </SelectTrigger>
-          <SelectContent>
-            {filteredStaff.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color || "#10B981" }} />
-                  {s.name}
-                </div>
-              </SelectItem>
+        {/* Staff selector - pill style */}
+        {filteredStaff.length > 1 ? (
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {filteredStaff.map((s, idx) => (
+              <button
+                key={s.id}
+                onClick={() => setMobileStaffIndex(idx)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
+                  mobileStaffIndex === idx
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'bg-card text-muted-foreground border-border hover:border-primary/30'
+                }`}
+              >
+                <div
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: s.color || "#10B981" }}
+                />
+                {s.name.split(' ')[0]}
+              </button>
             ))}
-          </SelectContent>
-        </Select>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-1">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: mobileStaff?.color || "#10B981" }}
+            />
+            <span className="text-sm font-medium text-foreground">{mobileStaff?.name}</span>
+          </div>
+        )}
 
-        {/* Single column grid */}
+        {/* Grid */}
         <div className="rounded-xl border border-border/50 overflow-hidden bg-card/40">
           <div className="flex">
             {/* Time column */}
-            <div className="w-14 flex-shrink-0 border-r border-border/30">
+            <div className="w-12 flex-shrink-0 border-r border-border/30 bg-card/60">
               {slots.map((slotTime) => (
                 <div key={slotTime} style={{ height: `${SLOT_HEIGHT}px` }}
-                  className="flex items-center justify-center text-[11px] text-muted-foreground/70 border-b border-border/20">
+                  className="flex items-center justify-center text-[10px] font-medium text-muted-foreground/70 border-b border-border/20">
                   {slotTime}
                 </div>
               ))}
             </div>
-            {mobileStaff && renderStaffColumn(mobileStaff)}
+            {/* Staff column - takes remaining width */}
+            <div className="flex-1">
+              {mobileStaff && renderStaffColumn(mobileStaff)}
+            </div>
           </div>
         </div>
       </div>
