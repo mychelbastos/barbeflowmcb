@@ -7,6 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -73,7 +83,7 @@ export function CustomerBookingsModal({
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   useEffect(() => {
     if (!open) {
       setPhone('');
@@ -192,6 +202,7 @@ export function CustomerBookingsModal({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -299,11 +310,7 @@ export function CustomerBookingsModal({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        if (window.confirm('Tem certeza que deseja cancelar este agendamento?')) {
-                          handleCancel(booking.id);
-                        }
-                      }}
+                      onClick={() => setConfirmCancelId(booking.id)}
                       disabled={cancellingId === booking.id || booking.status === 'cancelled'}
                       className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                     >
@@ -327,5 +334,31 @@ export function CustomerBookingsModal({
         )}
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!confirmCancelId} onOpenChange={(open) => !open && setConfirmCancelId(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancelar agendamento</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={() => {
+              if (confirmCancelId) {
+                handleCancel(confirmCancelId);
+                setConfirmCancelId(null);
+              }
+            }}
+          >
+            Sim, cancelar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

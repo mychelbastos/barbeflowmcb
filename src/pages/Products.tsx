@@ -22,6 +22,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Package, 
   Plus, 
@@ -89,6 +99,9 @@ const Products = () => {
     staff_id: '',
   });
   const [savingSale, setSavingSale] = useState(false);
+
+  // Confirm dialog state
+  const [confirmAction, setConfirmAction] = useState<{ type: 'product' | 'sale'; item: any; message: string } | null>(null);
 
   // Staff state
   const [staffList, setStaffList] = useState<any[]>([]);
@@ -256,7 +269,10 @@ const Products = () => {
   };
 
   const handleDeleteProduct = async (product: Product) => {
-    if (!window.confirm(`Excluir o produto "${product.name}"?`)) return;
+    setConfirmAction({ type: 'product', item: product, message: `Excluir o produto "${product.name}"?` });
+  };
+
+  const executeDeleteProduct = async (product: Product) => {
 
     try {
       const { error } = await supabase
@@ -380,7 +396,10 @@ const Products = () => {
   };
 
   const handleDeleteSale = async (sale: ProductSale) => {
-    if (!window.confirm('Excluir esta venda?')) return;
+    setConfirmAction({ type: 'sale', item: sale, message: 'Excluir esta venda?' });
+  };
+
+  const executeDeleteSale = async (sale: ProductSale) => {
 
     try {
       const { error } = await supabase
@@ -830,6 +849,33 @@ const Products = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.message}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={() => {
+                if (confirmAction?.type === 'product') {
+                  executeDeleteProduct(confirmAction.item);
+                } else if (confirmAction?.type === 'sale') {
+                  executeDeleteSale(confirmAction.item);
+                }
+                setConfirmAction(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
