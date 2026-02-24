@@ -82,7 +82,7 @@ const Dashboard = () => {
       }
 
       if (newStatus === "completed") {
-        await supabase.from("bookings").update({ session_outcome: "consumed" }).eq("id", bookingId).not("customer_package_id", "is", null).or("customer_subscription_id.not.is.null");
+        await supabase.from("bookings").update({ session_outcome: "consumed" }).eq("id", bookingId).or("customer_package_id.not.is.null,customer_subscription_id.not.is.null");
       }
 
       const notificationTypeMap: Record<string, string | null> = {
