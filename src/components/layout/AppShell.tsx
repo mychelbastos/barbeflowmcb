@@ -122,6 +122,7 @@ const baseNavigationItems: NavItem[] = [
       { title: "Comissões", url: "/app/commissions", icon: CreditCard },
     ]
   },
+  { title: "Relatórios", url: "/app/reports", icon: BarChart3 },
   { 
     title: "Configurações", 
     url: "/app/settings", 

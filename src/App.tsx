@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
 import Finance from "./pages/Finance";
 import CommissionsPage from "./pages/CommissionsPage";
 import CashRegister from "./pages/CashRegister";
@@ -111,6 +112,7 @@ const App = () => {
                   <Route path="commissions" element={<CommissionsPage />} />
                   <Route path="caixa" element={<CashRegister />} />
                   <Route path="products" element={<Products />} />
+                  <Route path="reports" element={<Reports />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>
               </>
