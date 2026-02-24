@@ -458,61 +458,61 @@ export default function Bookings() {
 
       {/* Main content */}
       {viewMode === "grid" ? (
-        <div className="flex gap-4">
-          {/* Desktop staff sidebar */}
-          {!isMobile && staff.length > 0 && (
-            <div className="w-48 flex-shrink-0">
-              <Card className="sticky top-4">
-                <CardHeader className="pb-2 px-3 pt-3">
-                  <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Profissionais</CardTitle>
-                </CardHeader>
-                <CardContent className="px-3 pb-3">
-                  <StaffFilter />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Mobile staff filter as sheet */}
+        <div className="space-y-3">
+          {/* Mobile staff filter */}
           {isMobile && staff.length > 1 && (
-            <div className="mb-3">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 w-full">
-                    <Filter className="h-3.5 w-3.5 mr-1.5" />
-                    Filtrar Profissionais ({visibleStaffIds.length}/{staff.length})
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72">
-                  <SheetHeader>
-                    <SheetTitle>Profissionais</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-4">
-                    <StaffFilter />
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 w-full">
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
+                  Filtrar Profissionais ({visibleStaffIds.length}/{staff.length})
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72">
+                <SheetHeader>
+                  <SheetTitle>Profissionais</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4">
+                  <StaffFilter />
+                </div>
+              </SheetContent>
+            </Sheet>
           )}
 
-          {/* Grid */}
-          <div className="flex-1 min-w-0">
-            {loading ? (
-              <div className="h-96 bg-muted/30 rounded-xl animate-pulse" />
-            ) : (
-              <ScheduleGrid
-                staff={staff}
-                schedules={schedules}
-                bookings={gridBookings}
-                blocks={blocks}
-                settings={settings}
-                timeRange={timeRange}
-                date={selectedDate}
-                onBookingClick={handleBookingClick}
-                visibleStaffIds={visibleStaffIds}
-                recurringCustomerIds={recurringCustomerIds}
-              />
+          <div className="flex gap-4">
+            {/* Desktop staff sidebar */}
+            {!isMobile && staff.length > 0 && (
+              <div className="w-48 flex-shrink-0">
+                <Card className="sticky top-4">
+                  <CardHeader className="pb-2 px-3 pt-3">
+                    <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Profissionais</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-3 pb-3">
+                    <StaffFilter />
+                  </CardContent>
+                </Card>
+              </div>
             )}
+
+            {/* Grid */}
+            <div className="flex-1 min-w-0">
+              {loading ? (
+                <div className="h-96 bg-muted/30 rounded-xl animate-pulse" />
+              ) : (
+                <ScheduleGrid
+                  staff={staff}
+                  schedules={schedules}
+                  bookings={gridBookings}
+                  blocks={blocks}
+                  settings={settings}
+                  timeRange={timeRange}
+                  date={selectedDate}
+                  onBookingClick={handleBookingClick}
+                  visibleStaffIds={visibleStaffIds}
+                  recurringCustomerIds={recurringCustomerIds}
+                />
+              )}
+            </div>
           </div>
         </div>
       ) : (
