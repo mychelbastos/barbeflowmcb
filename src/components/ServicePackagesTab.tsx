@@ -15,7 +15,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Package, Loader2, Trash2, Pencil, X, Eye, EyeOff, Upload, Sparkles, ImageIcon } from "lucide-react";
+import { Plus, Package, Loader2, Trash2, Pencil, X, Eye, EyeOff, Upload, Sparkles, ImageIcon, Link2 } from "lucide-react";
+import { getPublicUrl } from "@/lib/hostname";
 import { AiTextButton, AiGenerateImageButton } from "@/components/AiContentButtons";
 
 interface PackageServiceItem {
@@ -340,6 +341,23 @@ export function ServicePackagesTab() {
                   )}
                   <Button variant="ghost" size="sm" onClick={() => openEditForm(pkg)}>
                     <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (!currentTenant?.slug) {
+                        toast({ title: "Slug não encontrado", variant: "destructive" });
+                        return;
+                      }
+                      const url = getPublicUrl(`/${currentTenant.slug}?tab=packages&package=${pkg.id}`);
+                      navigator.clipboard.writeText(url).then(() => {
+                        toast({ title: "Link copiado!", description: `Envie para o cliente adquirir "${pkg.name}".` });
+                      });
+                    }}
+                    title="Copiar link do pacote"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(pkg.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
