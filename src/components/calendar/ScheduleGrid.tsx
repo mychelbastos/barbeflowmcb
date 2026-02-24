@@ -159,29 +159,6 @@ export function ScheduleGrid({
     return "free";
   }
 
-  function getBookingAtSlot(staffId: string, slotTime: string): BookingData | null {
-    const slotMins = timeToMinutes(slotTime);
-    const staffBookings = bookingsByStaff[staffId] || [];
-    for (const b of staffBookings) {
-      const bStart = formatInTimeZone(new Date(b.starts_at), TZ, "HH:mm");
-      const bEnd = formatInTimeZone(new Date(b.ends_at), TZ, "HH:mm");
-      if (slotMins >= timeToMinutes(bStart) && slotMins < timeToMinutes(bEnd)) return b;
-    }
-    return null;
-  }
-
-  function isBookingStart(staffId: string, slotTime: string, booking: BookingData): boolean {
-    const bStart = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
-    return slotTime === bStart;
-  }
-
-  function getBookingSpan(booking: BookingData): number {
-    const bStart = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
-    const bEnd = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
-    const durationMins = timeToMinutes(bEnd) - timeToMinutes(bStart);
-    return Math.max(1, Math.ceil(durationMins / slotDuration));
-  }
-
   function getBlockAtSlot(staffId: string, slotTime: string): BlockData | null {
     const slotMins = timeToMinutes(slotTime);
     const staffBlocks = [...(blocksByStaff.map[staffId] || []), ...blocksByStaff.general];
@@ -198,6 +175,61 @@ export function ScheduleGrid({
 
   const SLOT_HEIGHT = 48; // px per slot
 
+  // Helper: convert a booking's time to pixel position relative to grid start
+  function getBookingPosition(booking: BookingData): { top: number; height: number } {
+    const bStart = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
+    const bEnd = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
+    const startMins = timeToMinutes(bStart);
+    const endMins = timeToMinutes(bEnd);
+    const startOfDayMins = timeRange.startHour * 60;
+
+    const clampedStart = Math.max(startMins, startOfDayMins);
+    const clampedEnd = Math.min(endMins, timeRange.endHour * 60);
+
+    const top = ((clampedStart - startOfDayMins) / slotDuration) * SLOT_HEIGHT;
+    const height = ((clampedEnd - clampedStart) / slotDuration) * SLOT_HEIGHT;
+    return { top, height: Math.max(height, SLOT_HEIGHT) };
+  }
+
+  // Detect overlapping bookings and assign columns (Google Calendar style)
+  function assignColumns(bookingList: BookingData[]): Map<string, { col: number; totalCols: number }> {
+    const result = new Map<string, { col: number; totalCols: number }>();
+
+    const sorted = [...bookingList].sort((a, b) => {
+      const aStart = timeToMinutes(formatInTimeZone(new Date(a.starts_at), TZ, "HH:mm"));
+      const bStart = timeToMinutes(formatInTimeZone(new Date(b.starts_at), TZ, "HH:mm"));
+      return aStart - bStart;
+    });
+
+    const groups: BookingData[][] = [];
+    let currentGroup: BookingData[] = [];
+    let currentGroupEnd = 0;
+
+    for (const booking of sorted) {
+      const bStart = timeToMinutes(formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm"));
+      const bEnd = timeToMinutes(formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm"));
+
+      if (currentGroup.length === 0 || bStart < currentGroupEnd) {
+        currentGroup.push(booking);
+        currentGroupEnd = Math.max(currentGroupEnd, bEnd);
+      } else {
+        groups.push(currentGroup);
+        currentGroup = [booking];
+        currentGroupEnd = bEnd;
+      }
+    }
+    if (currentGroup.length > 0) groups.push(currentGroup);
+
+    for (const group of groups) {
+      const totalCols = group.length;
+      group.forEach((booking, idx) => {
+        result.set(booking.id, { col: idx, totalCols });
+      });
+    }
+
+    return result;
+  }
+
   // Mobile: show one staff at a time
   const mobileStaff = filteredStaff[mobileStaffIndex] || filteredStaff[0];
 
@@ -210,36 +242,22 @@ export function ScheduleGrid({
   }
 
   const renderStaffColumn = (member: StaffMember) => {
-    const renderedSlots: Set<string> = new Set();
+    const totalHeight = slots.length * SLOT_HEIGHT;
+    const staffBookings = bookingsByStaff[member.id] || [];
+    const columnAssignments = assignColumns(staffBookings);
 
     return (
-      <div key={member.id} className="flex-1 min-w-[160px]">
+      <div key={member.id} className="flex-1 min-w-[160px] relative" style={{ height: `${totalHeight}px` }}>
+        {/* Background: slot grid lines and clickable free slots */}
         {slots.map((slotTime) => {
-          if (renderedSlots.has(slotTime)) return null;
-
-          const booking = getBookingAtSlot(member.id, slotTime);
-
-          if (booking && isBookingStart(member.id, slotTime, booking)) {
-            const span = getBookingSpan(booking);
-            for (let i = 0; i < span; i++) {
-              const idx = slots.indexOf(slotTime) + i;
-              if (idx < slots.length) renderedSlots.add(slots[idx]);
-            }
-            return (
-              <div key={slotTime} style={{ height: `${span * SLOT_HEIGHT}px` }} className="px-1 py-0.5">
-                <BookingCard booking={booking} onClick={() => onBookingClick(booking)} isRecurring={recurringCustomerIds?.has(booking.customer_id)} />
-              </div>
-            );
-          }
-
-          if (booking) {
-            // This slot is part of a booking but not the start — skip
-            renderedSlots.add(slotTime);
-            return null;
-          }
-
           const slotType = getSlotType(member.id, slotTime);
-          renderedSlots.add(slotTime);
+
+          const hasBooking = staffBookings.some((b) => {
+            const bStart = formatInTimeZone(new Date(b.starts_at), TZ, "HH:mm");
+            const bEnd = formatInTimeZone(new Date(b.ends_at), TZ, "HH:mm");
+            const slotMins = timeToMinutes(slotTime);
+            return slotMins >= timeToMinutes(bStart) && slotMins < timeToMinutes(bEnd);
+          });
 
           if (slotType === "off" || slotType === "past") {
             return (
@@ -269,14 +287,41 @@ export function ScheduleGrid({
             );
           }
 
-          // Free slot
           return (
             <div
               key={slotTime}
               style={{ height: `${SLOT_HEIGHT}px` }}
-              className="border-b border-border/20 hover:bg-primary/5 cursor-pointer transition-colors"
-              onClick={() => handleSlotClick(member.id, slotTime)}
+              className={`border-b border-border/20 ${!hasBooking ? 'hover:bg-primary/5 cursor-pointer' : ''} transition-colors`}
+              onClick={() => !hasBooking && handleSlotClick(member.id, slotTime)}
             />
+          );
+        })}
+
+        {/* Overlay: absolutely positioned booking cards */}
+        {staffBookings.map((booking) => {
+          const { top, height } = getBookingPosition(booking);
+          const colInfo = columnAssignments.get(booking.id) || { col: 0, totalCols: 1 };
+          const widthPercent = 100 / colInfo.totalCols;
+          const leftPercent = colInfo.col * widthPercent;
+
+          return (
+            <div
+              key={booking.id}
+              className="absolute px-0.5 py-0.5"
+              style={{
+                top: `${top}px`,
+                height: `${height}px`,
+                left: `${leftPercent}%`,
+                width: `${widthPercent}%`,
+                zIndex: 5,
+              }}
+            >
+              <BookingCard
+                booking={booking}
+                onClick={() => onBookingClick(booking)}
+                isRecurring={recurringCustomerIds?.has(booking.customer_id)}
+              />
+            </div>
           );
         })}
       </div>
