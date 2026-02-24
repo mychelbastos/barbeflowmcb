@@ -258,13 +258,18 @@ const BookingPublic = () => {
     setServices(servicesRes.data || []);
     setStaff(staffRes.data || []);
 
-    const { data: pkgsData } = await supabase
+    const pkgQuery = supabase
       .from("service_packages")
       .select("*")
       .eq("tenant_id", tenantData.id)
-      .eq("active", true)
-      .eq("public", true)
-      .order("name");
+      .eq("active", true);
+
+    // If deep link targets a specific package, don't filter by public
+    if (!initialPackageId) {
+      pkgQuery.eq("public", true);
+    }
+
+    const { data: pkgsData } = await pkgQuery.order("name");
 
     if (pkgsData && pkgsData.length > 0) {
       const { data: pkgSvcs } = await supabase
