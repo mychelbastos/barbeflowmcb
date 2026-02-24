@@ -1,0 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ExportCSVButton } from "./ExportCSVButton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+interface Props { tenantId: string; startDate: string; endDate: string; serviceId?: string; }
+export default function BookingsByServiceFilterReport({ tenantId, startDate, endDate, serviceId }: Props) {
+  const { data, isLoading } = useQuery({ queryKey: ["rpt-bookings-service-filter", tenantId, startDate, endDate, serviceId], queryFn: async () => { let q = supabase.from("bookings").select("id, starts_at, status, customer:customer_id(name, phone), service:service_id(name), staff:staff_id(name)").eq("tenant_id", tenantId).gte("starts_at", startDate).lt("starts_at", endDate); if (serviceId && serviceId !== "all") q = q.eq("service_id", serviceId); const { data } = await q.order("starts_at", { ascending: false }); return (data||[]).map((b:any)=>({ id: b.id, date: b.starts_at, customer: b.customer?.name||"—", phone: b.customer?.phone||"", service: b.service?.name||"—", staff: b.staff?.name||"—", status: b.status })); }, enabled: !!tenantId });
+  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Carregando...</div>;
+  if (!data?.length) return <div className="text-sm text-muted-foreground p-4">Nenhum dado.</div>;
+  return (<div className="space-y-6"><div className="flex justify-end"><ExportCSVButton data={data.map(d=>({Data:format(new Date(d.date),"dd/MM/yy"),Cliente:d.customer,Serviço:d.service,Profissional:d.staff,Status:d.status}))} columns={[{key:"Data",label:"Data"},{key:"Cliente",label:"Cliente"},{key:"Serviço",label:"Serviço"},{key:"Profissional",label:"Prof."},{key:"Status",label:"Status"}]} filename="agendamentos-servico"/></div><div className="bg-card border border-border rounded-2xl overflow-hidden"><Table><TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Cliente</TableHead><TableHead>Serviço</TableHead><TableHead className="hidden md:table-cell">Prof.</TableHead></TableRow></TableHeader><TableBody>{data.slice(0,100).map(d=>(<TableRow key={d.id}><TableCell className="text-sm">{format(new Date(d.date),"dd/MM/yy")}</TableCell><TableCell className="font-medium text-sm">{d.customer}</TableCell><TableCell className="text-sm">{d.service}</TableCell><TableCell className="hidden md:table-cell text-sm">{d.staff}</TableCell></TableRow>))}</TableBody></Table></div></div>);
+}

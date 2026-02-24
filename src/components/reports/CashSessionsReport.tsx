@@ -1,0 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { formatBRL } from "@/utils/formatBRL";
+import { ExportCSVButton } from "./ExportCSVButton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+interface Props { tenantId: string; startDate: string; endDate: string; }
+export default function CashSessionsReport({ tenantId, startDate, endDate }: Props) {
+  const { data, isLoading } = useQuery({ queryKey: ["rpt-cash-sessions", tenantId, startDate, endDate], queryFn: async () => { const { data } = await supabase.from("cash_sessions").select("id, opened_at, closed_at, opening_amount_cents, closing_amount_cents, status, difference_cents").eq("tenant_id", tenantId).gte("opened_at", startDate).lt("opened_at", endDate).order("opened_at", { ascending: false }); return data||[]; }, enabled: !!tenantId });
+  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Carregando...</div>;
+  if (!data?.length) return <div className="text-sm text-muted-foreground p-4">Nenhum caixa no período.</div>;
+  return (<div className="space-y-6"><div className="flex justify-end"><ExportCSVButton data={data.map(d=>({Abertura:format(new Date(d.opened_at),"dd/MM/yy HH:mm"),Fechamento:d.closed_at?format(new Date(d.closed_at),"dd/MM/yy HH:mm"):"Aberto","Valor Abertura":formatBRL(d.opening_amount_cents),"Valor Fechamento":formatBRL(d.closing_amount_cents||0),Diferença:formatBRL(d.difference_cents||0)}))} columns={[{key:"Abertura",label:"Abertura"},{key:"Fechamento",label:"Fechamento"},{key:"Valor Abertura",label:"V. Abertura"},{key:"Valor Fechamento",label:"V. Fechamento"},{key:"Diferença",label:"Diferença"}]} filename="caixas"/></div><div className="bg-card border border-border rounded-2xl overflow-hidden"><Table><TableHeader><TableRow><TableHead>Abertura</TableHead><TableHead>Fechamento</TableHead><TableHead className="text-right">Abertura</TableHead><TableHead className="text-right">Fechamento</TableHead><TableHead className="text-right">Status</TableHead></TableRow></TableHeader><TableBody>{data.map(d=>(<TableRow key={d.id}><TableCell className="text-sm">{format(new Date(d.opened_at),"dd/MM HH:mm")}</TableCell><TableCell className="text-sm">{d.closed_at?format(new Date(d.closed_at),"dd/MM HH:mm"):"—"}</TableCell><TableCell className="text-right text-sm">{formatBRL(d.opening_amount_cents)}</TableCell><TableCell className="text-right text-sm">{formatBRL(d.closing_amount_cents||0)}</TableCell><TableCell className="text-right"><Badge variant={d.status==="open"?"default":"secondary"} className="text-xs">{d.status==="open"?"Aberto":"Fechado"}</Badge></TableCell></TableRow>))}</TableBody></Table></div></div>);
+}
