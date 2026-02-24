@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 
 export default function WhatsAppConfig() {
+  usePageTitle("WhatsApp");
   const { currentTenant, loading: tenantLoading } = useTenant();
 
   const [connectionStatus, setConnectionStatus] = useState<{

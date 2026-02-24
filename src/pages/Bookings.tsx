@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useNavigate } from "react-router-dom";
 import { BookingDetailsModal } from "@/components/modals/BookingDetailsModal";
 import {
@@ -78,6 +79,7 @@ import {
 } from "@/components/ui/sheet";
 
 export default function Bookings() {
+  usePageTitle("Agendamentos");
   const navigate = useNavigate();
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();

@@ -1,8 +1,10 @@
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ServicePackagesTab } from "@/components/ServicePackagesTab";
 import { PackageCustomersList } from "@/components/packages/PackageCustomersList";
 
 export default function PackagesPage() {
+  usePageTitle("Pacotes");
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       <div>

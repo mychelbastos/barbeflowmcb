@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +69,7 @@ interface ProductSale {
 }
 
 const Products = () => {
+  usePageTitle("Produtos");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
 

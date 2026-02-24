@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +76,7 @@ interface Customer {
 }
 
 export default function RecurringClients() {
+  usePageTitle("Clientes Fixos");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
 

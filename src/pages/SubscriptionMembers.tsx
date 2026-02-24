@@ -1,6 +1,8 @@
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { SubscribersList } from "@/components/subscriptions/SubscribersList";
 
 export default function SubscriptionMembers() {
+  usePageTitle("Assinantes");
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       <div>

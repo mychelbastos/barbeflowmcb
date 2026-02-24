@@ -1,5 +1,6 @@
 import mpIcon from "@/assets/mercadopago-icon.jpg";
 import { useState, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { CustomerImportExport } from "@/components/CustomerImportExport";
 import WhatsAppConfigEmbed from "@/pages/WhatsAppConfig";
@@ -131,6 +132,7 @@ function WhatsAppNotificationStatus() {
 }
 
 export default function Settings() {
+  usePageTitle("Configurações");
   const { currentTenant, tenants, loading: tenantLoading } = useTenant();
   const { isSuperAdmin } = useSuperAdmin();
   const { toast } = useToast();

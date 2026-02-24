@@ -1,9 +1,11 @@
 import { useLocation, Link } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useEffect } from "react";
 import { AlertCircle, Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
+  usePageTitle("Página não encontrada");
   const location = useLocation();
 
   useEffect(() => {

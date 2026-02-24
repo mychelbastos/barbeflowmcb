@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PLANS } from "@/hooks/useSubscription";
@@ -107,6 +108,7 @@ function PlanCard({ planKey, plan, isYearly, checkoutLoading, onSubscribe, recom
 }
 
 export default function Onboarding() {
+  usePageTitle("Bem-vindo");
   const { toast } = useToast();
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);

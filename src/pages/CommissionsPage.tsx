@@ -1,7 +1,9 @@
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { CommissionsTab } from "@/components/CommissionsTab";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 
 export default function CommissionsPage() {
+  usePageTitle("Comissões");
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       <DateRangeSelector className="overflow-x-auto" />

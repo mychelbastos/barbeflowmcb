@@ -4,12 +4,14 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { getPublicUrl, isDashboardDomain } from "@/lib/hostname";
 import { useState } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
 import { trackEvent } from "@/utils/metaTracking";
 
 const Login = () => {
+  usePageTitle("Login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);

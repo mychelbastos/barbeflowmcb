@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +73,7 @@ const SUPABASE_URL = "https://iagzodcwctvydmgrwjsy.supabase.co";
 type StaffFormData = z.infer<typeof staffSchema>;
 
 export default function Staff() {
+  usePageTitle("Profissionais");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { toast } = useToast();
   const { hasActiveSubscription, features } = useSubscription();

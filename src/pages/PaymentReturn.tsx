@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 const PaymentReturn = () => {
+  usePageTitle("Pagamento");
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();

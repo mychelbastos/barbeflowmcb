@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { useReportFavorites } from "@/hooks/useReportFavorites";
 import { REPORT_DEFINITIONS, categoryConfig, categoryOrder } from "@/data/reportDefinitions";
@@ -11,6 +12,7 @@ import { BarChart3, Search, Star, Eye } from "lucide-react";
 import type { ReportCategory } from "@/data/reportDefinitions";
 
 export default function Reports() {
+  usePageTitle("Relatórios");
   const { currentTenant } = useTenant();
   const tenantId = currentTenant?.id || "";
   const { favorites, toggleFavorite, isFavorite } = useReportFavorites(tenantId);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
 import { useDateRange } from "@/contexts/DateRangeContext";
@@ -39,6 +40,7 @@ const fadeUp = {
 };
 
 const Dashboard = () => {
+  usePageTitle("Dashboard");
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
   const [periodBookings, setPeriodBookings] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { useSubscriptionEvents } from "@/hooks/useSubscriptionInsights";
 import { MonthNavigator } from "@/components/subscriptions/MonthNavigator";
@@ -11,6 +12,7 @@ const formatBRL = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function SubscriptionCalendar() {
+  usePageTitle("Calendário de Assinaturas");
   const { currentTenant } = useTenant();
   const [month, setMonth] = useState(new Date());
   const { data, isLoading } = useSubscriptionEvents(currentTenant?.id, month);

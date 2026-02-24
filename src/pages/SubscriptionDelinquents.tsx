@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { useDelinquents } from "@/hooks/useSubscriptionInsights";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ const formatBRL = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function SubscriptionDelinquents() {
+  usePageTitle("Inadimplentes");
   const { currentTenant } = useTenant();
   const { data, isLoading } = useDelinquents(currentTenant?.id);
   const { toast } = useToast();

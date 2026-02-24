@@ -1,8 +1,10 @@
+import { usePageTitle } from "@/hooks/usePageTitle";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
 import { getDashboardUrl, getPublicUrl } from "@/lib/hostname";
 import { ArrowLeft } from "lucide-react";
 
 export default function Terms() {
+  usePageTitle("Termos de Uso");
   return (
     <div className="min-h-screen bg-background text-foreground">
       <nav className="border-b border-border">
