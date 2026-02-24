@@ -99,24 +99,66 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   }
 
   return (
-    <div className="space-y-4">
-      <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            <span className="font-medium">{pkg.name}</span>
-          </div>
-          <span className="text-lg font-semibold text-primary">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
-        </div>
-        <div className="space-y-1">
-          {(pkg.package_services || []).map((ps: any) => (
-            <div key={ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
-              <span className="truncate">{ps.service?.name}</span>
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{ps.sessions_count}x</Badge>
+    <div className="space-y-6">
+      {/* Hero do pacote */}
+      {pkg.photo_url && (
+        <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden">
+          <img src={pkg.photo_url} alt={pkg.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Package className="h-4 w-4 text-emerald-400" />
+              <h2 className="text-xl font-bold text-white">{pkg.name}</h2>
             </div>
-          ))}
+            <span className="text-2xl font-bold text-emerald-400">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
+          </div>
         </div>
+      )}
+
+      {/* Fallback sem imagem */}
+      {!pkg.photo_url && (
+        <div className="text-center py-4">
+          <Package className="h-6 w-6 text-emerald-400 mx-auto mb-2" />
+          <h2 className="text-xl font-bold mb-1">{pkg.name}</h2>
+          <span className="text-2xl font-bold text-emerald-400">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
+        </div>
+      )}
+
+      {/* Serviços incluídos */}
+      {(pkg.package_services || []).length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-zinc-300">O que está incluído</h3>
+          <div className="space-y-2">
+            {(pkg.package_services || []).map((ps: any) => (
+              <div key={ps.service_id} className="flex items-center gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium">{ps.service?.name || 'Serviço'}</span>
+                  <span className="text-xs text-zinc-500 ml-2">
+                    {ps.sessions_count} {ps.sessions_count === 1 ? 'sessão' : 'sessões'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Total de sessões */}
+      <div className="flex items-center gap-2 text-zinc-400 text-xs">
+        <Package className="h-3.5 w-3.5 text-emerald-400" />
+        <span>{(pkg.package_services || []).reduce((sum: number, ps: any) => sum + (ps.sessions_count || 0), 0)} sessões no total</span>
+      </div>
+
+      {/* Separador */}
+      <div className="border-t border-zinc-800" />
+
+      {/* Título do formulário */}
+      <div className="text-center">
+        <h3 className="text-lg font-semibold">Dados para aquisição</h3>
+        <p className="text-zinc-500 text-xs mt-1">Preencha seus dados para adquirir o pacote</p>
       </div>
 
       <div className="space-y-3">

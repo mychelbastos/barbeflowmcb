@@ -98,6 +98,7 @@ const BookingPublic = () => {
   const [packages, setPackages] = useState<any[]>([]);
   const initialTab = searchParams.get('tab') as BookingTab | null;
   const initialPlanId = searchParams.get('plan');
+  const initialPackageId = searchParams.get('package');
   const [bookingTab, setBookingTab] = useState<BookingTab>(
     initialTab && ['services', 'packages', 'subscriptions'].includes(initialTab) ? initialTab : 'services'
   );
@@ -159,6 +160,16 @@ const BookingPublic = () => {
       setLoading(false);
     }
   };
+
+  // Auto-select package from deep link
+  useEffect(() => {
+    if (initialPackageId && packages.length > 0 && !purchasingPackage) {
+      const pkg = packages.find(p => p.id === initialPackageId);
+      if (pkg) {
+        setPurchasingPackage(pkg);
+      }
+    }
+  }, [initialPackageId, packages]);
 
   useEffect(() => {
     if (selectedService && selectedDate) {
@@ -1384,7 +1395,6 @@ END:VCALENDAR`;
                   onSuccess={() => { setPurchasingPackage(null); }}
                   onCancel={() => setPurchasingPackage(null)}
                   onScheduleNow={() => {
-                    // After purchase, go to service selection with first service of package
                     const firstSvc = purchasingPackage.package_services?.[0];
                     if (firstSvc) {
                       setPurchasingPackage(null);
@@ -1395,32 +1405,50 @@ END:VCALENDAR`;
                   }}
                 />
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {packages.map((pkg: any) => (
                     <button
                       key={pkg.id}
                       onClick={() => setPurchasingPackage(pkg)}
-                      className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+                      className="w-full bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 rounded-2xl text-left transition-all duration-300 hover:bg-zinc-900 group overflow-hidden"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Package className="h-4 w-4 text-emerald-400 shrink-0" />
-                            <h3 className="font-medium group-hover:text-white transition-colors">{pkg.name}</h3>
+                      {pkg.photo_url && (
+                        <div className="relative w-full aspect-[2/1] overflow-hidden">
+                          <img src={pkg.photo_url} alt={pkg.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                          <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                            <span className="text-lg font-bold text-emerald-400">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
                           </div>
-                          <div className="space-y-1">
+                        </div>
+                      )}
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <h3 className="font-semibold text-base group-hover:text-white transition-colors leading-tight">{pkg.name}</h3>
+                          </div>
+                          {!pkg.photo_url && (
+                            <span className="text-lg font-bold text-emerald-400 shrink-0">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
+                          )}
+                        </div>
+                        {(pkg.package_services || []).length > 0 && (
+                          <div className="space-y-1.5 pt-1">
                             {(pkg.package_services || []).map((ps: any) => (
-                              <div key={ps.id || ps.service_id} className="flex items-center gap-2 text-sm text-zinc-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 shrink-0" />
-                                <span className="truncate">{ps.service?.name}</span>
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{ps.sessions_count}x</Badge>
+                              <div key={ps.id || ps.service_id} className="flex items-center gap-2">
+                                <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                <span className="text-sm text-zinc-300">
+                                  {ps.service?.name}
+                                  <span className="text-zinc-500"> · {ps.sessions_count} {ps.sessions_count === 1 ? 'sessão' : 'sessões'}</span>
+                                </span>
                               </div>
                             ))}
                           </div>
+                        )}
+                        <div className="pt-2">
+                          <div className="w-full py-2.5 rounded-xl bg-white/5 border border-zinc-700 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-zinc-900 text-center text-sm font-medium transition-all duration-300">
+                            Comprar pacote
+                          </div>
                         </div>
-                        <span className="font-semibold text-emerald-400 whitespace-nowrap text-lg">
-                          R$ {(pkg.price_cents / 100).toFixed(0)}
-                        </span>
                       </div>
                     </button>
                   ))}
