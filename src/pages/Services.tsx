@@ -74,7 +74,10 @@ const serviceSchema = z.object({
   color: z.string().min(1, "Cor é obrigatória"),
   active: z.boolean(),
   public: z.boolean(),
+  category: z.string().optional(),
 });
+
+const categorySuggestions = ["Cortes", "Barba", "Sobrancelhas", "Tratamentos", "Feminino", "Combos"];
 
 type ServiceFormData = z.infer<typeof serviceSchema>;
 
@@ -152,6 +155,7 @@ export default function Services() {
       color: "#3B82F6",
       active: true,
       public: true,
+      category: "",
     },
   });
 
@@ -278,6 +282,7 @@ export default function Services() {
       color: service.color,
       active: service.active,
       public: service.public ?? true,
+      category: service.category || "",
     });
     setPhotoPreview(service.photo_url || null);
     setPhotoFile(null);
@@ -586,6 +591,39 @@ export default function Services() {
                         {...field} 
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Cortes, Barba, Tratamentos, Feminino..." {...field} />
+                    </FormControl>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {categorySuggestions.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => field.onChange(cat)}
+                          className={`text-xs px-2 py-0.5 rounded-md border transition-colors ${
+                            field.value === cat
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-muted text-muted-foreground border-border hover:bg-accent'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Serviços da mesma categoria serão agrupados na página de agendamento
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

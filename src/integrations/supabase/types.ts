@@ -1581,6 +1581,7 @@ export type Database = {
       services: {
         Row: {
           active: boolean | null
+          category: string | null
           color: string | null
           created_at: string
           description: string | null
@@ -1595,6 +1596,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          category?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
@@ -1609,6 +1611,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          category?: string | null
           color?: string | null
           created_at?: string
           description?: string | null
