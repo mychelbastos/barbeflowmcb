@@ -18,6 +18,7 @@ interface GetSlotsRequest {
   service_id?: string;
   staff_id?: string;
   allow_past?: boolean; // Admin override to allow past time slots
+  custom_duration?: number; // Override service duration (minutes)
 }
 
 // Timezone offset map (in hours, negative = behind UTC)
@@ -61,7 +62,7 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, date, service_id, staff_id, allow_past }: GetSlotsRequest = await req.json();
+    const { tenant_id, date, service_id, staff_id, allow_past, custom_duration }: GetSlotsRequest = await req.json();
     
     console.log('Get available slots request:', { tenant_id, date, service_id, staff_id });
 
@@ -160,6 +161,12 @@ serve(async (req) => {
       }
 
       serviceDuration = service.duration_minutes;
+    }
+
+    // Override with custom duration if provided (admin feature)
+    if (custom_duration && custom_duration >= 5) {
+      console.log(`Using custom_duration: ${custom_duration}min (overriding service duration: ${serviceDuration}min)`);
+      serviceDuration = custom_duration;
     }
 
     // Get all bookings for the day (in UTC range that covers the local day)

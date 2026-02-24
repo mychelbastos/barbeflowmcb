@@ -325,7 +325,10 @@ export function BookingModal() {
     loadAllBenefits();
   }, [selectedCustomerId, currentTenant, services]);
 
-  // Fetch available slots when date/service/staff changes
+  // Compute effective duration for slot fetching
+  const effectiveDuration = watchedUseCustomDuration && watchedCustomDuration ? watchedCustomDuration : undefined;
+
+  // Fetch available slots when date/service/staff/duration changes
   useEffect(() => {
     if (watchedDate && currentTenant) {
       fetchAvailableSlots();
@@ -333,7 +336,7 @@ export function BookingModal() {
       setAvailableSlots([]);
       form.setValue("time", "");
     }
-  }, [watchedDate, watchedServiceId, watchedStaffId, currentTenant]);
+  }, [watchedDate, watchedServiceId, watchedStaffId, effectiveDuration, currentTenant]);
 
   // Check if selected staff has a schedule for the selected date's weekday
   useEffect(() => {
@@ -410,9 +413,11 @@ export function BookingModal() {
       const body: any = {
         tenant_id: currentTenant.id,
         date: watchedDate,
+        allow_past: true,
       };
       if (watchedServiceId) body.service_id = watchedServiceId;
       if (watchedStaffId && watchedStaffId !== "none") body.staff_id = watchedStaffId;
+      if (effectiveDuration) body.custom_duration = effectiveDuration;
 
       const { data, error } = await supabase.functions.invoke('get-available-slots', { body });
       if (error) throw error;
