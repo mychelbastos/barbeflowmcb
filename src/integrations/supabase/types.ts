@@ -1022,7 +1022,7 @@ export type Database = {
       payments: {
         Row: {
           amount_cents: number
-          booking_id: string
+          booking_id: string | null
           checkout_url: string | null
           created_at: string
           currency: string
@@ -1037,7 +1037,7 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
-          booking_id: string
+          booking_id?: string | null
           checkout_url?: string | null
           created_at?: string
           currency?: string
@@ -1052,7 +1052,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
-          booking_id?: string
+          booking_id?: string | null
           checkout_url?: string | null
           created_at?: string
           currency?: string

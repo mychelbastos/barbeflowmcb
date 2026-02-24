@@ -32,6 +32,7 @@ import Products from "./pages/Products";
 import RecurringClients from "./pages/RecurringClients";
 import BookingPublic from "./pages/BookingPublic";
 import PaymentReturn from "./pages/PaymentReturn";
+import PackagePaymentReturn from "./pages/PackagePaymentReturn";
 import NotFound from "./pages/NotFound";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -89,6 +90,7 @@ const App = () => {
                 <Route path="/privacidade" element={<Privacy />} />
                 <Route path="/:slug" element={<BookingPublic />} />
                 <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
+                <Route path="/:slug/pacote/retorno" element={<PackagePaymentReturn />} />
                 <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
               </>
             )}

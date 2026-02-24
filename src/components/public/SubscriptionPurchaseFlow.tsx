@@ -74,17 +74,13 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
       const canonical = canonicalPhone(phoneInput);
       setPhone(formatPhoneInput(phoneInput));
 
-      const { data: customers } = await supabase
-        .from('customers')
-        .select('name, email, phone')
-        .eq('tenant_id', tenant.id)
-        .eq('phone', canonical)
-        .limit(1);
+      const { data, error } = await supabase.functions.invoke('public-customer-bookings', {
+        body: { action: 'lookup', phone: canonical, tenant_id: tenant.id },
+      });
 
-      if (customers && customers.length > 0) {
-        const cust = customers[0];
-        setName(cust.name || '');
-        setEmail(cust.email || '');
+      if (!error && data?.found && data?.customer) {
+        setName(data.customer.name || '');
+        setEmail(data.customer.email || '');
         setCustomerFound(true);
       } else {
         setCustomerFound(false);
