@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Check, CreditCard, Loader2, ChevronLeft, Repeat } from "lucide-react";
+import { Check, CreditCard, Loader2, ChevronLeft, Repeat, XCircle } from "lucide-react";
 import { SubscriptionCardPayment, type SubscriptionCardPaymentProps } from "./SubscriptionCardPayment";
 
 interface PublicSubscriptionPlansProps {
@@ -140,10 +140,87 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
   // Plan selection form
   if (selectedPlan) {
     return (
-      <div className="animate-in fade-in duration-300">
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold mb-2">Assinar plano</h2>
-          <p className="text-zinc-500 text-sm">{selectedPlan.name} — R$ {(selectedPlan.price_cents / 100).toFixed(2)}/mês</p>
+      <div className="space-y-6">
+        {/* Hero do plano */}
+        {selectedPlan.photo_url && (
+          <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden">
+            <img 
+              src={selectedPlan.photo_url} 
+              alt={selectedPlan.name} 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <h2 className="text-xl font-bold text-white mb-1">{selectedPlan.name}</h2>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-primary">
+                  R$ {(selectedPlan.price_cents / 100).toFixed(2)}
+                </span>
+                <span className="text-muted-foreground text-sm">/mês</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!selectedPlan.photo_url && (
+          <div className="text-center py-4">
+            <h2 className="text-xl font-bold mb-1">{selectedPlan.name}</h2>
+            <div className="flex items-baseline gap-1 justify-center">
+              <span className="text-2xl font-bold text-primary">
+                R$ {(selectedPlan.price_cents / 100).toFixed(2)}
+              </span>
+              <span className="text-muted-foreground text-sm">/mês</span>
+            </div>
+          </div>
+        )}
+
+        {selectedPlan.description && (
+          <p className="text-muted-foreground text-sm leading-relaxed px-1">
+            {selectedPlan.description}
+          </p>
+        )}
+
+        {selectedPlan.plan_services?.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-zinc-300">Serviços incluídos</h3>
+            <div className="space-y-2">
+              {selectedPlan.plan_services.map((ps: any) => (
+                <div key={ps.id} className="flex items-center gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Check className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium">{ps.service?.name || 'Serviço'}</span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {ps.sessions_per_cycle != null ? `${ps.sessions_per_cycle}x por mês` : 'Ilimitado'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+            <Repeat className="h-3.5 w-3.5 text-primary" />
+            <span>Renovação automática mensal</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+            <CreditCard className="h-3.5 w-3.5 text-primary" />
+            <span>Pagamento seguro via cartão de crédito</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground text-xs">
+            <XCircle className="h-3.5 w-3.5 text-primary" />
+            <span>Cancele a qualquer momento</span>
+          </div>
+        </div>
+
+        <div className="border-t border-zinc-800" />
+
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Dados para assinatura</h3>
+          <p className="text-muted-foreground text-xs mt-1">Preencha seus dados para ativar o plano</p>
         </div>
 
         <div className="space-y-4">
