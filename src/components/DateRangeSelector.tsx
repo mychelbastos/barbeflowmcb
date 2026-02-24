@@ -41,7 +41,7 @@ export function DateRangeSelector({ className, showTitle = true }: DateRangeSele
         </div>
       )}
       <div className={showTitle ? "p-3 md:p-5" : "p-3 md:p-5"}>
-        <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-3">
+        <div className={`grid gap-3 md:gap-4 grid-cols-1 ${preset === 'custom' ? 'md:grid-cols-3' : 'md:grid-cols-1'}`}>
           <div className="space-y-1.5 md:space-y-2">
             <Label className="text-muted-foreground text-xs md:text-sm">Período</Label>
             <Select value={preset} onValueChange={setPreset}>
