@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,10 @@ interface PublicSubscriptionPlansProps {
   tenant: any;
   plans: any[];
   onBack?: () => void;
+  initialPlanId?: string | null;
 }
 
-export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscriptionPlansProps) {
+export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }: PublicSubscriptionPlansProps) {
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [phone, setPhone] = useState('');
@@ -24,6 +25,13 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack }: PublicSubscri
   const [showCardPayment, setShowCardPayment] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
+
+  useEffect(() => {
+    if (initialPlanId && plans.length > 0 && !selectedPlan) {
+      const plan = plans.find(p => p.id === initialPlanId);
+      if (plan) setSelectedPlan(plan);
+    }
+  }, [initialPlanId, plans]);
 
   const formatCpfInput = (value: string): string => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
