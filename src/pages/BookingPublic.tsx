@@ -1369,8 +1369,8 @@ END:VCALENDAR`;
                   )}
                 </div>
 
-                {/* Search bar — show when 6+ services */}
-                {services.length > 6 && (
+                {/* Search bar — show when 3+ services */}
+                {services.length >= 3 && (
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
