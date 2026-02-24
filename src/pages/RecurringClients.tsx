@@ -21,7 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Loader2, Trash2, Pencil, UserCheck, Clock, CalendarClock, Ban
+  Plus, Loader2, Trash2, Pencil, UserCheck, Clock, CalendarClock, Ban, Scissors
 } from "lucide-react";
 
 const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -477,73 +477,117 @@ export default function RecurringClients() {
         <div className="space-y-3">
           {records.map((r) => (
             <Card key={r.id} className={!r.active ? "opacity-60" : ""}>
-              <CardContent className="flex items-center justify-between p-4 gap-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${r.active ? "bg-emerald-500/10" : "bg-muted"}`}>
-                    <UserCheck className={`h-5 w-5 ${r.active ? "text-emerald-500" : "text-muted-foreground"}`} />
+              <CardContent className="p-3 md:p-4">
+                {/* Mobile: stacked compact layout */}
+                <div className="flex items-start gap-3">
+                  <div className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${r.active ? "bg-emerald-500/10" : "bg-muted"}`}>
+                    <UserCheck className={`h-4 w-4 md:h-5 md:w-5 ${r.active ? "text-emerald-500" : "text-muted-foreground"}`} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-foreground truncate">{r.customer?.name || "Cliente"}</p>
-                      <Badge variant={r.active ? "default" : "secondary"} className="text-xs">
+                    {/* Name + badges row */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-semibold text-sm text-foreground truncate max-w-[140px] md:max-w-none">{r.customer?.name || "Cliente"}</p>
+                      <Badge variant={r.active ? "default" : "secondary"} className="text-[10px] h-5 px-1.5">
                         {r.active ? "Ativo" : "Inativo"}
                       </Badge>
                       {(r as any).hasPackage && (
-                        <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/30">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-500 dark:border-amber-500/30">
                           Pacote
                         </Badge>
                       )}
                       {(r as any).hasSubscription && (
-                        <Badge variant="secondary" className="text-[10px] h-5 bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-500 dark:border-violet-500/30">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-500 dark:border-violet-500/30">
                           Assinatura
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap mt-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {WEEKDAY_SHORT[r.weekday]} {r.start_time.slice(0, 5)} ({r.duration_minutes}min)
-                      </span>
-                      <span>•</span>
-                      <span>{getServiceName(r.service_id)}</span>
-                      <span>•</span>
-                      <span>{getStaffName(r.staff_id)}</span>
-                      <span>•</span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {FREQUENCY_SHORT[(r as any).frequency || 'weekly']}
-                      </Badge>
+
+                    {/* Info: 2 compact rows on mobile */}
+                    <div className="mt-1.5 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3 flex-shrink-0" />
+                        <span className="font-medium text-foreground">{WEEKDAY_SHORT[r.weekday]}</span>
+                        <span>{r.start_time.slice(0, 5)}</span>
+                        <span className="text-muted-foreground/60">•</span>
+                        <span>{r.duration_minutes}min</span>
+                        <span className="text-muted-foreground/60">•</span>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 font-normal">
+                          {FREQUENCY_SHORT[(r as any).frequency || 'weekly']}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Scissors className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{getServiceName(r.service_id)}</span>
+                        <span className="text-muted-foreground/60">•</span>
+                        <span className="truncate">{getStaffName(r.staff_id)}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions row - inline on mobile */}
+                    <div className="flex items-center gap-0.5 mt-2 -ml-1.5 md:hidden">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1" onClick={() => handleToggleActive(r)}>
+                        <Ban className="h-3.5 w-3.5" />
+                        {r.active ? "Desativar" : "Ativar"}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1" onClick={() => openEdit(r)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive gap-1">
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Remover
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover cliente fixo?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              O horário ficará disponível novamente para novos agendamentos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Remover
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleToggleActive(r)}>
-                    <Ban className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => openEdit(r)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remover cliente fixo?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          O horário ficará disponível novamente para novos agendamentos.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Remover
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {/* Desktop actions - icon buttons */}
+                  <div className="hidden md:flex items-center gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => handleToggleActive(r)}>
+                      <Ban className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => openEdit(r)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover cliente fixo?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            O horário ficará disponível novamente para novos agendamentos.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardContent>
             </Card>
