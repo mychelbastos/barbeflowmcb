@@ -176,7 +176,7 @@ export default function Reports() {
                           <span className="font-medium text-sm text-foreground">{r.name}</span>
                           {r.hasChart && (
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                              📊
+                              <BarChart3 className="h-2.5 w-2.5" />
                             </Badge>
                           )}
                         </div>
