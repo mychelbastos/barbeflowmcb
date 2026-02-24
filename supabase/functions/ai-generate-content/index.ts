@@ -116,8 +116,9 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
-      // Get item info - products table has no description column
-      const selectCols = finalTable === 'products' ? 'name, tenant_id' : 'name, tenant_id, description';
+      // Get item info - only services and subscription_plans have description column
+      const tablesWithDescription = ['services', 'subscription_plans'];
+      const selectCols = tablesWithDescription.includes(finalTable) ? 'name, tenant_id, description' : 'name, tenant_id';
       const { data: item, error: itemError } = await supabase
         .from(finalTable)
         .select(selectCols)
