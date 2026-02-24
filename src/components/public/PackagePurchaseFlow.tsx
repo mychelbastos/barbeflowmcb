@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone } from "lucide-react";
+import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone, ExternalLink } from "lucide-react";
 
 interface PackagePurchaseFlowProps {
   tenant: any;
@@ -73,17 +73,13 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
       const canonical = canonicalPhone(phoneInput);
       setPhone(formatPhoneInput(phoneInput));
 
-      const { data: customers } = await supabase
-        .from('customers')
-        .select('name, email, phone')
-        .eq('tenant_id', tenant.id)
-        .eq('phone', canonical)
-        .limit(1);
+      const { data, error } = await supabase.functions.invoke('public-customer-bookings', {
+        body: { action: 'lookup', phone: canonical, tenant_id: tenant.id },
+      });
 
-      if (customers && customers.length > 0) {
-        const cust = customers[0];
-        setName(cust.name || '');
-        setEmail(cust.email || '');
+      if (!error && data?.found && data?.customer) {
+        setName(data.customer.name || '');
+        setEmail(data.customer.email || '');
         setCustomerFound(true);
       } else {
         setCustomerFound(false);
@@ -108,12 +104,12 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   };
 
   const handlePurchase = async () => {
-    if (!name || !phone) {
-      toast({ title: "Preencha nome e telefone", variant: "destructive" });
+    if (!name || !phone || !email || !cpf) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email.trim())) {
+    if (!emailRegex.test(email.trim())) {
       toast({ title: "E-mail inválido", description: "Verifique o e-mail digitado.", variant: "destructive" });
       return;
     }
@@ -123,36 +119,35 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
     }
     setSubmitting(true);
     try {
-      const canonical = canonicalPhone(phone);
-      const { data: custResult, error: custErr } = await supabase.functions.invoke('public-customer-bookings', {
-        body: { action: 'find-or-create', phone: canonical, tenant_id: tenant.id, name: name.trim(), email: email || null },
+      const { data, error } = await supabase.functions.invoke('mp-create-package-checkout', {
+        body: {
+          tenant_id: tenant.id,
+          package_id: pkg.id,
+          customer_name: name.trim(),
+          customer_phone: phone,
+          customer_email: email.trim(),
+          customer_cpf: cpf.replace(/\D/g, ''),
+        },
       });
-      if (custErr || !custResult?.customer_id) throw new Error('Erro ao identificar cliente');
-      const customerId = custResult.customer_id;
-      const { data: pkgSvcs } = await supabase
-        .from('package_services').select('service_id, sessions_count').eq('package_id', pkg.id);
-      const totalSessions = (pkgSvcs || []).reduce((sum: number, s: any) => sum + s.sessions_count, 0);
-      const { data: newCp, error: cpErr } = await supabase
-        .from('customer_packages')
-        .insert({
-          customer_id: customerId, package_id: pkg.id, tenant_id: tenant.id,
-          sessions_total: totalSessions, sessions_used: 0,
-          status: 'active', payment_status: 'pending',
-        })
-        .select().single();
-      if (cpErr) throw cpErr;
-      if (newCp && pkgSvcs && pkgSvcs.length > 0) {
-        await supabase.from('customer_package_services').insert(
-          pkgSvcs.map((ps: any) => ({
-            customer_package_id: newCp.id, service_id: ps.service_id,
-            sessions_total: ps.sessions_count, sessions_used: 0,
-          }))
-        );
+
+      if (error) {
+        const errorMessage = data?.error || error.message || 'Erro ao criar checkout';
+        throw new Error(errorMessage);
       }
-      toast({ title: "Pacote adquirido!" });
-      setStep('success');
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else if (data?.payment_method === 'local') {
+        toast({ title: "Pacote adquirido!", description: "Pagamento será realizado no local." });
+        setStep('success');
+      } else {
+        toast({ title: "Pacote criado!", description: "Aguardando confirmação de pagamento." });
+        setStep('success');
+      }
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      console.error('Package purchase error:', err);
+      toast({ title: "Erro ao processar", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -326,7 +321,7 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
 
           <Button onClick={handlePurchase} disabled={submitting || !name || !phone || !email || !cpf}
             className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
-            {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><Check className="h-4 w-4 mr-2" /> Comprar pacote</>}
+            {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><ExternalLink className="h-4 w-4 mr-2" /> Pagar e adquirir pacote</>}
           </Button>
           <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
             <ChevronLeft className="h-4 w-4" /> Voltar

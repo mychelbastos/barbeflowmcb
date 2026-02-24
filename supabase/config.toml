@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = false
+
+[functions.mp-create-package-checkout]
+verify_jwt = false
