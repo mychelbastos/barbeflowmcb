@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SubscriptionPlanForm } from "@/components/subscriptions/SubscriptionPlanForm";
 import { SubscriptionPlanCard } from "@/components/subscriptions/SubscriptionPlanCard";
-import { SubscribersList } from "@/components/subscriptions/SubscribersList";
 import { Button } from "@/components/ui/button";
 import { Plus, CreditCard, Loader2 } from "lucide-react";
 
@@ -35,7 +33,6 @@ export default function SubscriptionPlansPage() {
 
       const plansData = plansRes.data || [];
 
-      // Load plan services
       if (plansData.length > 0) {
         const [{ data: planServices }, { data: subCounts }, { data: planStaff }] = await Promise.all([
           supabase.from('subscription_plan_services').select('*, service:services(name)').in('plan_id', plansData.map(p => p.id)),
@@ -75,7 +72,7 @@ export default function SubscriptionPlansPage() {
     const { error } = await supabase.from('subscription_plans').delete().eq('id', id);
     if (error) {
       if (error.code === '23503') {
-        toast({ title: "Não é possível excluir", description: "Este plano possui assinantes vinculados. Cancele as assinaturas primeiro.", variant: "destructive" });
+        toast({ title: "Não é possível excluir", description: "Este plano possui assinantes vinculados.", variant: "destructive" });
       } else {
         toast({ title: "Erro ao excluir plano", description: error.message, variant: "destructive" });
       }
@@ -110,57 +107,39 @@ export default function SubscriptionPlansPage() {
 
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Assinaturas</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Gerencie planos de assinatura recorrente para seus clientes
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Planos de Assinatura</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Gerencie os planos recorrentes oferecidos aos clientes
+          </p>
+        </div>
+        <Button size="sm" onClick={() => { setEditingPlan(null); setShowForm(true); }}>
+          <Plus className="h-4 w-4 mr-1" /> Novo Plano
+        </Button>
       </div>
 
-      <Tabs defaultValue="plans">
-        <TabsList>
-          <TabsTrigger value="plans">Planos</TabsTrigger>
-          <TabsTrigger value="subscribers">Assinantes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="plans">
-          <div className="space-y-4">
-            <div className="flex justify-end">
-              <Button size="sm" onClick={() => { setEditingPlan(null); setShowForm(true); }}>
-                <Plus className="h-4 w-4 mr-1" /> Novo Plano
-              </Button>
-            </div>
-
-            {plans.length === 0 ? (
-              <div className="text-center py-8">
-                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">Nenhum plano de assinatura cadastrado</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Crie planos como "Corte Mensal R$89,90/mês"
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {plans.map((plan) => (
-                  <SubscriptionPlanCard
-                    key={plan.id}
-                    plan={plan}
-                    tenantSlug={currentTenant?.slug}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onToggleActive={handleToggleActive}
-                    onReload={loadData}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="subscribers">
-          <SubscribersList />
-        </TabsContent>
-      </Tabs>
+      {plans.length === 0 ? (
+        <div className="text-center py-8">
+          <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-sm text-muted-foreground">Nenhum plano de assinatura cadastrado</p>
+          <p className="text-xs text-muted-foreground mt-1">Crie planos como "Corte Mensal R$89,90/mês"</p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {plans.map((plan) => (
+            <SubscriptionPlanCard
+              key={plan.id}
+              plan={plan}
+              tenantSlug={currentTenant?.slug}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleActive={handleToggleActive}
+              onReload={loadData}
+            />
+          ))}
+        </div>
+      )}
 
       <SubscriptionPlanForm
         open={showForm}

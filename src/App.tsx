@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DateRangeProvider } from "@/contexts/DateRangeContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -18,6 +18,10 @@ import CommissionsPage from "./pages/CommissionsPage";
 import CashRegister from "./pages/CashRegister";
 import PackagesPage from "./pages/PackagesPage";
 import SubscriptionPlansPage from "./pages/SubscriptionPlansPage";
+import SubscriptionMembers from "./pages/SubscriptionMembers";
+import SubscriptionReceivables from "./pages/SubscriptionReceivables";
+import SubscriptionCalendar from "./pages/SubscriptionCalendar";
+import SubscriptionDelinquents from "./pages/SubscriptionDelinquents";
 import SubscriptionCallback from "./pages/SubscriptionCallback";
 import Bookings from "./pages/Bookings";
 import Services from "./pages/Services";
@@ -104,7 +108,12 @@ const App = () => {
                   <Route path="bookings" element={<Bookings />} />
                   <Route path="services" element={<Services />} />
                   <Route path="packages" element={<PackagesPage />} />
-                  <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
+                  <Route path="subscription-plans" element={<Navigate to={`${dashPrefix}/subscriptions/plans`} replace />} />
+                  <Route path="subscriptions/plans" element={<SubscriptionPlansPage />} />
+                  <Route path="subscriptions/members" element={<SubscriptionMembers />} />
+                  <Route path="subscriptions/receivables" element={<SubscriptionReceivables />} />
+                  <Route path="subscriptions/calendar" element={<SubscriptionCalendar />} />
+                  <Route path="subscriptions/delinquents" element={<SubscriptionDelinquents />} />
                   <Route path="staff" element={<Staff />} />
                   <Route path="customers" element={<Customers />} />
                   <Route path="recurring-clients" element={<RecurringClients />} />

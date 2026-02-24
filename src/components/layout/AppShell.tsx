@@ -69,6 +69,9 @@ import {
   Palette,
   Banknote,
   Globe,
+  Receipt,
+  CalendarDays,
+  AlertTriangle,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -107,8 +110,19 @@ const baseNavigationItems: NavItem[] = [
     children: [
       { title: "Serviços", url: "/app/services", icon: Scissors },
       { title: "Pacotes", url: "/app/packages", icon: Gift },
-      { title: "Assinaturas", url: "/app/subscription-plans", icon: Repeat },
       { title: "Produtos", url: "/app/products", icon: Package },
+    ]
+  },
+  { 
+    title: "Assinaturas", 
+    url: "/app/subscriptions/plans", 
+    icon: Repeat,
+    children: [
+      { title: "Planos", url: "/app/subscriptions/plans", icon: CreditCard },
+      { title: "Assinantes", url: "/app/subscriptions/members", icon: Users },
+      { title: "Recebíveis", url: "/app/subscriptions/receivables", icon: Receipt },
+      { title: "Calendário", url: "/app/subscriptions/calendar", icon: CalendarDays },
+      { title: "Inadimplentes", url: "/app/subscriptions/delinquents", icon: AlertTriangle },
     ]
   },
   { title: "Profissionais", url: "/app/staff", icon: Users },
