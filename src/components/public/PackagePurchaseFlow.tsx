@@ -9,9 +9,9 @@ import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
 interface PackagePurchaseFlowProps {
   tenant: any;
   pkg: any;
-  onSuccess: () => void;
+  onSuccess: (customerPackageId?: string) => void;
   onCancel: () => void;
-  onScheduleNow: () => void;
+  onScheduleNow: (customerPackageId?: string) => void;
 }
 
 function canonicalPhone(phone: string): string {
@@ -158,10 +158,10 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
         <h3 className="text-lg font-semibold">Pacote adquirido!</h3>
         <p className="text-sm text-zinc-400">Você tem {pkg.total_sessions || 0} sessões disponíveis.</p>
         <div className="space-y-2 pt-2">
-          <Button onClick={onScheduleNow} className="w-full bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl">
+          <Button onClick={() => onScheduleNow(customerPackageId ?? undefined)} className="w-full bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl">
             <Calendar className="h-4 w-4 mr-2" /> Agendar agora
           </Button>
-          <Button variant="outline" onClick={onSuccess} className="w-full border-zinc-700 text-zinc-400 rounded-xl">
+          <Button variant="outline" onClick={() => onSuccess(customerPackageId ?? undefined)} className="w-full border-zinc-700 text-zinc-400 rounded-xl">
             Agendar depois
           </Button>
         </div>
