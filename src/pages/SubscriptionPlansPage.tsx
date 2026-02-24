@@ -7,6 +7,7 @@ import { SubscriptionPlanCard } from "@/components/subscriptions/SubscriptionPla
 import { Button } from "@/components/ui/button";
 import { Plus, CreditCard, Loader2 } from "lucide-react";
 
+// Subscription Plans page – tabs removed, subscribers are at /subscriptions/members
 export default function SubscriptionPlansPage() {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
