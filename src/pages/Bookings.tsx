@@ -245,6 +245,26 @@ export default function Bookings() {
         } catch (e) { console.error(e); }
       }
 
+      // Push notification para admins/staff sobre mudança de status
+      if (currentTenant && (newStatus === "cancelled" || newStatus === "confirmed" || newStatus === "no_show")) {
+        const pushTitleMap: Record<string, string> = {
+          cancelled: "❌ Agendamento cancelado",
+          confirmed: "✅ Agendamento confirmado",
+          no_show: "⚠️ Cliente faltou",
+        };
+        const customerName = booking?.customer?.name || "Cliente";
+        const serviceName = booking?.service?.name || "Serviço";
+        supabase.functions.invoke("send-push-notification", {
+          body: {
+            tenant_id: currentTenant.id,
+            title: pushTitleMap[newStatus] || "Atualização de agendamento",
+            body: `${customerName} — ${serviceName}`,
+            url: "/app/bookings",
+            data: { booking_id: realId },
+          },
+        }).catch(console.error);
+      }
+
       toast({ title: "Status atualizado", description: `Agendamento marcado como ${getStatusLabel(newStatus)}` });
 
       // When completing, keep modal open and show comanda
