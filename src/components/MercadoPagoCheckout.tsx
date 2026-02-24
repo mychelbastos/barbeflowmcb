@@ -13,7 +13,7 @@ interface PayerInfo {
 }
 
 interface MercadoPagoCheckoutProps {
-  bookingId: string;
+  bookingId?: string;
   tenantSlug: string;
   amount: number;
   serviceName: string;
@@ -23,6 +23,7 @@ interface MercadoPagoCheckoutProps {
   payer: PayerInfo;
   customerPackageId?: string;
   packageAmountCents?: number;
+  paymentId?: string;
 }
 
 type PaymentMethod = 'card' | 'pix' | null;
@@ -45,7 +46,9 @@ export const MercadoPagoCheckout = ({
   payer,
   customerPackageId,
   packageAmountCents,
+  paymentId: externalPaymentId,
 }: MercadoPagoCheckoutProps) => {
+  const isPackagePayment = !!customerPackageId && !bookingId;
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -96,6 +99,13 @@ export const MercadoPagoCheckout = ({
 
       // Check if we have public_key - if not, use checkout redirect as fallback
       if (keyError || !keyData?.public_key) {
+        // For package payments without booking, no redirect fallback
+        if (!bookingId) {
+          setErrorMessage('Erro ao carregar pagamento. Verifique se o Mercado Pago está conectado.');
+          setStatus('error');
+          return;
+        }
+
         console.log('No public_key available, using checkout redirect fallback');
         setUseCheckoutRedirect(true);
         
@@ -244,21 +254,37 @@ export const MercadoPagoCheckout = ({
     setErrorMessage('');
 
     try {
-      const { data, error } = await supabase.functions.invoke('mp-process-payment', {
-        body: {
-          booking_id: bookingId,
-          token: formData.token,
-          payment_method_id: formData.payment_method_id,
-          payment_type: 'card',
-          payer: {
-            email: formData.payer?.email || payer.email,
-            identification: formData.payer?.identification,
-          },
-          customer_package_id: customerPackageId || undefined,
-          package_amount_cents: packageAmountCents || undefined,
-          device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke(
+        isPackagePayment ? 'mp-process-package-payment' : 'mp-process-payment',
+        {
+          body: isPackagePayment
+            ? {
+                customer_package_id: customerPackageId,
+                payment_id: externalPaymentId,
+                token: formData.token,
+                payment_method_id: formData.payment_method_id,
+                payment_type: 'card',
+                payer: {
+                  email: formData.payer?.email || payer.email,
+                  identification: formData.payer?.identification,
+                },
+                device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
+              }
+            : {
+                booking_id: bookingId,
+                token: formData.token,
+                payment_method_id: formData.payment_method_id,
+                payment_type: 'card',
+                payer: {
+                  email: formData.payer?.email || payer.email,
+                  identification: formData.payer?.identification,
+                },
+                customer_package_id: customerPackageId || undefined,
+                package_amount_cents: packageAmountCents || undefined,
+                device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
+              },
+        }
+      );
 
       if (!isMountedRef.current) return;
       if (error) throw error;
@@ -370,19 +396,33 @@ export const MercadoPagoCheckout = ({
     setErrorMessage('');
 
     try {
-      const { data, error } = await supabase.functions.invoke('mp-process-payment', {
-        body: {
-          booking_id: bookingId,
-          payment_type: 'pix',
-          payer: {
-            email: payer.email,
-            identification: payer.identification,
-          },
-          customer_package_id: customerPackageId || undefined,
-          package_amount_cents: packageAmountCents || undefined,
-          device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke(
+        isPackagePayment ? 'mp-process-package-payment' : 'mp-process-payment',
+        {
+          body: isPackagePayment
+            ? {
+                customer_package_id: customerPackageId,
+                payment_id: externalPaymentId,
+                payment_type: 'pix',
+                payer: {
+                  email: payer.email,
+                  identification: payer.identification,
+                },
+                device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
+              }
+            : {
+                booking_id: bookingId,
+                payment_type: 'pix',
+                payer: {
+                  email: payer.email,
+                  identification: payer.identification,
+                },
+                customer_package_id: customerPackageId || undefined,
+                package_amount_cents: packageAmountCents || undefined,
+                device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
+              },
+        }
+      );
 
       if (!isMountedRef.current) return;
       if (error) throw error;
@@ -477,7 +517,9 @@ export const MercadoPagoCheckout = ({
           <Check className="h-8 w-8 text-emerald-400" />
         </div>
         <h3 className="text-lg font-semibold mb-2">Pagamento aprovado!</h3>
-        <p className="text-muted-foreground text-sm">Seu agendamento foi confirmado.</p>
+        <p className="text-muted-foreground text-sm">
+          {isPackagePayment ? 'Seu pacote foi ativado com sucesso!' : 'Seu agendamento foi confirmado.'}
+        </p>
       </div>
     );
   }
