@@ -552,7 +552,11 @@ export function BookingModal() {
 
       const { data: result, error } = await supabase.functions.invoke('create-booking', { body });
 
-      if (error) throw error;
+      // Handle structured error responses (e.g. 403 forced_online_payment)
+      if (error) {
+        const msg = result?.message || result?.error || error.message;
+        throw new Error(msg || 'Erro ao criar agendamento');
+      }
       if (!result?.success) throw new Error(result?.error || 'Erro ao criar agendamento');
 
       toast({
