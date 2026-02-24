@@ -261,18 +261,27 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
             onClick={() => setSelectedPlan(plan)}
             className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
           >
-            <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start gap-3 mb-3">
+              {plan.photo_url && (
+                <div className="h-16 w-16 rounded-lg overflow-hidden shrink-0">
+                  <img src={plan.photo_url} alt={plan.name} className="w-full h-full object-cover" />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium group-hover:text-white transition-colors">{plan.name}</h3>
-                {plan.description && (
-                  <p className="text-zinc-500 text-sm line-clamp-2 mt-1">{plan.description}</p>
-                )}
-              </div>
-              <div className="text-right shrink-0">
-                <span className="font-semibold text-primary">
-                  R$ {(plan.price_cents / 100).toFixed(2)}
-                </span>
-                <span className="text-zinc-500 text-sm">/mês</span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium group-hover:text-white transition-colors">{plan.name}</h3>
+                    {plan.description && (
+                      <p className="text-zinc-500 text-sm line-clamp-2 mt-1">{plan.description}</p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-semibold text-primary">
+                      R$ {(plan.price_cents / 100).toFixed(2)}
+                    </span>
+                    <span className="text-zinc-500 text-sm">/mês</span>
+                  </div>
+                </div>
               </div>
             </div>
 
