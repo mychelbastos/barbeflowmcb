@@ -242,11 +242,13 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       const startsAt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
       const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
 
-      // Check if ANY real booking (including cancelled) exists for this staff+customer at this time
+      // Use a tolerance window based on service duration to catch bookings
+      // created at slightly different times than the recurring slot
+      const toleranceMs = Math.max(rc.duration_minutes, 60) * 60 * 1000;
       const alreadyExists = allDayBookings.some((b) => {
         return b.staff_id === rc.staff_id &&
           b.customer_id === rc.customer_id &&
-          Math.abs(new Date(b.starts_at).getTime() - startsAt.getTime()) < 60000;
+          Math.abs(new Date(b.starts_at).getTime() - startsAt.getTime()) < toleranceMs;
       });
 
       if (alreadyExists) continue;
