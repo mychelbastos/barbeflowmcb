@@ -325,9 +325,9 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
 
   // Plan cards list
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {plans.length === 0 ? (
-        <div className="text-center py-12 text-zinc-500">
+        <div className="text-center py-12 text-muted-foreground">
           <Repeat className="h-8 w-8 mx-auto mb-3 opacity-50" />
           <p className="text-sm">Nenhum plano de assinatura disponível</p>
         </div>
@@ -336,42 +336,69 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId }
           <button
             key={plan.id}
             onClick={() => setSelectedPlan(plan)}
-            className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+            className="w-full bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 rounded-2xl text-left transition-all duration-300 hover:bg-zinc-900 group overflow-hidden"
           >
-            <div className="flex items-start gap-3 mb-3">
-              {plan.photo_url && (
-                <div className="h-16 w-16 rounded-lg overflow-hidden shrink-0">
-                  <img src={plan.photo_url} alt={plan.name} className="w-full h-full object-cover" />
+            {plan.photo_url && (
+              <div className="relative w-full aspect-[2/1] overflow-hidden">
+                <img
+                  src={plan.photo_url}
+                  alt={plan.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                  <span className="text-lg font-bold text-primary">
+                    R$ {(plan.price_cents / 100).toFixed(2)}
+                  </span>
+                  <span className="text-muted-foreground text-xs">/mês</span>
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium group-hover:text-white transition-colors">{plan.name}</h3>
-                    {plan.description && (
-                      <p className="text-zinc-500 text-sm line-clamp-2 mt-1">{plan.description}</p>
-                    )}
-                  </div>
+              </div>
+            )}
+
+            <div className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-semibold text-base group-hover:text-white transition-colors leading-tight">
+                  {plan.name}
+                </h3>
+                {!plan.photo_url && (
                   <div className="text-right shrink-0">
-                    <span className="font-semibold text-primary">
+                    <span className="text-lg font-bold text-primary">
                       R$ {(plan.price_cents / 100).toFixed(2)}
                     </span>
-                    <span className="text-zinc-500 text-sm">/mês</span>
+                    <span className="text-muted-foreground text-xs">/mês</span>
                   </div>
+                )}
+              </div>
+
+              {plan.description && (
+                <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
+                  {plan.description}
+                </p>
+              )}
+
+              {plan.plan_services?.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {plan.plan_services.map((ps: any) => (
+                    <div key={ps.id} className="flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-sm text-zinc-300">
+                        {ps.service?.name || 'Serviço'}
+                        {ps.sessions_per_cycle != null
+                          ? <span className="text-muted-foreground"> · {ps.sessions_per_cycle}x por mês</span>
+                          : <span className="text-muted-foreground"> · Uso ilimitado</span>
+                        }
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-2">
+                <div className="w-full py-2.5 rounded-xl bg-white/5 border border-zinc-700 group-hover:bg-primary group-hover:border-primary group-hover:text-zinc-900 text-center text-sm font-medium transition-all duration-300">
+                  Assinar plano
                 </div>
               </div>
             </div>
-
-            {plan.plan_services?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {plan.plan_services.map((ps: any) => (
-                  <Badge key={ps.id} variant="secondary" className="text-xs bg-zinc-800 text-zinc-300 border-zinc-700">
-                    {ps.service?.name || 'Serviço'}
-                    {ps.sessions_per_cycle != null ? ` (${ps.sessions_per_cycle}x)` : ' (∞)'}
-                  </Badge>
-                ))}
-              </div>
-            )}
           </button>
         ))
       )}
