@@ -34,7 +34,9 @@ import {
   Banknote,
   CalendarCheck,
   Package,
-  Repeat
+  Repeat,
+  Search,
+  X
 } from "lucide-react";
 import { PublicSubscriptionPlans } from "@/components/subscriptions/PublicSubscriptionPlans";
 import { MyPackagesSection } from "@/components/public/MyPackagesSection";
@@ -125,9 +127,38 @@ const BookingPublic = () => {
   
   // Order Bump
   const [orderBumpItems, setOrderBumpItems] = useState<OrderBumpProduct[]>([]);
+  const [serviceSearch, setServiceSearch] = useState("");
 
   // Dynamic favicon + PWA manifest per tenant
   useTenantBranding(tenant);
+
+  // Group services by category with search filter
+  const groupedServices = useMemo(() => {
+    let filtered = services;
+    if (serviceSearch.trim()) {
+      const q = serviceSearch.toLowerCase();
+      filtered = services.filter(s => 
+        s.name.toLowerCase().includes(q) || 
+        (s.description || "").toLowerCase().includes(q) ||
+        (s.category || "").toLowerCase().includes(q)
+      );
+    }
+    // Sort: services with benefits first
+    filtered = [...filtered].sort((a: any, b: any) => {
+      const aHas = benefitsMap.has(a.id) ? 0 : 1;
+      const bHas = benefitsMap.has(b.id) ? 0 : 1;
+      return aHas - bHas;
+    });
+    const groups: Record<string, any[]> = {};
+    for (const svc of filtered) {
+      const cat = (svc as any).category || "Outros";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(svc);
+    }
+    return groups;
+  }, [services, serviceSearch, benefitsMap]);
+
+  const serviceCategories = Object.keys(groupedServices);
 
   useEffect(() => {
     if (isCustomDomain()) {
@@ -1314,75 +1345,141 @@ END:VCALENDAR`;
                   )}
                 </div>
 
-                {/* Sort: services with benefits first */}
-                {[...services].sort((a, b) => {
-                  const aHas = benefitsMap.has(a.id) ? 0 : 1;
-                  const bHas = benefitsMap.has(b.id) ? 0 : 1;
-                  return aHas - bHas;
-                }).map((service) => {
-                  const benefit = benefitsMap.get(service.id);
-                  return (
-                  <button
-                    key={service.id}
-                    onClick={() => handleServiceSelect(service.id)}
-                    className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-zinc-800">
-                        {service.photo_url ? (
-                          <img 
-                            src={service.photo_url} 
-                            alt={service.name}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Scissors className="h-6 w-6 text-zinc-600" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-medium mb-1 group-hover:text-white transition-colors">{service.name}</h3>
-                          {benefit ? (
-                            <span className="font-semibold text-amber-400 whitespace-nowrap text-xs">
-                              R$ 0,00
-                            </span>
-                          ) : (
-                            <span className="font-semibold text-emerald-400 whitespace-nowrap">
-                              R$ {(service.price_cents / 100).toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-zinc-500 text-sm line-clamp-2 mb-2">{service.description}</p>
-                        <div className="flex items-center gap-3 text-xs text-zinc-600">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {service.duration_minutes}min
+                {/* Search bar — show when 6+ services */}
+                {services.length > 6 && (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                    <Input
+                      placeholder="Buscar serviço..."
+                      value={serviceSearch}
+                      onChange={(e) => setServiceSearch(e.target.value)}
+                      className="pl-10 h-10 bg-zinc-900/50 border-zinc-800 rounded-xl text-sm placeholder:text-zinc-600"
+                    />
+                    {serviceSearch && (
+                      <button
+                        onClick={() => setServiceSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Category filter chips */}
+                {serviceCategories.length > 1 && !serviceSearch && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                    {serviceCategories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
+                        className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
+                      >
+                        {cat}
+                        <span className="ml-1 text-zinc-500">{groupedServices[cat].length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Services grouped by category */}
+                {Object.entries(groupedServices).map(([category, catServices]) => (
+                  <div key={category} className="space-y-2">
+                    {serviceCategories.length > 1 && (
+                      <div id={`cat-${category}`} className="pt-2 pb-1 sticky top-0 z-10 bg-black/80 backdrop-blur-sm -mx-1 px-1">
+                        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                          {category}
+                          <span className="ml-2 text-zinc-600 font-normal normal-case">
+                            {catServices.length} {catServices.length === 1 ? 'serviço' : 'serviços'}
                           </span>
-                        </div>
-                        {benefit && (
-                          <div className="mt-2">
-                            <BenefitBadge
-                              type={benefit.type}
-                              remaining={benefit.remaining}
-                              label={
-                                benefit.type === 'package'
-                                  ? `Incluso no pacote (${benefit.remaining} restante${benefit.remaining !== 1 ? 's' : ''} de ${benefit.total})`
-                                  : benefit.remaining === null
-                                    ? `Incluso no plano (ilimitado)`
-                                    : `Incluso no plano (${benefit.remaining} restante${benefit.remaining !== 1 ? 's' : ''} de ${benefit.limit})`
-                              }
-                            />
-                          </div>
-                        )}
+                        </h3>
                       </div>
-                    </div>
-                  </button>
-                  );
-                })}
+                    )}
+
+                    {catServices.map((service: any) => {
+                      const benefit = benefitsMap.get(service.id);
+                      return (
+                        <button
+                          key={service.id}
+                          onClick={() => handleServiceSelect(service.id)}
+                          className="w-full p-3 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-[72px] h-[72px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-800">
+                              {service.photo_url ? (
+                                <img
+                                  src={service.photo_url}
+                                  alt={service.name}
+                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Scissors className="h-6 w-6 text-zinc-600" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <h3 className="font-medium text-sm leading-tight group-hover:text-white transition-colors">
+                                  {service.name}
+                                </h3>
+                                {benefit ? (
+                                  <span className="font-semibold text-amber-400 whitespace-nowrap text-xs bg-amber-400/10 px-2 py-0.5 rounded-md">
+                                    Incluso
+                                  </span>
+                                ) : (
+                                  <span className="font-semibold text-emerald-400 whitespace-nowrap text-sm">
+                                    R$ {(service.price_cents / 100).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                              {service.description && (
+                                <p className="text-zinc-500 text-xs leading-relaxed line-clamp-2 mb-1.5">
+                                  {service.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="flex items-center gap-1 text-[11px] text-zinc-600">
+                                  <Clock className="h-3 w-3" />
+                                  {service.duration_minutes}min
+                                </span>
+                                {benefit && (
+                                  <span className={`text-[11px] px-1.5 py-0.5 rounded-md ${
+                                    benefit.type === 'package'
+                                      ? 'bg-emerald-500/10 text-emerald-400'
+                                      : 'bg-amber-500/10 text-amber-400'
+                                  }`}>
+                                    {benefit.type === 'package'
+                                      ? `Pacote (${benefit.remaining}/${benefit.total})`
+                                      : benefit.remaining === null
+                                        ? 'Assinatura ✓'
+                                        : `Assinatura (${benefit.used}/${benefit.limit})`
+                                    }
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+
+                {/* No search results */}
+                {Object.keys(groupedServices).length === 0 && serviceSearch && (
+                  <div className="text-center py-8 text-zinc-500">
+                    <Search className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhum serviço encontrado para "{serviceSearch}"</p>
+                    <button onClick={() => setServiceSearch("")} className="text-xs text-primary hover:underline mt-1">
+                      Limpar busca
+                    </button>
+                  </div>
+                )}
               </div>
             ) : bookingTab === 'subscriptions' ? (
               /* Subscriptions Tab */
