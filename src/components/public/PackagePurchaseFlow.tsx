@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone, ExternalLink } from "lucide-react";
+import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone } from "lucide-react";
+import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
 
 interface PackagePurchaseFlowProps {
   tenant: any;
@@ -61,6 +62,9 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   const [submitting, setSubmitting] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [customerPackageId, setCustomerPackageId] = useState<string | null>(null);
+  const [paymentRecordId, setPaymentRecordId] = useState<string | null>(null);
 
   const handlePhoneLookup = async () => {
     const digits = phoneInput.replace(/\D/g, '');
@@ -130,21 +134,13 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
         },
       });
 
-      if (error) {
-        const errorMessage = data?.error || error.message || 'Erro ao criar checkout';
-        throw new Error(errorMessage);
-      }
+      if (error) throw new Error(data?.error || error.message);
       if (data?.error) throw new Error(data.error);
 
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else if (data?.payment_method === 'local') {
-        toast({ title: "Pacote adquirido!", description: "Pagamento será realizado no local." });
-        setStep('success');
-      } else {
-        toast({ title: "Pacote criado!", description: "Aguardando confirmação de pagamento." });
-        setStep('success');
-      }
+      // Save IDs and show inline checkout
+      setCustomerPackageId(data.customer_package_id);
+      setPaymentRecordId(data.payment_id);
+      setShowPayment(true);
     } catch (err: any) {
       console.error('Package purchase error:', err);
       toast({ title: "Erro ao processar", description: err.message, variant: "destructive" });
@@ -169,6 +165,56 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
             Agendar depois
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // Inline payment view
+  if (showPayment && customerPackageId && paymentRecordId) {
+    return (
+      <div className="space-y-4">
+        {/* Package summary */}
+        <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-emerald-400" />
+              <span className="font-medium">{pkg.name}</span>
+            </div>
+            <span className="text-lg font-semibold text-emerald-400">
+              R$ {(pkg.price_cents / 100).toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <MercadoPagoCheckout
+          tenantSlug={tenant.slug}
+          amount={pkg.price_cents / 100}
+          serviceName={pkg.name}
+          customerPackageId={customerPackageId}
+          paymentId={paymentRecordId}
+          payer={{
+            email: email.trim(),
+            identification: {
+              type: 'CPF',
+              number: cpf.replace(/\D/g, ''),
+            },
+          }}
+          onSuccess={() => setStep('success')}
+          onError={(err) => {
+            toast({ title: "Erro no pagamento", description: err, variant: "destructive" });
+            setShowPayment(false);
+          }}
+          onPending={() => {
+            toast({ title: "Pagamento em processamento" });
+          }}
+        />
+
+        <button
+          onClick={() => setShowPayment(false)}
+          className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm"
+        >
+          <ChevronLeft className="h-4 w-4" /> Voltar
+        </button>
       </div>
     );
   }
@@ -321,7 +367,7 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
 
           <Button onClick={handlePurchase} disabled={submitting || !name || !phone || !email || !cpf}
             className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
-            {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><ExternalLink className="h-4 w-4 mr-2" /> Pagar e adquirir pacote</>}
+            {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><Package className="h-4 w-4 mr-2" /> Comprar pacote</>}
           </Button>
           <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
             <ChevronLeft className="h-4 w-4" /> Voltar
