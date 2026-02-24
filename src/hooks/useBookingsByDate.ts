@@ -61,9 +61,33 @@ export interface RecurringSlot {
   service_id: string | null;
   start_time: string;
   duration_minutes: number;
+  frequency: string;
+  start_date: string;
   customer: { name: string; phone: string } | null;
   service: { name: string; color: string | null; duration_minutes: number; price_cents: number } | null;
   notes: string | null;
+}
+
+/** Check if a recurring slot should appear on a given date based on its frequency */
+function isRecurringSlotActiveOnDate(rc: RecurringSlot, dateStr: string): boolean {
+  if (rc.frequency === 'weekly') return true;
+
+  const slotStart = new Date(rc.start_date + 'T00:00:00');
+  const targetDate = new Date(dateStr + 'T00:00:00');
+  const diffMs = targetDate.getTime() - slotStart.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (rc.frequency === 'biweekly') {
+    return diffWeeks % 2 === 0;
+  }
+
+  if (rc.frequency === 'monthly') {
+    // Same weekday, check if it's approximately 4-week intervals
+    return diffWeeks % 4 === 0;
+  }
+
+  return true;
 }
 
 export function useBookingsByDate(tenantId: string | undefined, date: Date) {
@@ -204,6 +228,9 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
     const real = [...bookings];
 
     for (const rc of recurringSlots) {
+      // Skip if this slot shouldn't appear on this date based on frequency
+      if (!isRecurringSlotActiveOnDate(rc, dateStr)) continue;
+
       // Build the starts_at/ends_at for this recurring slot on this date
       const startsAt = new Date(`${dateStr}T${rc.start_time}-03:00`);
       const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
