@@ -285,28 +285,25 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
       {/* Etapa 1: Identificação por telefone */}
       {step === 'phone' && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-zinc-400 text-xs">
-            <Phone className="h-3.5 w-3.5" />
-            <span>Informe seu telefone para identificação</span>
-          </div>
-          <div className="flex gap-2">
+          <div>
+            <label className="block text-sm text-zinc-400 mb-1.5">WhatsApp *</label>
             <Input
-              placeholder="(00) 00000-0000"
+              placeholder="(11) 99999-9999"
               value={phoneInput}
               onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
               onKeyDown={(e) => { if (e.key === 'Enter') handlePhoneLookup(); }}
-              className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl flex-1"
+              className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl"
               maxLength={15}
               inputMode="tel"
             />
-            <Button
-              onClick={handlePhoneLookup}
-              disabled={phoneLoading || phoneInput.replace(/\D/g, '').length < 10}
-              className="h-11 px-4 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl"
-            >
-              {phoneLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Search className="h-4 w-4 mr-1" /> Buscar</>}
-            </Button>
           </div>
+          <Button
+            onClick={handlePhoneLookup}
+            disabled={phoneLoading || phoneInput.replace(/\D/g, '').length < 10}
+            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
+          >
+            {phoneLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando...</> : <><Package className="h-4 w-4 mr-2" /> Continuar para pagamento</>}
+          </Button>
         </div>
       )}
 
