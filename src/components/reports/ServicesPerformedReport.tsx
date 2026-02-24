@@ -1,0 +1,13 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ExportCSVButton } from "./ExportCSVButton";
+import { formatBRL } from "@/utils/formatBRL";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+interface Props { tenantId: string; startDate: string; endDate: string; }
+export default function ServicesPerformedReport({ tenantId, startDate, endDate }: Props) {
+  const { data, isLoading } = useQuery({ queryKey: ["rpt-services-performed", tenantId, startDate, endDate], queryFn: async () => { const { data } = await supabase.from("bookings").select("id, starts_at, customer:customer_id(name), service:service_id(name), staff:staff_id(name), booking_items(total_price_cents, type)").eq("tenant_id", tenantId).eq("status", "completed").gte("starts_at", startDate).lt("starts_at", endDate).order("starts_at", { ascending: false }); return (data||[]).map((b:any)=>({ id: b.id, date: b.starts_at, customer: b.customer?.name||"—", service: b.service?.name||"—", staff: b.staff?.name||"—", total: (b.booking_items||[]).filter((i:any)=>i.type==="service").reduce((s:number,i:any)=>s+(i.total_price_cents||0),0) })); }, enabled: !!tenantId });
+  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Carregando...</div>;
+  if (!data?.length) return <div className="text-sm text-muted-foreground p-4">Nenhum dado.</div>;
+  return (<div className="space-y-6"><div className="flex justify-end"><ExportCSVButton data={data.map(d=>({Data:format(new Date(d.date),"dd/MM/yy"),Cliente:d.customer,Serviço:d.service,Profissional:d.staff,Valor:formatBRL(d.total)}))} columns={[{key:"Data",label:"Data"},{key:"Cliente",label:"Cliente"},{key:"Serviço",label:"Serviço"},{key:"Profissional",label:"Prof."},{key:"Valor",label:"Valor"}]} filename="servicos-realizados"/></div><div className="bg-card border border-border rounded-2xl overflow-hidden"><Table><TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Cliente</TableHead><TableHead>Serviço</TableHead><TableHead className="hidden md:table-cell">Prof.</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader><TableBody>{data.slice(0,100).map(d=>(<TableRow key={d.id}><TableCell className="text-sm">{format(new Date(d.date),"dd/MM/yy")}</TableCell><TableCell className="font-medium text-sm">{d.customer}</TableCell><TableCell className="text-sm">{d.service}</TableCell><TableCell className="hidden md:table-cell text-sm">{d.staff}</TableCell><TableCell className="text-right text-sm">{formatBRL(d.total)}</TableCell></TableRow>))}</TableBody></Table></div></div>);
+}

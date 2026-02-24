@@ -1,0 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ExportCSVButton } from "./ExportCSVButton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { subMonths, startOfMonth, endOfMonth } from "date-fns";
+interface Props { tenantId: string; startDate: string; endDate: string; }
+export default function ChurnedClientsReport({ tenantId, startDate, endDate }: Props) {
+  const { data, isLoading } = useQuery({ queryKey: ["rpt-churned", tenantId, startDate, endDate], queryFn: async () => { const now = new Date(endDate); const prevStart = startOfMonth(subMonths(now, 1)).toISOString(); const prevEnd = endOfMonth(subMonths(now, 1)).toISOString(); const { data: prev } = await supabase.from("bookings").select("customer_id, customer:customer_id(name, phone)").eq("tenant_id", tenantId).eq("status", "completed").gte("starts_at", prevStart).lt("starts_at", prevEnd); const { data: curr } = await supabase.from("bookings").select("customer_id").eq("tenant_id", tenantId).eq("status", "completed").gte("starts_at", startDate).lt("starts_at", endDate); const currSet = new Set((curr||[]).map(b=>b.customer_id)); const seen = new Set<string>(); return (prev||[]).filter(b => { if (currSet.has(b.customer_id) || seen.has(b.customer_id)) return false; seen.add(b.customer_id); return true; }).map((b:any)=>({ id: b.customer_id, name: b.customer?.name||"—", phone: b.customer?.phone||"" })); }, enabled: !!tenantId });
+  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Carregando...</div>;
+  if (!data?.length) return <div className="text-sm text-muted-foreground p-4">Todos os clientes retornaram.</div>;
+  return (<div className="space-y-6"><div className="flex justify-end"><ExportCSVButton data={data.map(d=>({Cliente:d.name,Telefone:d.phone}))} columns={[{key:"Cliente",label:"Cliente"},{key:"Telefone",label:"Telefone"}]} filename="clientes-nao-retornaram"/></div><div className="bg-card border border-border rounded-2xl overflow-hidden"><Table><TableHeader><TableRow><TableHead>Cliente</TableHead><TableHead>Telefone</TableHead></TableRow></TableHeader><TableBody>{data.map(d=>(<TableRow key={d.id}><TableCell className="font-medium text-sm">{d.name}</TableCell><TableCell className="text-sm">{d.phone}</TableCell></TableRow>))}</TableBody></Table></div></div>);
+}
