@@ -42,6 +42,7 @@ interface CreateBookingRequest {
   extra_slots?: number;
   custom_duration?: number;
   created_via?: string;
+  allow_overlap?: boolean;
   order_bump_items?: Array<{ product_id: string; quantity?: number }>;
 }
 
@@ -502,6 +503,14 @@ serve(async (req) => {
     const isBenefitBooking = !!(resolvedPackageId || resolvedSubscriptionId);
     const bookingStatus = isBenefitBooking ? 'confirmed' : (payment_method === 'online' ? 'pending_payment' : 'confirmed');
 
+    // Determine if we should skip conflict check (admin override for overlapping bookings)
+    const isAdminBooking = (payload.created_via || 'public') === 'admin';
+    const skipConflictCheck = isAdminBooking && payload.allow_overlap === true;
+
+    if (skipConflictCheck) {
+      console.log('Admin override: skipping conflict check for overlapping booking');
+    }
+
     const { data: atomicResult, error: atomicError } = await supabase.rpc('create_booking_if_available', {
       p_tenant_id: tenant_id,
       p_service_id: service_id,
@@ -515,6 +524,7 @@ serve(async (req) => {
       p_customer_package_id: resolvedPackageId,
       p_customer_subscription_id: resolvedSubscriptionId,
       p_buffer_minutes: bufferTime,
+      p_skip_conflict_check: skipConflictCheck,
     });
 
     if (atomicError) {
