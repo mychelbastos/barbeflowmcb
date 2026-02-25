@@ -619,7 +619,7 @@ export function BookingModal() {
       }
       if (!result?.success) throw new Error(result?.error || 'Erro ao criar agendamento');
 
-      const bookingId = result.booking_id;
+      const bookingId = result.booking?.id || result.booking_id;
 
       // 2. Insert additional services as booking_items (extra_service)
       if (additionalServices.length > 0) {
