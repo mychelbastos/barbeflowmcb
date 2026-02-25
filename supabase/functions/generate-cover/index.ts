@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { compressImage } from "../_shared/compress-image.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,15 +83,17 @@ serve(async (req) => {
 
     const generatedImageData = imagePart.inlineData.data;
 
-    // Convert base64 to blob and upload to storage
-    const imageBytes = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));
+    // Compress cover to ~30KB JPEG (wider for banner)
+    const rawBytes = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));
+    const compressed = await compressImage(rawBytes, { maxWidth: 800, quality: 65 });
+    console.log(`Cover compressed: ${rawBytes.length} → ${compressed.data.length} bytes`);
 
-    const fileName = `${tenant_id}/cover-${Date.now()}.png`;
+    const fileName = `${tenant_id}/cover-${Date.now()}.${compressed.ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("tenant-media")
-      .upload(fileName, imageBytes, {
-        contentType: "image/png",
+      .upload(fileName, compressed.data, {
+        contentType: compressed.mimeType,
         upsert: true,
       });
 
