@@ -5,7 +5,8 @@ import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2, AlertTriangle, MoreVertical } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Pause, Play, XCircle, UserPlus, Calendar, Trash2, AlertTriangle, MoreVertical, Search } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -44,7 +45,8 @@ export function SubscribersList() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPlan, setFilterPlan] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('active');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAssignDialog, setShowAssignDialog] = useState(false);
 
   // Cancel confirmation state
@@ -163,39 +165,65 @@ export function SubscribersList() {
     setDeleteTarget(null);
   };
 
-  const filtered = subscribers.filter(s => {
-    if (filterPlan !== 'all' && s.plan_id !== filterPlan) return false;
-    if (filterStatus !== 'all' && s.status !== filterStatus) return false;
-    return true;
-  });
+  const statusPriority: Record<string, number> = { active: 0, authorized: 0, pending: 1, paused: 2, expired: 3, cancelled: 4 };
+
+  const filtered = subscribers
+    .filter(s => {
+      if (filterPlan !== 'all' && s.plan_id !== filterPlan) return false;
+      if (filterStatus !== 'all' && s.status !== filterStatus) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const name = (s.customer?.name || '').toLowerCase();
+        const phone = (s.customer?.phone || '');
+        const email = (s.customer?.email || '').toLowerCase();
+        if (!name.includes(q) && !phone.includes(q) && !email.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9));
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 justify-between">
-        <div className="flex gap-2">
-          <Select value={filterPlan} onValueChange={setFilterPlan}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Plano" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os planos</SelectItem>
-              {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="active">Ativo</SelectItem>
-              <SelectItem value="pending">Pendente</SelectItem>
-              <SelectItem value="paused">Pausado</SelectItem>
-              <SelectItem value="cancelled">Cancelado</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Search + Filters */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone ou e-mail..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
-        <Button size="sm" onClick={() => setShowAssignDialog(true)}>
-          <UserPlus className="h-4 w-4 mr-1" /> Atribuir
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 justify-between">
+          <div className="flex gap-2">
+            <Select value={filterPlan} onValueChange={setFilterPlan}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Plano" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os planos</SelectItem>
+                {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="paused">Pausado</SelectItem>
+                <SelectItem value="cancelled">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+            {filtered.length > 0 && (
+              <span className="text-xs text-muted-foreground self-center">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          <Button size="sm" onClick={() => setShowAssignDialog(true)}>
+            <UserPlus className="h-4 w-4 mr-1" /> Atribuir
+          </Button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
