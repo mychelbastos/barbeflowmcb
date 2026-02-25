@@ -25,8 +25,16 @@ import {
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  pending_payment: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   completed: 'bg-muted text-muted-foreground border-border',
   cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
+};
+
+const statusLabels: Record<string, string> = {
+  active: 'Ativo',
+  pending_payment: 'Aguardando pgto',
+  completed: 'Esgotado',
+  cancelled: 'Cancelado',
 };
 
 const paymentColors: Record<string, string> = {
@@ -203,10 +211,11 @@ export function PackageCustomersList() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-48"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativo</SelectItem>
+            <SelectItem value="pending_payment">Aguardando pagamento</SelectItem>
             <SelectItem value="completed">Esgotado</SelectItem>
             <SelectItem value="cancelled">Cancelado</SelectItem>
           </SelectContent>
@@ -231,7 +240,7 @@ export function PackageCustomersList() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm text-foreground truncate">{cp.customer?.name}</span>
                     <Badge className={statusColors[cp.status] || statusColors.active}>
-                      {cp.status === 'completed' ? 'Esgotado' : cp.status === 'cancelled' ? 'Cancelado' : 'Ativo'}
+                      {statusLabels[cp.status] || cp.status}
                     </Badge>
                     <Badge className={paymentColors[cp.payment_status] || paymentColors.pending}>
                       {cp.payment_status === 'confirmed' ? (
