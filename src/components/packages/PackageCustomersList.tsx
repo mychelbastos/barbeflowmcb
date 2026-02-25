@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, XCircle, Trash2, AlertTriangle, DollarSign, RotateCcw, MoreVertical } from "lucide-react";
+import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, XCircle, Trash2, AlertTriangle, DollarSign, RotateCcw, MoreVertical, Search } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -59,7 +59,8 @@ export function PackageCustomersList() {
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterPackage, setFilterPackage] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('active');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Edit sessions modal
   const [editingCp, setEditingCp] = useState<any | null>(null);
@@ -192,34 +193,60 @@ export function PackageCustomersList() {
     }
   };
 
-  const filtered = customerPackages.filter(cp => {
-    if (filterPackage !== 'all' && cp.package_id !== filterPackage) return false;
-    if (filterStatus !== 'all' && cp.status !== filterStatus) return false;
-    return true;
-  });
+  const statusPriority: Record<string, number> = { active: 0, pending_payment: 1, completed: 2, cancelled: 3 };
+
+  const filtered = customerPackages
+    .filter(cp => {
+      if (filterPackage !== 'all' && cp.package_id !== filterPackage) return false;
+      if (filterStatus !== 'all' && cp.status !== filterStatus) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const name = (cp.customer?.name || '').toLowerCase();
+        const phone = (cp.customer?.phone || '');
+        const email = (cp.customer?.email || '').toLowerCase();
+        if (!name.includes(q) && !phone.includes(q) && !email.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => (statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9));
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={filterPackage} onValueChange={setFilterPackage}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Pacote" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os pacotes</SelectItem>
-            {packages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Ativo</SelectItem>
-            <SelectItem value="pending_payment">Aguardando pagamento</SelectItem>
-            <SelectItem value="completed">Esgotado</SelectItem>
-            <SelectItem value="cancelled">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Search + Filters */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone ou e-mail..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={filterPackage} onValueChange={setFilterPackage}>
+            <SelectTrigger className="w-44"><SelectValue placeholder="Pacote" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os pacotes</SelectItem>
+              {packages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativo</SelectItem>
+              <SelectItem value="pending_payment">Aguardando pagamento</SelectItem>
+              <SelectItem value="completed">Esgotado</SelectItem>
+              <SelectItem value="cancelled">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+          {filtered.length > 0 && (
+            <span className="text-xs text-muted-foreground ml-auto">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+          )}
+        </div>
       </div>
 
       {filtered.length === 0 ? (
