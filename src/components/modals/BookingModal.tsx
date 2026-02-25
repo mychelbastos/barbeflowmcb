@@ -636,7 +636,6 @@ export function BookingModal() {
               title: svc.name,
               quantity: 1,
               unit_price_cents: svc.price_cents,
-              total_price_cents: svc.price_cents,
               purchase_price_cents: 0,
               staff_id: staffId,
               paid_status: 'unpaid' as const,
