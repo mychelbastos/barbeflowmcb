@@ -66,8 +66,10 @@ interface CustomerSuggestion {
 
 interface AvailableSlot {
   time: string;
-  staff_id: string;
-  staff_name: string;
+  staff_id?: string;
+  staff_name?: string;
+  occupied?: boolean;
+  reason?: string;
 }
 
 interface DetectedBenefit {
@@ -433,10 +435,20 @@ export function BookingModal() {
 
       const { data, error } = await supabase.functions.invoke('get-available-slots', { body });
       if (error) throw error;
-      setAvailableSlots(data?.available_slots || []);
-      // Reset time if previously selected time is no longer available
+
+      // Merge available + occupied slots (occupied shown in amber for admin override)
+      const available = (data?.available_slots || []).map((s: any) => ({ ...s, occupied: false }));
+      const occupied = (data?.occupied_slots || []).map((s: any) => ({ ...s, occupied: true }));
+
+      // Combine, deduplicate by time, sort
+      const allSlots = [...available, ...occupied];
+      const uniqueSlots: AvailableSlot[] = Array.from(new Map(allSlots.map((s: any) => [s.time, s])).values());
+      uniqueSlots.sort((a, b) => a.time.localeCompare(b.time));
+
+      setAvailableSlots(uniqueSlots);
+      // Reset time if previously selected time is no longer in any slot
       const currentTime = form.getValues("time");
-      if (currentTime && !data?.available_slots?.find((s: AvailableSlot) => s.time === currentTime)) {
+      if (currentTime && !uniqueSlots.find((s) => s.time === currentTime)) {
         form.setValue("time", "");
       }
     } catch (error) {
@@ -1140,8 +1152,12 @@ export function BookingModal() {
                 const { totalDuration } = getTotalDuration();
                 const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
 
-                // Classify slots: check if each has enough consecutive time
+                // Classify slots: occupied slots are always conflict; free slots check consecutive availability
                 const classifiedSlots = availableSlots.map((slot) => {
+                  if (slot.occupied) {
+                    return { ...slot, hasConflict: true };
+                  }
+
                   const [h, m] = slot.time.split(':').map(Number);
                   const startMin = h * 60 + m;
                   const endMin = startMin + totalDuration;
@@ -1152,7 +1168,7 @@ export function BookingModal() {
                     const checkM = String(t % 60).padStart(2, '0');
                     const checkTime = `${checkH}:${checkM}`;
                     const found = availableSlots.find(s => s.time === checkTime);
-                    if (!found) {
+                    if (!found || found.occupied) {
                       hasConflict = true;
                       break;
                     }
@@ -1204,14 +1220,27 @@ export function BookingModal() {
                         </div>
 
                         {/* Warning when a conflicting slot is selected */}
-                        {field.value && classifiedSlots.find(s => s.time === field.value)?.hasConflict && (
-                          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500">
-                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                            <p className="text-xs leading-relaxed">
-                              Este horário não comporta os {totalDuration} min completos do serviço e pode sobrepor o próximo agendamento. Confirme apenas se tiver certeza.
-                            </p>
-                          </div>
-                        )}
+                        {field.value && (() => {
+                          const selectedSlot = classifiedSlots.find(s => s.time === field.value);
+                          if (!selectedSlot?.hasConflict) return null;
+                          const isOccupied = selectedSlot.occupied;
+                          return (
+                            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium">
+                                  {isOccupied ? 'Encaixe forçado' : 'Sobreposição parcial'}
+                                </p>
+                                <p className="text-xs leading-relaxed">
+                                  {isOccupied
+                                    ? `Já existe agendamento neste horário${selectedSlot.reason ? `: ${selectedSlot.reason}` : ''}. O encaixe será criado mesmo assim.`
+                                    : `Este horário não comporta os ${totalDuration} min completos do serviço e pode sobrepor o próximo agendamento.`
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                     <FormMessage />
