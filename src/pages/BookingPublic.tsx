@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { isCustomDomain } from "@/lib/hostname";
 import { useTenantBranding } from "@/hooks/useTenantBranding";
+import { optimizedImageUrl } from "@/lib/imageOptimizer";
 import { useToast } from "@/hooks/use-toast";
 import { TenantNotFound } from "@/components/TenantNotFound";
 import { Button } from "@/components/ui/button";
@@ -165,36 +166,65 @@ const BookingPublic = () => {
 
   useEffect(() => {
     if (isCustomDomain()) {
-      loadTenantByCustomDomain();
+      loadTenantViaEdge(undefined, window.location.hostname);
     } else if (slug) {
-      loadTenantData();
+      loadTenantViaEdge(slug);
     }
   }, [slug]);
 
-  const loadTenantByCustomDomain = async () => {
+  const loadTenantViaEdge = async (slugParam?: string, customDomain?: string) => {
     try {
       setLoading(true);
-      const host = window.location.hostname;
-      const { data: tenantData, error } = await supabase
-        .from("tenants")
-        .select("*")
-        .eq("custom_domain", host)
-        .single();
 
-      if (error || !tenantData) {
+      const { data, error } = await supabase.functions.invoke('public-tenant-page', {
+        body: {
+          slug: slugParam || undefined,
+          custom_domain: customDomain || undefined,
+          initial_package_id: initialPackageId || undefined,
+          initial_plan_id: initialPlanId || undefined,
+        },
+      });
+
+      if (error || !data?.tenant) {
         setTenantNotFound(true);
         return;
       }
 
-      await loadTenantDataFromRecord(tenantData);
+      const tenantData = data.tenant;
+      setTenant(tenantData);
+
+      // Extract payment settings
+      const settings = (tenantData.settings || {}) as Record<string, any>;
+      setAllowOnlinePayment(settings.allow_online_payment || false);
+      setRequirePrepayment(settings.require_prepayment || false);
+      setPrepaymentPercentage(settings.prepayment_percentage || 0);
+      setMaxAdvanceDays(settings.max_advance_days || 0);
+
+      // Compute blocked dates from blocks
+      const blocked = new Set<string>();
+      if (data.blocks) {
+        for (const block of data.blocks) {
+          const startDate = new Date(block.starts_at);
+          const endDate = new Date(block.ends_at);
+          const isFullDay = startDate.getHours() === 0 && startDate.getMinutes() === 0 &&
+                            endDate.getHours() === 23 && endDate.getMinutes() >= 59;
+          if (isFullDay && block.staff_id === null) {
+            blocked.add(startDate.toISOString().split('T')[0]);
+          }
+        }
+      }
+      setBlockedDates(blocked);
+      setServices(data.services || []);
+      setStaff(data.staff || []);
+      setPackages(data.packages || []);
+      setSubscriptionPlans(data.subscription_plans || []);
     } catch (err) {
-      console.error("Error loading by custom domain:", err);
+      console.error('Error loading tenant page:', err);
       setTenantNotFound(true);
     } finally {
       setLoading(false);
     }
   };
-
   // Auto-select package from deep link
   useEffect(() => {
     if (initialPackageId && packages.length > 0 && !purchasingPackage) {
@@ -210,158 +240,6 @@ const BookingPublic = () => {
       loadAvailableSlots();
     }
   }, [selectedService, selectedStaff, selectedDate]);
-
-  const loadTenantData = async () => {
-    try {
-      setLoading(true);
-      
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
-      if (tenantError || !tenantData) {
-        setTenantNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      await loadTenantDataFromRecord(tenantData);
-    } catch (error) {
-      console.error('Error loading tenant data:', error);
-      toast({
-        title: "Erro ao carregar dados",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTenantDataFromRecord = async (tenantData: any) => {
-    setTenant(tenantData);
-    
-    // Extract payment settings
-    const settings = (tenantData.settings || {}) as Record<string, any>;
-    setAllowOnlinePayment(settings.allow_online_payment || false);
-    setRequirePrepayment(settings.require_prepayment || false);
-    setPrepaymentPercentage(settings.prepayment_percentage || 0);
-    setMaxAdvanceDays(settings.max_advance_days || 0);
-
-    const [servicesRes, staffRes, blocksRes] = await Promise.all([
-      supabase
-        .from('services')
-        .select('*')
-        .eq('tenant_id', tenantData.id)
-        .eq('active', true)
-        .eq('public', true)
-        .order('name'),
-      
-      supabase
-        .from('staff')
-        .select('*')
-        .eq('tenant_id', tenantData.id)
-        .eq('active', true)
-        .order('name'),
-      
-      supabase
-        .from('blocks')
-        .select('starts_at, ends_at, staff_id')
-        .eq('tenant_id', tenantData.id)
-        .gte('ends_at', new Date().toISOString())
-    ]);
-
-    if (servicesRes.error) throw servicesRes.error;
-    if (staffRes.error) throw staffRes.error;
-    
-    const blocked = new Set<string>();
-    if (blocksRes.data) {
-      for (const block of blocksRes.data) {
-        const startDate = new Date(block.starts_at);
-        const endDate = new Date(block.ends_at);
-        const isFullDay = startDate.getHours() === 0 && startDate.getMinutes() === 0 && 
-                          endDate.getHours() === 23 && endDate.getMinutes() >= 59;
-        if (isFullDay && block.staff_id === null) {
-          blocked.add(startDate.toISOString().split('T')[0]);
-        }
-      }
-    }
-    setBlockedDates(blocked);
-    setServices(servicesRes.data || []);
-    setStaff(staffRes.data || []);
-
-    let pkgsData: any[] = [];
-    if (initialPackageId) {
-      const { data } = await supabase
-        .from("service_packages")
-        .select("*")
-        .eq("tenant_id", tenantData.id)
-        .eq("active", true)
-        .or(`public.eq.true,id.eq.${initialPackageId}`)
-        .order("name");
-      pkgsData = data || [];
-    } else {
-      const { data } = await supabase
-        .from("service_packages")
-        .select("*")
-        .eq("tenant_id", tenantData.id)
-        .eq("active", true)
-        .eq("public", true)
-        .order("name");
-      pkgsData = data || [];
-    }
-
-    if (pkgsData && pkgsData.length > 0) {
-      const { data: pkgSvcs } = await supabase
-        .from("package_services")
-        .select("*, service:services(name, duration_minutes, price_cents, photo_url)")
-        .in("package_id", pkgsData.map(p => p.id));
-      for (const pkg of pkgsData) {
-        (pkg as any).package_services = (pkgSvcs || []).filter((ps: any) => ps.package_id === pkg.id);
-      }
-      setPackages(pkgsData);
-    } else {
-      setPackages([]);
-    }
-
-    let subPlansData: any[] = [];
-    if (initialPlanId) {
-      const { data } = await supabase
-        .from("subscription_plans")
-        .select("*")
-        .eq("tenant_id", tenantData.id)
-        .eq("active", true)
-        .or(`public.eq.true,id.eq.${initialPlanId}`)
-        .order("name");
-      subPlansData = data || [];
-    } else {
-      const { data } = await supabase
-        .from("subscription_plans")
-        .select("*")
-        .eq("tenant_id", tenantData.id)
-        .eq("active", true)
-        .eq("public", true)
-        .order("name");
-      subPlansData = data || [];
-    }
-
-    if (subPlansData && subPlansData.length > 0) {
-      const planIds = subPlansData.map(p => p.id);
-      const [{ data: planSvcs }, { data: planStaffData }] = await Promise.all([
-        supabase.from("subscription_plan_services").select("*, service:services(name)").in("plan_id", planIds),
-        supabase.from("subscription_plan_staff").select("plan_id, staff_id").in("plan_id", planIds),
-      ]);
-      for (const plan of subPlansData) {
-        (plan as any).plan_services = (planSvcs || []).filter((ps: any) => ps.plan_id === plan.id);
-        (plan as any).plan_staff = (planStaffData || []).filter((ps: any) => ps.plan_id === plan.id);
-      }
-      setSubscriptionPlans(subPlansData);
-    } else {
-      setSubscriptionPlans([]);
-    }
-  };
 
   const loadAvailableSlots = async () => {
     if (!selectedService || !selectedDate || !tenant) return;
@@ -1156,7 +1034,7 @@ END:VCALENDAR`;
         {tenant?.cover_url ? (
           <div className="w-full h-48 sm:h-56 overflow-hidden relative">
             <img
-              src={tenant.cover_url}
+              src={optimizedImageUrl(tenant.cover_url, 800, 75)}
               alt={`Capa ${tenant.name}`}
               className="w-full h-full object-cover"
               fetchPriority="high"
@@ -1176,7 +1054,7 @@ END:VCALENDAR`;
               <div className="w-16 h-16 sm:w-18 sm:h-18 flex-shrink-0 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-zinc-700/50 shadow-lg">
                 {tenant?.logo_url ? (
                   <img 
-                    src={tenant.logo_url} 
+                    src={optimizedImageUrl(tenant.logo_url, 128, 80)} 
                     alt={`Logo ${tenant.name}`}
                     className="w-full h-full object-cover"
                     fetchPriority="high"
@@ -1447,7 +1325,7 @@ END:VCALENDAR`;
                             <div className="w-[72px] h-[72px] flex-shrink-0 rounded-xl overflow-hidden bg-zinc-800">
                               {service.photo_url ? (
                                 <img
-                                  src={service.photo_url}
+                                  src={optimizedImageUrl(service.photo_url, 144, 75)}
                                   alt={service.name}
                                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                   loading="lazy"
@@ -1605,7 +1483,7 @@ END:VCALENDAR`;
                     >
                       {pkg.photo_url && (
                         <div className="relative w-full aspect-[2/1] overflow-hidden">
-                          <img src={pkg.photo_url} alt={pkg.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          <img src={optimizedImageUrl(pkg.photo_url, 400, 75)} alt={pkg.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                           <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
                             <span className="text-lg font-bold text-emerald-400">R$ {(pkg.price_cents / 100).toFixed(0)}</span>
@@ -1691,7 +1569,7 @@ END:VCALENDAR`;
                       style={{ backgroundColor: `${member.color}20` }}
                     >
                       {member.photo_url ? (
-                        <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                        <img src={optimizedImageUrl(member.photo_url, 96, 75)} alt={member.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       ) : (
                         <User className="h-5 w-5" style={{ color: member.color }} />
                       )}
