@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { BookingCard } from "./BookingCard";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Plus } from "lucide-react";
 
 const TZ = "America/Bahia";
 
@@ -292,8 +293,8 @@ export function ScheduleGrid({
             <div
               key={slotTime}
               style={{ height: `${SLOT_HEIGHT}px` }}
-              className={`border-b border-border/20 ${!hasBooking ? 'hover:bg-primary/5 cursor-pointer' : ''} transition-colors`}
-              onClick={() => !hasBooking && handleSlotClick(member.id, slotTime)}
+              className="border-b border-border/20 hover:bg-primary/5 cursor-pointer transition-colors"
+              onClick={() => handleSlotClick(member.id, slotTime)}
             />
           );
         })}
@@ -369,12 +370,24 @@ export function ScheduleGrid({
           <div className="flex">
             {/* Time column */}
             <div className="w-12 flex-shrink-0 border-r border-border/30 bg-card/60">
-              {slots.map((slotTime) => (
-                <div key={slotTime} style={{ height: `${SLOT_HEIGHT}px` }}
-                  className="flex items-center justify-center text-[10px] font-medium text-muted-foreground/70 border-b border-border/20">
-                  {slotTime}
-                </div>
-              ))}
+              {slots.map((slotTime) => {
+                const mStaff = filteredStaff[mobileStaffIndex];
+                return (
+                  <div
+                    key={slotTime}
+                    style={{ height: `${SLOT_HEIGHT}px` }}
+                    className="group relative flex items-center justify-center text-[10px] font-medium text-muted-foreground/70 border-b border-border/20 cursor-pointer active:bg-primary/10 transition-colors"
+                    onClick={() => openBookingModal({
+                      staffId: mStaff?.id,
+                      date: dateStr,
+                      time: slotTime,
+                    })}
+                  >
+                    <span>{slotTime}</span>
+                    <Plus className="h-2.5 w-2.5 text-primary absolute right-0.5 top-0.5 opacity-40" />
+                  </div>
+                );
+              })}
             </div>
             {/* Staff column - takes remaining width */}
             <div className="flex-1">
@@ -419,9 +432,20 @@ export function ScheduleGrid({
             {/* Time column */}
             <div className="w-16 flex-shrink-0 border-r border-border/30 sticky left-0 bg-card/80 z-[5]">
               {slots.map((slotTime) => (
-                <div key={slotTime} style={{ height: `${SLOT_HEIGHT}px` }}
-                  className="flex items-center justify-center text-[11px] text-muted-foreground/70 border-b border-border/20">
-                  {slotTime}
+                <div
+                  key={slotTime}
+                  style={{ height: `${SLOT_HEIGHT}px` }}
+                  className="group relative flex items-center justify-center text-[11px] text-muted-foreground/70 border-b border-border/20 cursor-pointer hover:bg-primary/5 transition-colors"
+                  onClick={() => openBookingModal({ date: dateStr, time: slotTime })}
+                  title={`Novo agendamento às ${slotTime}`}
+                >
+                  <span className="group-hover:opacity-0 transition-opacity">{slotTime}</span>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 text-primary">
+                      <Plus className="h-3 w-3" />
+                      <span className="text-[10px] font-medium">{slotTime}</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
