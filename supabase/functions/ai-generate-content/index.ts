@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { compressImage } from "../_shared/compress-image.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -193,15 +194,17 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
       const generatedMimeType = imagePart.inlineData.mimeType || 'image/png';
       const generatedImageData = imagePart.inlineData.data;
 
-      // Upload to storage
-      const binaryData = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));
-      const ext = generatedMimeType.includes('png') ? 'png' : 'jpeg';
+      // Compress image to ~20-30KB JPEG
+      const rawBytes = Uint8Array.from(atob(generatedImageData), c => c.charCodeAt(0));
+      const compressed = await compressImage(rawBytes, { maxWidth: 600, quality: 65 });
+      console.log(`Image compressed: ${rawBytes.length} → ${compressed.data.length} bytes`);
+
       const folder = finalTable.replace('_', '-');
-      const fileName = `${item.tenant_id}/${folder}/generated-${item_id}-${Date.now()}.${ext}`;
+      const fileName = `${item.tenant_id}/${folder}/generated-${item_id}-${Date.now()}.${compressed.ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('tenant-media')
-        .upload(fileName, binaryData, { contentType: generatedMimeType, upsert: true });
+        .upload(fileName, compressed.data, { contentType: compressed.mimeType, upsert: true });
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
