@@ -513,7 +513,7 @@ export default function RecurringClients() {
                         <span className="text-muted-foreground/60">•</span>
                         <span>{r.duration_minutes}min</span>
                         <span className="text-muted-foreground/60">•</span>
-                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 font-normal">
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 font-normal bg-muted text-foreground border-border">
                           {FREQUENCY_SHORT[(r as any).frequency || 'weekly']}
                         </Badge>
                       </div>
