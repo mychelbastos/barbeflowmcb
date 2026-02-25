@@ -224,7 +224,8 @@ export function BookingModal() {
           .select('id, status, payment_status, package:service_packages(name)')
           .eq('customer_id', selectedCustomerId)
           .eq('tenant_id', currentTenant.id)
-          .eq('status', 'active');
+          .eq('status', 'active')
+          .eq('payment_status', 'confirmed');
 
         if (pkgs) {
           for (const pkg of pkgs) {
@@ -304,7 +305,8 @@ export function BookingModal() {
           .select('id, status, payment_status, package:service_packages(name)')
           .eq('customer_id', selectedCustomerId)
           .eq('tenant_id', currentTenant.id)
-          .eq('status', 'active');
+          .eq('status', 'active')
+          .eq('payment_status', 'confirmed');
 
         if (pkgs) {
           for (const pkg of pkgs) {
