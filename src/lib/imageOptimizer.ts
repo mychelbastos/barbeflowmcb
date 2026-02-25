@@ -1,11 +1,12 @@
-const SUPABASE_STORAGE_DOMAIN = 'iagzodcwctvydmgrwjsy.supabase.co/storage';
-
 /**
- * Returns an optimized image URL using Supabase Storage Image Transformations.
- * Falls back to original URL if not a Supabase Storage URL.
- * 
- * Requires Supabase Pro plan for image transformations.
- * If transforms aren't available, the original URL is returned unchanged.
+ * Returns an optimized image URL using wsrv.nl free image proxy.
+ * Converts to WebP, resizes, and caches automatically.
+ *
+ * wsrv.nl is a free, open-source image CDN/proxy.
+ * - Resizes to specified width
+ * - Converts to WebP (97%+ browser support)
+ * - Caches results globally
+ * - Handles errors gracefully (returns transparent placeholder)
  */
 export function optimizedImageUrl(
   url: string | null | undefined,
@@ -13,21 +14,10 @@ export function optimizedImageUrl(
   quality: number = 75
 ): string {
   if (!url) return '';
-  
-  // Only transform Supabase Storage URLs
-  if (!url.includes(SUPABASE_STORAGE_DOMAIN)) return url;
-  
-  // Convert /object/public/ to /render/image/public/ and add params
-  if (url.includes('/object/public/')) {
-    return url.replace('/object/public/', '/render/image/public/') + 
-      `?width=${width}&quality=${quality}`;
-  }
-  
-  // If already a render URL, just update params
-  if (url.includes('/render/image/public/')) {
-    const base = url.split('?')[0];
-    return `${base}?width=${width}&quality=${quality}`;
-  }
-  
-  return url;
+
+  // Only optimize remote URLs (skip data URIs, blobs, local files)
+  if (!url.startsWith('http')) return url;
+
+  // Use wsrv.nl proxy for resizing + WebP conversion
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&q=${quality}&output=webp&default=1`;
 }
