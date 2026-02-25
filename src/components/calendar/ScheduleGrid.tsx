@@ -293,9 +293,16 @@ export function ScheduleGrid({
             <div
               key={slotTime}
               style={{ height: `${SLOT_HEIGHT}px` }}
-              className="border-b border-border/20 hover:bg-primary/5 cursor-pointer transition-colors"
+              className="group/slot border-b border-border/20 hover:bg-primary/5 cursor-pointer transition-colors relative"
               onClick={() => handleSlotClick(member.id, slotTime)}
-            />
+            >
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity pointer-events-none">
+                <div className="flex items-center gap-1 text-primary/50">
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-medium">{slotTime}</span>
+                </div>
+              </div>
+            </div>
           );
         })}
 
@@ -323,6 +330,10 @@ export function ScheduleGrid({
                 onClick={() => onBookingClick(booking)}
                 isRecurring={recurringCustomerIds?.has(booking.customer_id)}
                 hasOverlap={colInfo.hasOverlap}
+                onQuickBook={() => {
+                  const startTime = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
+                  openBookingModal({ staffId: member.id, date: dateStr, time: startTime });
+                }}
               />
             </div>
           );
