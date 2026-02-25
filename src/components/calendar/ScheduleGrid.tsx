@@ -330,11 +330,41 @@ export function ScheduleGrid({
                 onClick={() => onBookingClick(booking)}
                 isRecurring={recurringCustomerIds?.has(booking.customer_id)}
                 hasOverlap={colInfo.hasOverlap}
-                onQuickBook={() => {
-                  const startTime = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
-                  openBookingModal({ staffId: member.id, date: dateStr, time: startTime });
-                }}
               />
+            </div>
+          );
+        })}
+
+        {/* Quick-book overlay: [+] button on every slot, above booking cards */}
+        {slots.map((slotTime) => {
+          const slotType = getSlotType(member.id, slotTime);
+          if (slotType === "off" || slotType === "past") return null;
+
+          const slotIndex = slots.indexOf(slotTime);
+          const top = slotIndex * SLOT_HEIGHT;
+
+          return (
+            <div
+              key={`quick-${slotTime}`}
+              className="absolute right-0 flex items-center justify-center group/quick"
+              style={{
+                top: `${top}px`,
+                height: `${SLOT_HEIGHT}px`,
+                width: '28px',
+                zIndex: 10,
+              }}
+            >
+              <button
+                type="button"
+                className="h-5 w-5 rounded-full bg-primary/80 text-primary-foreground flex items-center justify-center shadow-sm opacity-0 group-hover/quick:opacity-100 hover:bg-primary hover:scale-110 transition-all"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openBookingModal({ staffId: member.id, date: dateStr, time: slotTime });
+                }}
+                title={`Novo agendamento às ${slotTime}`}
+              >
+                <Plus className="h-3 w-3" />
+              </button>
             </div>
           );
         })}
