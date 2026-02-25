@@ -242,15 +242,14 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       const startsAt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
       const endsAt = new Date(startsAt.getTime() + rc.duration_minutes * 60 * 1000);
 
-      // Use a tolerance window based on service duration to catch bookings
-      // created at slightly different times than the recurring slot
-      // Exclude cancelled bookings from dedup so virtual slots reappear
-      const toleranceMs = Math.max(rc.duration_minutes, 60) * 60 * 1000;
+      // Check if a real booking already exists for this customer + staff on the same day
+      // This covers: admin rescheduled to different time, admin created manual booking, etc.
+      // We match by customer_id + staff_id without time constraint,
+      // so any real booking for that pair suppresses the virtual slot
       const alreadyExists = allDayBookings.some((b) => {
         if (b.status === 'cancelled') return false;
         return b.staff_id === rc.staff_id &&
-          b.customer_id === rc.customer_id &&
-          Math.abs(new Date(b.starts_at).getTime() - startsAt.getTime()) < toleranceMs;
+          b.customer_id === rc.customer_id;
       });
 
       if (alreadyExists) continue;
