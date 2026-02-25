@@ -244,8 +244,10 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
 
       // Use a tolerance window based on service duration to catch bookings
       // created at slightly different times than the recurring slot
+      // Exclude cancelled bookings from dedup so virtual slots reappear
       const toleranceMs = Math.max(rc.duration_minutes, 60) * 60 * 1000;
       const alreadyExists = allDayBookings.some((b) => {
+        if (b.status === 'cancelled') return false;
         return b.staff_id === rc.staff_id &&
           b.customer_id === rc.customer_id &&
           Math.abs(new Date(b.starts_at).getTime() - startsAt.getTime()) < toleranceMs;
