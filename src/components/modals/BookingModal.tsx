@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Clock, Package, Repeat, AlertTriangle } from "lucide-react";
+import { Loader2, Clock, Package, Repeat, AlertTriangle, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -78,6 +78,11 @@ interface DetectedBenefit {
   validUntil?: string;
 }
 
+interface AdditionalService {
+  service_id: string;
+  staff_id?: string;
+}
+
 export function BookingModal() {
   const { currentTenant } = useTenant();
   const { isOpen, closeBookingModal, initialStaffId, initialDate, initialTime, customerPackageId, customerSubscriptionId, allowedServiceIds, preselectedCustomerId } = useBookingModal();
@@ -103,6 +108,7 @@ export function BookingModal() {
   const [loadingBenefits, setLoadingBenefits] = useState(false);
   const [serviceBenefitsMap, setServiceBenefitsMap] = useState<Map<string, DetectedBenefit>>(new Map());
   const [scheduleWarning, setScheduleWarning] = useState<string | null>(null);
+  const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -143,6 +149,7 @@ export function BookingModal() {
       setAvailableSlots([]);
       setDetectedBenefits([]);
       setServiceBenefitsMap(new Map());
+      setAdditionalServices([]);
     }
   }, [isOpen, currentTenant]);
 
@@ -527,50 +534,111 @@ export function BookingModal() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // Compute total duration including additional services
+  const getTotalDuration = () => {
+    const selectedService = services.find(s => s.id === form.getValues("service_id"));
+    const baseDuration = selectedService?.duration_minutes || 0;
+    const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
+    const extraSlots = form.getValues("extra_slots") || 0;
+    const useCustom = form.getValues("use_custom_duration");
+    const customDur = form.getValues("custom_duration");
+    
+    let mainDuration = useCustom && customDur ? customDur : baseDuration + extraSlots * extraSlotDuration;
+    
+    let additionalDuration = 0;
+    for (const as of additionalServices) {
+      const svc = services.find(s => s.id === as.service_id);
+      additionalDuration += svc?.duration_minutes || 0;
+    }
+    
+    return { mainDuration, additionalDuration, totalDuration: mainDuration + additionalDuration };
+  };
+
   const handleSubmit = async (data: BookingFormData) => {
     if (!currentTenant) return;
     try {
       setFormLoading(true);
 
       const startsAt = new Date(`${data.date}T${data.time}`);
+      const { mainDuration } = getTotalDuration();
 
-      const body: any = {
-        tenant_id: currentTenant.id,
+      // Build list of all services to book: main + additional
+      const allBookings: { service_id: string; staff_id: string | null; starts_at: Date; duration: number }[] = [];
+
+      // Main service
+      const mainStaffId = data.staff_id === "none" ? null : (data.staff_id || null);
+      allBookings.push({
         service_id: data.service_id,
-        staff_id: data.staff_id === "none" ? null : data.staff_id,
-        customer_name: data.customer_name,
-        customer_phone: data.customer_phone,
-        customer_email: data.customer_email || undefined,
-        starts_at: startsAt.toISOString(),
-        notes: data.notes || undefined,
-        created_via: 'admin',
-        payment_method: 'onsite',
-        customer_package_id: customerPackageId || undefined,
-        customer_subscription_id: customerSubscriptionId || undefined,
-      };
+        staff_id: mainStaffId,
+        starts_at: startsAt,
+        duration: mainDuration,
+      });
 
-      if (data.use_custom_duration && data.custom_duration) {
-        body.custom_duration = data.custom_duration;
-      } else {
-        body.extra_slots = data.extra_slots || 0;
+      // Additional services (sequential after main)
+      let nextStart = new Date(startsAt.getTime() + mainDuration * 60 * 1000);
+      for (const as of additionalServices) {
+        const svc = services.find(s => s.id === as.service_id);
+        const dur = svc?.duration_minutes || 30;
+        const staffId = as.staff_id && as.staff_id !== "none" ? as.staff_id : mainStaffId;
+        allBookings.push({
+          service_id: as.service_id,
+          staff_id: staffId,
+          starts_at: nextStart,
+          duration: dur,
+        });
+        nextStart = new Date(nextStart.getTime() + dur * 60 * 1000);
       }
 
-      const { data: result, error } = await supabase.functions.invoke('create-booking', { body });
+      // Create bookings sequentially
+      const createdIds: string[] = [];
+      for (let i = 0; i < allBookings.length; i++) {
+        const b = allBookings[i];
+        const body: any = {
+          tenant_id: currentTenant.id,
+          service_id: b.service_id,
+          staff_id: b.staff_id,
+          customer_name: data.customer_name,
+          customer_phone: data.customer_phone,
+          customer_email: data.customer_email || undefined,
+          starts_at: b.starts_at.toISOString(),
+          notes: i === 0 ? (data.notes || undefined) : undefined,
+          created_via: 'admin',
+          payment_method: 'onsite',
+        };
 
-      // Handle structured error responses (e.g. 403 forced_online_payment)
-      if (error) {
-        const msg = result?.message || result?.error || error.message;
-        throw new Error(msg || 'Erro ao criar agendamento');
+        // Only apply package/subscription benefit to the main service
+        if (i === 0) {
+          body.customer_package_id = customerPackageId || undefined;
+          body.customer_subscription_id = customerSubscriptionId || undefined;
+          if (data.use_custom_duration && data.custom_duration) {
+            body.custom_duration = data.custom_duration;
+          } else {
+            body.extra_slots = data.extra_slots || 0;
+          }
+        }
+
+        const { data: result, error } = await supabase.functions.invoke('create-booking', { body });
+
+        if (error) {
+          const msg = result?.message || result?.error || error.message;
+          throw new Error(msg || `Erro ao criar agendamento ${i + 1}`);
+        }
+        if (!result?.success) throw new Error(result?.error || `Erro ao criar agendamento ${i + 1}`);
+        
+        createdIds.push(result.booking_id);
       }
-      if (!result?.success) throw new Error(result?.error || 'Erro ao criar agendamento');
 
+      const svcCount = allBookings.length;
       toast({
         title: "Sucesso",
-        description: "Agendamento criado com sucesso!",
+        description: svcCount > 1
+          ? `${svcCount} agendamentos criados com sucesso!`
+          : "Agendamento criado com sucesso!",
       });
 
       form.reset();
       setSelectedCustomerId(null);
+      setAdditionalServices([]);
       closeBookingModal();
     } catch (error: any) {
       toast({
@@ -947,18 +1015,111 @@ export function BookingModal() {
               </div>
             )}
 
+            {/* Additional Services */}
+            {watchedServiceId && !customerPackageId && !customerSubscriptionId && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Serviços adicionais</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setAdditionalServices([...additionalServices, { service_id: "", staff_id: undefined }])}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Mais serviços
+                  </Button>
+                </div>
+
+                {additionalServices.map((as, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-border">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Select
+                        value={as.service_id}
+                        onValueChange={(val) => {
+                          const updated = [...additionalServices];
+                          updated[idx].service_id = val;
+                          setAdditionalServices(updated);
+                          form.setValue("time", "");
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Serviço" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {services.map((svc) => (
+                            <SelectItem key={svc.id} value={svc.id}>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: svc.color }} />
+                                <span>{svc.name} - {svc.duration_minutes}min</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={as.staff_id || "inherit"}
+                        onValueChange={(val) => {
+                          const updated = [...additionalServices];
+                          updated[idx].staff_id = val === "inherit" ? undefined : val;
+                          setAdditionalServices(updated);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Mesmo profissional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inherit">Mesmo profissional</SelectItem>
+                          {staff.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => {
+                        setAdditionalServices(additionalServices.filter((_, i) => i !== idx));
+                        form.setValue("time", "");
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+
+                {additionalServices.length > 0 && (() => {
+                  const { mainDuration, additionalDuration, totalDuration } = getTotalDuration();
+                  const additionalSvcNames = additionalServices
+                    .map(a => services.find(s => s.id === a.service_id)?.name)
+                    .filter(Boolean);
+                  return (
+                    <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
+                      <p className="text-xs text-foreground">
+                        <span className="font-medium">Duração total:</span> {totalDuration} min
+                        <span className="text-muted-foreground"> ({mainDuration} min principal + {additionalDuration} min adicionais)</span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Os serviços serão agendados em sequência: {services.find(s => s.id === watchedServiceId)?.name}
+                        {additionalSvcNames.length > 0 ? ` → ${additionalSvcNames.join(' → ')}` : ''}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* Available Time Slots - filtered by total duration */}
             <FormField
               control={form.control}
               name="time"
               render={({ field }) => {
-                const selectedService = services.find(s => s.id === watchedServiceId);
-                const extraSlotDuration = (currentTenant as any)?.settings?.extra_slot_duration || 5;
+                const { totalDuration } = getTotalDuration();
                 const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
-                const baseDuration = selectedService?.duration_minutes || 60;
-                const totalDuration = watchedUseCustomDuration && watchedCustomDuration
-                  ? watchedCustomDuration
-                  : baseDuration + (watchedExtraSlots || 0) * extraSlotDuration;
 
                 // Filter slots: ensure enough consecutive available time
                 const filteredSlots = availableSlots.filter((slot) => {
@@ -966,7 +1127,6 @@ export function BookingModal() {
                   const startMin = h * 60 + m;
                   const endMin = startMin + totalDuration;
 
-                  // Check all slot intervals within the needed duration are available
                   for (let t = startMin + slotDuration; t < endMin; t += slotDuration) {
                     const checkH = String(Math.floor(t / 60)).padStart(2, '0');
                     const checkM = String(t % 60).padStart(2, '0');
@@ -1049,7 +1209,15 @@ export function BookingModal() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={formLoading} className="w-full sm:w-auto">
-                {formLoading ? "Criando..." : customerPackageId ? "Criar Agendamento (sessão do pacote)" : customerSubscriptionId ? "Criar Agendamento (sessão da assinatura)" : "Criar Agendamento"}
+                {formLoading 
+                  ? "Criando..." 
+                  : additionalServices.length > 0 
+                    ? `Criar ${additionalServices.length + 1} Agendamentos`
+                    : customerPackageId 
+                      ? "Criar Agendamento (sessão do pacote)" 
+                      : customerSubscriptionId 
+                        ? "Criar Agendamento (sessão da assinatura)" 
+                        : "Criar Agendamento"}
               </Button>
             </DialogFooter>
           </form>
