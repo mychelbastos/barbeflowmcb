@@ -918,7 +918,7 @@ export function BookingModal() {
             )}
 
             {/* Additional Services — integrated below main service */}
-            {watchedServiceId && !customerPackageId && !customerSubscriptionId && (
+            {watchedServiceId && (
               <div className="space-y-2">
                 {additionalServices.length === 0 ? (
                   <Button
@@ -962,14 +962,23 @@ export function BookingModal() {
                               <SelectValue placeholder="Selecione um serviço" />
                             </SelectTrigger>
                             <SelectContent>
-                              {services.map((svc) => (
-                                <SelectItem key={svc.id} value={svc.id}>
-                                  <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
-                                    <span>{svc.name} - {svc.duration_minutes}min</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
+                              {services.map((svc) => {
+                                const alreadyCount = additionalServices.filter(a => a.service_id === svc.id).length
+                                  + (form.getValues("service_id") === svc.id ? 1 : 0);
+                                return (
+                                  <SelectItem key={svc.id} value={svc.id}>
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
+                                      <span>{svc.name} - {svc.duration_minutes}min</span>
+                                      {alreadyCount > 0 && (
+                                        <span className="text-[10px] text-muted-foreground ml-1">
+                                          (já {alreadyCount}x)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           <Select
@@ -1007,9 +1016,14 @@ export function BookingModal() {
                     {additionalServices.some(a => a.service_id) && (() => {
                       const { mainDuration, additionalDuration, totalDuration } = getTotalDuration();
                       const mainSvcName = services.find(s => s.id === watchedServiceId)?.name;
-                      const additionalSvcNames = additionalServices
+                      const additionalSvcRaw = additionalServices
                         .map(a => services.find(s => s.id === a.service_id)?.name)
                         .filter(Boolean);
+                      const svcCounts = new Map<string, number>();
+                      additionalSvcRaw.forEach(n => svcCounts.set(n!, (svcCounts.get(n!) || 0) + 1));
+                      const additionalSvcNames = Array.from(svcCounts.entries()).map(
+                        ([name, count]) => count > 1 ? `${count}x ${name}` : name
+                      );
                       return (
                         <div className="pt-2 border-t border-border/50">
                           <p className="text-xs text-foreground">
@@ -1020,6 +1034,12 @@ export function BookingModal() {
                           <p className="text-[10px] text-muted-foreground mt-0.5 ml-4">
                             {mainSvcName}{additionalSvcNames.length > 0 ? ` → ${additionalSvcNames.join(' → ')}` : ''}
                           </p>
+                          {(customerPackageId || customerSubscriptionId) && additionalServices.length > 0 && (
+                            <p className="text-[10px] text-amber-500 mt-1 ml-4">
+                              ⚠ Serviço principal coberto pela {customerPackageId ? 'sessão do pacote' : 'assinatura'} (R$ 0,00). 
+                              Serviço(s) adicional(is) será(ão) cobrado(s) normalmente.
+                            </p>
+                          )}
                         </div>
                       );
                     })()}
@@ -1297,7 +1317,7 @@ export function BookingModal() {
                 {formLoading 
                   ? "Criando..." 
                   : additionalServices.length > 0 
-                    ? `Criar ${additionalServices.length + 1} Agendamentos`
+                    ? `Criar Agendamento (${additionalServices.length + 1} serviços)`
                     : customerPackageId 
                       ? "Criar Agendamento (sessão do pacote)" 
                       : customerSubscriptionId 
