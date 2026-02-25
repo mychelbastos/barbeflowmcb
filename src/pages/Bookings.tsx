@@ -377,7 +377,8 @@ export default function Bookings() {
       // Check for conflicts (skip if force override)
       const staffId = editForm.staff_id === "none" ? null : editForm.staff_id;
       if (staffId && !forceOverlap) {
-        const { data: conflicts } = await supabase
+        // 1. Get conflicts with the NEW time range
+        const { data: newConflicts } = await supabase
           .from("bookings")
           .select("id, starts_at, ends_at, customer:customers(name)")
           .eq("staff_id", staffId)
@@ -386,10 +387,30 @@ export default function Bookings() {
           .lt("starts_at", endsAt.toISOString())
           .gt("ends_at", startsAt.toISOString());
 
-        if (conflicts && conflicts.length > 0) {
-          setConflictWarning({ open: true, conflicts });
-          setEditLoading(false);
-          return;
+        if (newConflicts && newConflicts.length > 0) {
+          // 2. Get conflicts that ALREADY existed with original time range
+          const originalStartsAt = selectedBooking.starts_at;
+          const originalEndsAt = selectedBooking.ends_at;
+
+          const { data: existingConflicts } = await supabase
+            .from("bookings")
+            .select("id")
+            .eq("staff_id", staffId)
+            .neq("id", selectedBooking.id)
+            .neq("status", "cancelled")
+            .lt("starts_at", originalEndsAt)
+            .gt("ends_at", originalStartsAt);
+
+          const existingIds = new Set((existingConflicts || []).map(c => c.id));
+
+          // 3. Only warn about genuinely NEW conflicts
+          const genuinelyNewConflicts = newConflicts.filter(c => !existingIds.has(c.id));
+
+          if (genuinelyNewConflicts.length > 0) {
+            setConflictWarning({ open: true, conflicts: genuinelyNewConflicts });
+            setEditLoading(false);
+            return;
+          }
         }
       }
 
