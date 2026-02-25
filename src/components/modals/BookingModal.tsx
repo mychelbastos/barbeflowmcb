@@ -1121,20 +1121,25 @@ export function BookingModal() {
                 const { totalDuration } = getTotalDuration();
                 const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
 
-                // Filter slots: ensure enough consecutive available time
-                const filteredSlots = availableSlots.filter((slot) => {
+                // Classify slots: check if each has enough consecutive time
+                const classifiedSlots = availableSlots.map((slot) => {
                   const [h, m] = slot.time.split(':').map(Number);
                   const startMin = h * 60 + m;
                   const endMin = startMin + totalDuration;
+                  let hasConflict = false;
 
                   for (let t = startMin + slotDuration; t < endMin; t += slotDuration) {
                     const checkH = String(Math.floor(t / 60)).padStart(2, '0');
                     const checkM = String(t % 60).padStart(2, '0');
                     const checkTime = `${checkH}:${checkM}`;
                     const found = availableSlots.find(s => s.time === checkTime);
-                    if (!found) return false;
+                    if (!found) {
+                      hasConflict = true;
+                      break;
+                    }
                   }
-                  return true;
+
+                  return { ...slot, hasConflict };
                 });
 
                 return (
@@ -1147,30 +1152,44 @@ export function BookingModal() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Carregando horários disponíveis...
                       </div>
-                    ) : filteredSlots.length === 0 ? (
+                    ) : classifiedSlots.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-2">
-                        {availableSlots.length > 0
-                          ? `Nenhum horário comporta ${totalDuration} min seguidos`
-                          : 'Nenhum horário disponível para esta data'}
+                        Nenhum horário disponível para esta data
                       </p>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto p-1">
-                        {filteredSlots.map((slot) => (
-                          <button
-                            key={slot.time}
-                            type="button"
-                            className={cn(
-                              "flex items-center justify-center gap-1 px-2 py-2 rounded-md text-sm font-medium border transition-colors",
-                              field.value === slot.time
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
-                            )}
-                            onClick={() => field.onChange(slot.time)}
-                          >
-                            <Clock className="h-3 w-3" />
-                            {slot.time}
-                          </button>
-                        ))}
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto p-1">
+                          {classifiedSlots.map((slot) => (
+                            <button
+                              key={slot.time}
+                              type="button"
+                              className={cn(
+                                "flex items-center justify-center gap-1 px-2 py-2 rounded-md text-sm font-medium border transition-colors",
+                                field.value === slot.time
+                                  ? slot.hasConflict
+                                    ? "bg-amber-600 text-white border-amber-600"
+                                    : "bg-primary text-primary-foreground border-primary"
+                                  : slot.hasConflict
+                                    ? "bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20"
+                                    : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
+                              )}
+                              onClick={() => field.onChange(slot.time)}
+                            >
+                              <Clock className="h-3 w-3" />
+                              {slot.time}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Warning when a conflicting slot is selected */}
+                        {field.value && classifiedSlots.find(s => s.time === field.value)?.hasConflict && (
+                          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                            <p className="text-xs leading-relaxed">
+                              Este horário não comporta os {totalDuration} min completos do serviço e pode sobrepor o próximo agendamento. Confirme apenas se tiver certeza.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                     <FormMessage />
