@@ -19,7 +19,7 @@ import {
 import {
   Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Lock, Unlock,
   Plus, Minus, Receipt, AlertTriangle, Clock, Banknote, CreditCard, Smartphone,
-  Wifi, WifiOff,
+  Wifi, WifiOff, Package,
 } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -89,6 +89,14 @@ type StaffMember = {
   name: string;
 };
 
+type ProductItem = {
+  id: string;
+  name: string;
+  sale_price_cents: number;
+  purchase_price_cents: number;
+  photo_url: string | null;
+};
+
 export default function CashRegister() {
   usePageTitle("Caixa");
   const { currentTenant, loading: tenantLoading } = useTenant();
@@ -115,6 +123,20 @@ export default function CashRegister() {
   const [entryStaffId, setEntryStaffId] = useState<string>("none");
   const [submitting, setSubmitting] = useState(false);
 
+  // Product sale integration
+  const [entryType, setEntryType] = useState<'manual' | 'product'>('manual');
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<{product_id: string; quantity: number; unit_price_cents: number}[]>([]);
+
+  const resetEntryForm = () => {
+    setEntryAmount('');
+    setEntryNotes('');
+    setEntryPaymentMethod('cash');
+    setEntryStaffId('none');
+    setEntryType('manual');
+    setSelectedProducts([]);
+  };
+
   const loadData = useCallback(async () => {
     if (!currentTenant) return;
     setLoading(true);
@@ -127,6 +149,15 @@ export default function CashRegister() {
         .eq("active", true)
         .order("name");
       setStaffList(staffData || []);
+
+      // Load products
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('id, name, sale_price_cents, purchase_price_cents, photo_url')
+        .eq('tenant_id', currentTenant.id)
+        .eq('active', true)
+        .order('name');
+      setProducts(productsData || []);
 
       // Get open session
       const { data: openSession } = await supabase
@@ -247,6 +278,67 @@ export default function CashRegister() {
     if (!session || !currentTenant || !entryModal) return;
     setSubmitting(true);
     try {
+      // ===== PRODUCT SALE FLOW =====
+      if (entryModal === 'income' && entryType === 'product') {
+        if (selectedProducts.length === 0) {
+          toast.error('Selecione ao menos um produto');
+          setSubmitting(false);
+          return;
+        }
+
+        const staffId = entryStaffId !== 'none' ? entryStaffId : null;
+
+        for (const item of selectedProducts) {
+          const product = products.find(p => p.id === item.product_id);
+          if (!product) continue;
+
+          const totalCents = item.unit_price_cents * item.quantity;
+
+          // 1. Create product_sale
+          const { data: sale, error: saleErr } = await supabase
+            .from('product_sales')
+            .insert({
+              tenant_id: currentTenant.id,
+              product_id: item.product_id,
+              quantity: item.quantity,
+              sale_date: new Date().toISOString(),
+              sale_price_snapshot_cents: item.unit_price_cents,
+              purchase_price_snapshot_cents: product.purchase_price_cents,
+              staff_id: staffId,
+              notes: entryNotes || null,
+            })
+            .select('id')
+            .single();
+
+          if (saleErr) throw saleErr;
+
+          // 2. Create cash_entry linked to product_sale
+          const { error: entryErr } = await supabase
+            .from('cash_entries')
+            .insert({
+              tenant_id: currentTenant.id,
+              session_id: session.id,
+              amount_cents: totalCents,
+              kind: 'income',
+              source: 'product_sale',
+              notes: `${product.name} x${item.quantity}${entryNotes ? ' | ' + entryNotes : ''}`,
+              payment_method: entryPaymentMethod,
+              occurred_at: new Date().toISOString(),
+              staff_id: staffId,
+              product_sale_id: sale.id,
+            });
+
+          if (entryErr) throw entryErr;
+        }
+
+        toast.success(`${selectedProducts.length} produto(s) registrado(s) no caixa!`);
+        setEntryModal(null);
+        resetEntryForm();
+        await loadData();
+        return;
+      }
+
+      // ===== EXISTING MANUAL FLOW =====
       const cents = Math.round(parseFloat(entryAmount || "0") * 100);
       if (cents <= 0) { toast.error("Valor deve ser maior que zero"); setSubmitting(false); return; }
 
@@ -257,7 +349,6 @@ export default function CashRegister() {
       else if (entryModal === "expense") { kind = "expense"; source = "expense"; }
       else { kind = "income"; source = "manual"; }
 
-      // Only send staff_id for income entries (not supply/withdrawal/expense admin)
       const staffId = entryModal === "income" && entryStaffId !== "none" ? entryStaffId : null;
 
       const { error } = await supabase.from("cash_entries").insert({
@@ -274,10 +365,7 @@ export default function CashRegister() {
       if (error) throw error;
       toast.success("Lançamento registrado!");
       setEntryModal(null);
-      setEntryAmount("");
-      setEntryNotes("");
-      setEntryPaymentMethod("cash");
-      setEntryStaffId("none");
+      resetEntryForm();
       await loadData();
     } catch (err: any) {
       toast.error("Erro: " + err.message);
@@ -678,30 +766,155 @@ export default function CashRegister() {
       </Dialog>
 
       {/* Entry Modal (supply/withdrawal/expense/income) */}
-      <Dialog open={!!entryModal} onOpenChange={() => setEntryModal(null)}>
+      <Dialog open={!!entryModal} onOpenChange={() => { setEntryModal(null); resetEntryForm(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {entryModal === "supply" && "Suprimento"}
               {entryModal === "withdrawal" && "Sangria"}
               {entryModal === "expense" && "Despesa"}
-              {entryModal === "income" && "Entrada Manual"}
+              {entryModal === "income" && "Entrada"}
             </DialogTitle>
             <DialogDescription>
               {entryModal === "supply" && "Registrar entrada de dinheiro no caixa."}
               {entryModal === "withdrawal" && "Registrar retirada de dinheiro do caixa."}
               {entryModal === "expense" && "Registrar despesa com motivo obrigatório."}
-              {entryModal === "income" && "Registrar recebimento manual."}
+              {entryModal === "income" && "Registrar recebimento manual ou venda de produto."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
-              <Input
-                type="number" step="0.01" min="0" placeholder="0,00"
-                value={entryAmount} onChange={e => setEntryAmount(e.target.value)}
-              />
-            </div>
+            {/* Entry type toggle — only for income */}
+            {entryModal === 'income' && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={entryType === 'manual' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => { setEntryType('manual'); setSelectedProducts([]); }}
+                >
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  Valor manual
+                </Button>
+                <Button
+                  type="button"
+                  variant={entryType === 'product' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => { setEntryType('product'); setEntryAmount(''); }}
+                >
+                  <Package className="h-4 w-4 mr-1" />
+                  Venda de produto
+                </Button>
+              </div>
+            )}
+
+            {/* === MANUAL: amount field === */}
+            {(entryModal !== 'income' || entryType === 'manual') && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">Valor (R$)</label>
+                <Input
+                  type="number" step="0.01" min="0" placeholder="0,00"
+                  value={entryAmount} onChange={e => setEntryAmount(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* === PRODUCT: product selector === */}
+            {entryModal === 'income' && entryType === 'product' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Adicionar produto</label>
+                  <Select
+                    value=""
+                    onValueChange={(productId) => {
+                      const product = products.find(p => p.id === productId);
+                      if (!product) return;
+                      const existing = selectedProducts.find(sp => sp.product_id === productId);
+                      if (existing) {
+                        setSelectedProducts(prev =>
+                          prev.map(sp => sp.product_id === productId
+                            ? { ...sp, quantity: sp.quantity + 1 }
+                            : sp
+                          )
+                        );
+                      } else {
+                        setSelectedProducts(prev => [...prev, {
+                          product_id: productId,
+                          quantity: 1,
+                          unit_price_cents: product.sale_price_cents,
+                        }]);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um produto..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} — R$ {(p.sale_price_cents / 100).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedProducts.length > 0 && (
+                  <div className="space-y-2">
+                    {selectedProducts.map((sp, idx) => {
+                      const product = products.find(p => p.id === sp.product_id);
+                      const lineTotal = sp.unit_price_cents * sp.quantity;
+                      return (
+                        <div key={sp.product_id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{product?.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              R$ {(sp.unit_price_cents / 100).toFixed(2)} × {sp.quantity} = R$ {(lineTotal / 100).toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button" variant="outline" size="icon" className="h-7 w-7"
+                              onClick={() => {
+                                if (sp.quantity <= 1) {
+                                  setSelectedProducts(prev => prev.filter((_, i) => i !== idx));
+                                } else {
+                                  setSelectedProducts(prev =>
+                                    prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity - 1 } : item)
+                                  );
+                                }
+                              }}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="text-sm font-medium w-6 text-center">{sp.quantity}</span>
+                            <Button
+                              type="button" variant="outline" size="icon" className="h-7 w-7"
+                              onClick={() => {
+                                setSelectedProducts(prev =>
+                                  prev.map((item, i) => i === idx ? { ...item, quantity: item.quantity + 1 } : item)
+                                );
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="flex justify-between items-center pt-2 border-t border-border">
+                      <span className="text-sm font-medium">Total</span>
+                      <span className="text-sm font-bold text-emerald-400">
+                        R$ {(selectedProducts.reduce((sum, sp) => sum + sp.unit_price_cents * sp.quantity, 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Payment method (always visible) */}
             <div>
               <label className="text-sm font-medium mb-1 block">Meio de Pagamento</label>
               <Select value={entryPaymentMethod} onValueChange={setEntryPaymentMethod}>
@@ -713,7 +926,8 @@ export default function CashRegister() {
                 </SelectContent>
               </Select>
             </div>
-            {/* Staff selector — only for manual income */}
+
+            {/* Staff selector — only for income */}
             {entryModal === "income" && (
               <div>
                 <label className="text-sm font-medium mb-1 block">Profissional (opcional)</label>
@@ -728,6 +942,8 @@ export default function CashRegister() {
                 </Select>
               </div>
             )}
+
+            {/* Notes */}
             <div>
               <label className="text-sm font-medium mb-1 block">
                 Observação {entryModal === "expense" && <span className="text-red-400">*</span>}
@@ -740,10 +956,16 @@ export default function CashRegister() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEntryModal(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setEntryModal(null); resetEntryForm(); }}>Cancelar</Button>
             <Button
               onClick={handleAddEntry}
-              disabled={submitting || (entryModal === "expense" && !entryNotes.trim())}
+              disabled={
+                submitting ||
+                (entryModal === "expense" && !entryNotes.trim()) ||
+                (entryModal === "income" && entryType === "manual" && !entryAmount) ||
+                (entryModal === "income" && entryType === "product" && selectedProducts.length === 0) ||
+                (entryModal !== "income" && !entryAmount)
+              }
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Registrar
