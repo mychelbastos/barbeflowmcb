@@ -917,6 +917,117 @@ export function BookingModal() {
               )
             )}
 
+            {/* Additional Services — integrated below main service */}
+            {watchedServiceId && !customerPackageId && !customerSubscriptionId && (
+              <div className="space-y-2">
+                {additionalServices.length === 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1 text-primary hover:text-primary/80 px-0"
+                    onClick={() => setAdditionalServices([{ service_id: "", staff_id: undefined }])}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Adicionar outro serviço
+                  </Button>
+                ) : (
+                  <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Serviços adicionais</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[11px] gap-1 text-primary"
+                        onClick={() => setAdditionalServices([...additionalServices, { service_id: "", staff_id: undefined }])}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Mais
+                      </Button>
+                    </div>
+
+                    {additionalServices.map((as, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Select
+                            value={as.service_id}
+                            onValueChange={(val) => {
+                              const updated = [...additionalServices];
+                              updated[idx].service_id = val;
+                              setAdditionalServices(updated);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecione um serviço" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {services.map((svc) => (
+                                <SelectItem key={svc.id} value={svc.id}>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: svc.color }} />
+                                    <span>{svc.name} - {svc.duration_minutes}min</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={as.staff_id || "inherit"}
+                            onValueChange={(val) => {
+                              const updated = [...additionalServices];
+                              updated[idx].staff_id = val === "inherit" ? undefined : val;
+                              setAdditionalServices(updated);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Mesmo profissional" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inherit">Mesmo profissional</SelectItem>
+                              {staff.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => setAdditionalServices(additionalServices.filter((_, i) => i !== idx))}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    {/* Duration summary */}
+                    {additionalServices.some(a => a.service_id) && (() => {
+                      const { mainDuration, additionalDuration, totalDuration } = getTotalDuration();
+                      const mainSvcName = services.find(s => s.id === watchedServiceId)?.name;
+                      const additionalSvcNames = additionalServices
+                        .map(a => services.find(s => s.id === a.service_id)?.name)
+                        .filter(Boolean);
+                      return (
+                        <div className="pt-2 border-t border-border/50">
+                          <p className="text-xs text-foreground">
+                            <Clock className="h-3 w-3 inline mr-1 text-primary" />
+                            <span className="font-medium">Duração total: {totalDuration} min</span>
+                            <span className="text-muted-foreground"> ({mainDuration} min + {additionalDuration} min)</span>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 ml-4">
+                            {mainSvcName}{additionalSvcNames.length > 0 ? ` → ${additionalSvcNames.join(' → ')}` : ''}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Date */}
             <FormField
               control={form.control}
@@ -1046,103 +1157,7 @@ export function BookingModal() {
               </div>
             )}
 
-            {/* Additional Services */}
-            {watchedServiceId && !customerPackageId && !customerSubscriptionId && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">Serviços adicionais</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => setAdditionalServices([...additionalServices, { service_id: "", staff_id: undefined }])}
-                  >
-                    <Plus className="h-3 w-3" />
-                    Mais serviços
-                  </Button>
-                </div>
-
-                {additionalServices.map((as, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-border">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Select
-                        value={as.service_id}
-                        onValueChange={(val) => {
-                          const updated = [...additionalServices];
-                          updated[idx].service_id = val;
-                          setAdditionalServices(updated);
-                          form.setValue("time", "");
-                        }}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Serviço" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {services.map((svc) => (
-                            <SelectItem key={svc.id} value={svc.id}>
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: svc.color }} />
-                                <span>{svc.name} - {svc.duration_minutes}min</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={as.staff_id || "inherit"}
-                        onValueChange={(val) => {
-                          const updated = [...additionalServices];
-                          updated[idx].staff_id = val === "inherit" ? undefined : val;
-                          setAdditionalServices(updated);
-                        }}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Mesmo profissional" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="inherit">Mesmo profissional</SelectItem>
-                          {staff.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => {
-                        setAdditionalServices(additionalServices.filter((_, i) => i !== idx));
-                        form.setValue("time", "");
-                      }}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-
-                {additionalServices.length > 0 && (() => {
-                  const { mainDuration, additionalDuration, totalDuration } = getTotalDuration();
-                  const additionalSvcNames = additionalServices
-                    .map(a => services.find(s => s.id === a.service_id)?.name)
-                    .filter(Boolean);
-                  return (
-                    <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
-                      <p className="text-xs text-foreground">
-                        <span className="font-medium">Duração total:</span> {totalDuration} min
-                        <span className="text-muted-foreground"> ({mainDuration} min principal + {additionalDuration} min adicionais)</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Os serviços serão agendados em sequência: {services.find(s => s.id === watchedServiceId)?.name}
-                        {additionalSvcNames.length > 0 ? ` → ${additionalSvcNames.join(' → ')}` : ''}
-                      </p>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
+            {/* Additional Services section removed — moved above Date */}
 
             {/* Available Time Slots - filtered by total duration */}
             <FormField
