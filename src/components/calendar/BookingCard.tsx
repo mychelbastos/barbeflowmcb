@@ -1,5 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import type { BookingData } from "@/hooks/useBookingsByDate";
 
 const TZ = "America/Bahia";
@@ -17,9 +17,10 @@ interface BookingCardProps {
   onClick: () => void;
   isRecurring?: boolean;
   hasOverlap?: boolean;
+  onQuickBook?: () => void;
 }
 
-export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: BookingCardProps) {
+export function BookingCard({ booking, onClick, isRecurring, hasOverlap, onQuickBook }: BookingCardProps) {
   const startTime = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
   const endTime = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
   const style = statusStyles[booking.status] || statusStyles.confirmed;
@@ -27,8 +28,22 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: Booki
   return (
     <button
       onClick={onClick}
-      className={`w-full h-full rounded-lg px-2 py-1 text-left transition-all hover:brightness-110 cursor-pointer flex flex-col justify-center gap-0 overflow-hidden ${style} ${hasOverlap ? 'ring-1 ring-amber-500/50 ring-inset' : ''}`}
+      className={`group/card relative w-full h-full rounded-lg px-2 py-1 text-left transition-all hover:brightness-110 cursor-pointer flex flex-col justify-center gap-0 overflow-hidden ${style} ${hasOverlap ? 'ring-1 ring-amber-500/50 ring-inset' : ''}`}
     >
+      {/* Quick book button - appears on hover */}
+      {onQuickBook && (
+        <div
+          className="absolute top-0.5 right-0.5 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation();
+            onQuickBook();
+          }}
+        >
+          <div className="h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
+            <Plus className="h-3 w-3" />
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-1 min-w-0">
         {hasOverlap && (
           <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
