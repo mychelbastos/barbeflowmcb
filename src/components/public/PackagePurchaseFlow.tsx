@@ -108,6 +108,7 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   };
 
   const handlePurchase = async () => {
+    if (submitting) return;
     if (!name || !phone || !email || !cpf) {
       toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
@@ -137,7 +138,7 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
       if (error) throw new Error(data?.error || error.message);
       if (data?.error) throw new Error(data.error);
 
-      // Save IDs and show inline checkout
+      // Save IDs and show inline checkout (works for both new and reused checkouts)
       setCustomerPackageId(data.customer_package_id);
       setPaymentRecordId(data.payment_id);
       setShowPayment(true);
