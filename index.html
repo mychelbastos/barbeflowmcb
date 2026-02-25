@@ -14,18 +14,22 @@
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     <link rel="dns-prefetch" href="https://iagzodcwctvydmgrwjsy.supabase.co" />
     <link rel="preconnect" href="https://iagzodcwctvydmgrwjsy.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://iagzodcwctvydmgrwjsy.supabase.co/storage/v1" />
+    <link rel="preconnect" href="https://iagzodcwctvydmgrwjsy.supabase.co/storage/v1" crossorigin />
 
-    <!-- Meta Pixel Code (consent-controlled) -->
+    <!-- Meta Pixel Code (deferred until page load) -->
     <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('consent', 'revoke');
+    window.addEventListener('load', function() {
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('consent', 'revoke');
+    });
     </script>
      <!-- End Meta Pixel Code -->
     <meta property="og:title" content="modoGESTOR - Sistema de Gestão para Profissionais de Serviços" />

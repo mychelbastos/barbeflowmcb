@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,39 +8,50 @@ import { DateRangeProvider } from "@/contexts/DateRangeContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { isDashboardDomain, isPublicDomain, isPreviewOrLocal, isCustomDomain } from "@/lib/hostname";
+
+// Public pages — loaded eagerly (these are what public visitors need)
 import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Reports from "./pages/Reports";
-import Finance from "./pages/Finance";
-import CommissionsPage from "./pages/CommissionsPage";
-import CashRegister from "./pages/CashRegister";
-import PackagesPage from "./pages/PackagesPage";
-import SubscriptionPlansPage from "./pages/SubscriptionPlansPage";
-import SubscriptionMembers from "./pages/SubscriptionMembers";
-import SubscriptionReceivables from "./pages/SubscriptionReceivables";
-import SubscriptionCalendar from "./pages/SubscriptionCalendar";
-import SubscriptionDelinquents from "./pages/SubscriptionDelinquents";
-import SubscriptionCallback from "./pages/SubscriptionCallback";
-import Bookings from "./pages/Bookings";
-import Services from "./pages/Services";
-import Staff from "./pages/Staff";
-import Customers from "./pages/Customers";
-import Settings from "./pages/Settings";
-import Products from "./pages/Products";
-import RecurringClients from "./pages/RecurringClients";
 import BookingPublic from "./pages/BookingPublic";
-import PaymentReturn from "./pages/PaymentReturn";
-import PackagePaymentReturn from "./pages/PackagePaymentReturn";
 import NotFound from "./pages/NotFound";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Onboarding from "./pages/Onboarding";
-import AuthWatcher from "./components/AuthWatcher";
+
+// Auth pages — small, lazy loaded
+const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
+// Public sub-pages — lazy loaded (only after booking flow)
+const PaymentReturn = lazy(() => import("./pages/PaymentReturn"));
+const PackagePaymentReturn = lazy(() => import("./pages/PackagePaymentReturn"));
+const SubscriptionCallback = lazy(() => import("./pages/SubscriptionCallback"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+
+// Admin pages — ALL lazy loaded (never needed by public visitors)
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Finance = lazy(() => import("./pages/Finance"));
+const CommissionsPage = lazy(() => import("./pages/CommissionsPage"));
+const CashRegister = lazy(() => import("./pages/CashRegister"));
+const PackagesPage = lazy(() => import("./pages/PackagesPage"));
+const SubscriptionPlansPage = lazy(() => import("./pages/SubscriptionPlansPage"));
+const SubscriptionMembers = lazy(() => import("./pages/SubscriptionMembers"));
+const SubscriptionReceivables = lazy(() => import("./pages/SubscriptionReceivables"));
+const SubscriptionCalendar = lazy(() => import("./pages/SubscriptionCalendar"));
+const SubscriptionDelinquents = lazy(() => import("./pages/SubscriptionDelinquents"));
+const Bookings = lazy(() => import("./pages/Bookings"));
+const Services = lazy(() => import("./pages/Services"));
+const Staff = lazy(() => import("./pages/Staff"));
+const Customers = lazy(() => import("./pages/Customers"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Products = lazy(() => import("./pages/Products"));
+const RecurringClients = lazy(() => import("./pages/RecurringClients"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+
+// Lazy-loaded components
+const AuthWatcher = lazy(() => import("./components/AuthWatcher"));
 import ProtectedRoute from "./components/ProtectedRoute";
-import AppShell from "./components/layout/AppShell";
+const AppShell = lazy(() => import("./components/layout/AppShell"));
+
 import { ScrollToTop } from "./components/ScrollToTop";
 import { CookieBanner } from "./components/CookieBanner";
 import { useEffect } from "react";
@@ -55,11 +67,20 @@ const showDashboard = isDashboardDomain() || isPreviewOrLocal();
 // On preview/local, routes use /app prefix
 const dashPrefix = isDashboardDomain() ? '' : '/app';
 
+// Minimal loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+    <div className="w-6 h-6 border-2 border-zinc-700 border-t-white rounded-full animate-spin" />
+  </div>
+);
+
 const ProtectedAppShell = () => (
   <ProtectedRoute>
     <ThemeProvider>
       <DateRangeProvider>
-        <AppShell />
+        <Suspense fallback={<PageLoader />}>
+          <AppShell />
+        </Suspense>
       </DateRangeProvider>
     </ThemeProvider>
   </ProtectedRoute>
@@ -79,63 +100,67 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
-          <AuthWatcher />
-          <Routes>
-            {/* Public routes - modogestor.com.br */}
-            {showPublic && (
-              <>
-                {/* On custom domains, root shows the booking page directly */}
-                <Route path="/" element={isCustomDomain() ? <BookingPublic /> : <Landing />} />
-                <Route path="/termos" element={<Terms />} />
-                <Route path="/privacidade" element={<Privacy />} />
-                <Route path="/:slug" element={<BookingPublic />} />
-                <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
-                <Route path="/:slug/pacote/retorno" element={<PackagePaymentReturn />} />
-                <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
-              </>
-            )}
+          <Suspense fallback={null}>
+            <AuthWatcher />
+          </Suspense>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public routes - modogestor.com.br */}
+              {showPublic && (
+                <>
+                  {/* On custom domains, root shows the booking page directly */}
+                  <Route path="/" element={isCustomDomain() ? <BookingPublic /> : <Landing />} />
+                  <Route path="/termos" element={<Terms />} />
+                  <Route path="/privacidade" element={<Privacy />} />
+                  <Route path="/:slug" element={<BookingPublic />} />
+                  <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
+                  <Route path="/:slug/pacote/retorno" element={<PackagePaymentReturn />} />
+                  <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
+                </>
+              )}
 
-            {/* Dashboard routes */}
-            {showDashboard && (
-              <>
-                <Route path={`${dashPrefix}/login`} element={<Login />} />
-                <Route path={`${dashPrefix}/register`} element={<Login />} />
-                <Route path={`${dashPrefix}/forgot-password`} element={<ForgotPassword />} />
-                <Route path={`${dashPrefix}/reset-password`} element={<ResetPassword />} />
-                
-                <Route path={`${dashPrefix}/onboarding`} element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                
-                <Route path={dashPrefix || '/'} element={<ProtectedAppShell />}>
-                  <Route path={dashPrefix ? 'dashboard' : 'dashboard'} element={<Dashboard />} />
-                  <Route path="bookings" element={<Bookings />} />
-                  <Route path="services" element={<Services />} />
-                  <Route path="packages" element={<PackagesPage />} />
-                  <Route path="subscription-plans" element={<Navigate to={`${dashPrefix}/subscriptions/plans`} replace />} />
-                  <Route path="subscriptions/plans" element={<SubscriptionPlansPage />} />
-                  <Route path="subscriptions/members" element={<SubscriptionMembers />} />
-                  <Route path="subscriptions/receivables" element={<SubscriptionReceivables />} />
-                  <Route path="subscriptions/calendar" element={<SubscriptionCalendar />} />
-                  <Route path="subscriptions/delinquents" element={<SubscriptionDelinquents />} />
-                  <Route path="staff" element={<Staff />} />
-                  <Route path="customers" element={<Customers />} />
-                  <Route path="recurring-clients" element={<RecurringClients />} />
-                  <Route path="finance" element={<Finance />} />
-                  <Route path="commissions" element={<CommissionsPage />} />
-                  <Route path="caixa" element={<CashRegister />} />
-                  <Route path="products" element={<Products />} />
-                  <Route path="reports" element={<Reports />} />
-                  <Route path="settings" element={<Settings />} />
-                </Route>
-              </>
-            )}
+              {/* Dashboard routes */}
+              {showDashboard && (
+                <>
+                  <Route path={`${dashPrefix}/login`} element={<Login />} />
+                  <Route path={`${dashPrefix}/register`} element={<Login />} />
+                  <Route path={`${dashPrefix}/forgot-password`} element={<ForgotPassword />} />
+                  <Route path={`${dashPrefix}/reset-password`} element={<ResetPassword />} />
+                  
+                  <Route path={`${dashPrefix}/onboarding`} element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                  
+                  <Route path={dashPrefix || '/'} element={<ProtectedAppShell />}>
+                    <Route path={dashPrefix ? 'dashboard' : 'dashboard'} element={<Dashboard />} />
+                    <Route path="bookings" element={<Bookings />} />
+                    <Route path="services" element={<Services />} />
+                    <Route path="packages" element={<PackagesPage />} />
+                    <Route path="subscription-plans" element={<Navigate to={`${dashPrefix}/subscriptions/plans`} replace />} />
+                    <Route path="subscriptions/plans" element={<SubscriptionPlansPage />} />
+                    <Route path="subscriptions/members" element={<SubscriptionMembers />} />
+                    <Route path="subscriptions/receivables" element={<SubscriptionReceivables />} />
+                    <Route path="subscriptions/calendar" element={<SubscriptionCalendar />} />
+                    <Route path="subscriptions/delinquents" element={<SubscriptionDelinquents />} />
+                    <Route path="staff" element={<Staff />} />
+                    <Route path="customers" element={<Customers />} />
+                    <Route path="recurring-clients" element={<RecurringClients />} />
+                    <Route path="finance" element={<Finance />} />
+                    <Route path="commissions" element={<CommissionsPage />} />
+                    <Route path="caixa" element={<CashRegister />} />
+                    <Route path="products" element={<Products />} />
+                    <Route path="reports" element={<Reports />} />
+                    <Route path="settings" element={<Settings />} />
+                  </Route>
+                </>
+              )}
 
-            {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
-            {isDashboardDomain() && (
-              <Route path="/" element={<Login />} />
-            )}
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
+              {isDashboardDomain() && (
+                <Route path="/" element={<Login />} />
+              )}
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
           <CookieBanner />
         </BrowserRouter>
       </TooltipProvider>
