@@ -565,84 +565,93 @@ export function BookingModal() {
       setFormLoading(true);
 
       const startsAt = new Date(`${data.date}T${data.time}`);
-      const { mainDuration } = getTotalDuration();
+      const { totalDuration } = getTotalDuration();
 
-      // Build list of all services to book: main + additional
-      const allBookings: { service_id: string; staff_id: string | null; starts_at: Date; duration: number }[] = [];
+      // Determine if this slot has a conflict (for admin overlap override)
+      const selectedSlot = classifiedSlotsRef.current?.find(s => s.time === data.time);
+      const hasConflict = selectedSlot?.hasConflict || false;
 
-      // Main service
       const mainStaffId = data.staff_id === "none" ? null : (data.staff_id || null);
-      allBookings.push({
+
+      // 1. Create ONE booking with TOTAL duration
+      const body: any = {
+        tenant_id: currentTenant.id,
         service_id: data.service_id,
         staff_id: mainStaffId,
-        starts_at: startsAt,
-        duration: mainDuration,
-      });
+        customer_name: data.customer_name,
+        customer_phone: data.customer_phone,
+        customer_email: data.customer_email || undefined,
+        starts_at: startsAt.toISOString(),
+        notes: data.notes || undefined,
+        created_via: 'admin',
+        payment_method: 'onsite',
+        allow_overlap: hasConflict,
+        customer_package_id: customerPackageId || undefined,
+        customer_subscription_id: customerSubscriptionId || undefined,
+      };
 
-      // Additional services (sequential after main)
-      let nextStart = new Date(startsAt.getTime() + mainDuration * 60 * 1000);
-      for (const as of additionalServices) {
-        const svc = services.find(s => s.id === as.service_id);
-        const dur = svc?.duration_minutes || 30;
-        const staffId = as.staff_id && as.staff_id !== "none" ? as.staff_id : mainStaffId;
-        allBookings.push({
-          service_id: as.service_id,
-          staff_id: staffId,
-          starts_at: nextStart,
-          duration: dur,
-        });
-        nextStart = new Date(nextStart.getTime() + dur * 60 * 1000);
+      // Pass custom_duration = totalDuration to force the booking to span all services
+      if (additionalServices.length > 0) {
+        body.custom_duration = totalDuration;
+      } else if (data.use_custom_duration && data.custom_duration) {
+        body.custom_duration = data.custom_duration;
+      } else {
+        body.extra_slots = data.extra_slots || 0;
       }
 
-      // Create bookings sequentially
-      const createdIds: string[] = [];
-      for (let i = 0; i < allBookings.length; i++) {
-        const b = allBookings[i];
-        // Determine if this slot has a conflict (for admin overlap override)
-        const selectedSlot = classifiedSlotsRef.current?.find(s => s.time === data.time);
-        const hasConflict = selectedSlot?.hasConflict || false;
+      const { data: result, error } = await supabase.functions.invoke('create-booking', { body });
 
-        const body: any = {
-          tenant_id: currentTenant.id,
-          service_id: b.service_id,
-          staff_id: b.staff_id,
-          customer_name: data.customer_name,
-          customer_phone: data.customer_phone,
-          customer_email: data.customer_email || undefined,
-          starts_at: b.starts_at.toISOString(),
-          notes: i === 0 ? (data.notes || undefined) : undefined,
-          created_via: 'admin',
-          payment_method: 'onsite',
-          allow_overlap: hasConflict,
-        };
+      if (error) {
+        const msg = result?.message || result?.error || error.message;
+        throw new Error(msg || 'Erro ao criar agendamento');
+      }
+      if (!result?.success) throw new Error(result?.error || 'Erro ao criar agendamento');
 
-        // Only apply package/subscription benefit to the main service
-        if (i === 0) {
-          body.customer_package_id = customerPackageId || undefined;
-          body.customer_subscription_id = customerSubscriptionId || undefined;
-          if (data.use_custom_duration && data.custom_duration) {
-            body.custom_duration = data.custom_duration;
-          } else {
-            body.extra_slots = data.extra_slots || 0;
+      const bookingId = result.booking_id;
+
+      // 2. Insert additional services as booking_items (extra_service)
+      if (additionalServices.length > 0) {
+        const extraItems = additionalServices
+          .map(as => {
+            const svc = services.find(s => s.id === as.service_id);
+            if (!svc) return null;
+            const staffId = as.staff_id && as.staff_id !== "none" ? as.staff_id : mainStaffId;
+            return {
+              tenant_id: currentTenant.id,
+              booking_id: bookingId,
+              type: 'extra_service' as const,
+              ref_id: svc.id,
+              title: svc.name,
+              quantity: 1,
+              unit_price_cents: svc.price_cents,
+              total_price_cents: svc.price_cents,
+              purchase_price_cents: 0,
+              staff_id: staffId,
+              paid_status: 'unpaid' as const,
+            };
+          })
+          .filter(Boolean);
+
+        if (extraItems.length > 0) {
+          const { error: itemsError } = await supabase
+            .from('booking_items')
+            .insert(extraItems as any[]);
+
+          if (itemsError) {
+            console.error('Error inserting extra service items:', itemsError);
+            toast({
+              title: "Aviso",
+              description: "Agendamento criado, mas houve erro ao adicionar serviços extras na comanda. Adicione manualmente.",
+              variant: "destructive",
+            });
           }
         }
-
-        const { data: result, error } = await supabase.functions.invoke('create-booking', { body });
-
-        if (error) {
-          const msg = result?.message || result?.error || error.message;
-          throw new Error(msg || `Erro ao criar agendamento ${i + 1}`);
-        }
-        if (!result?.success) throw new Error(result?.error || `Erro ao criar agendamento ${i + 1}`);
-        
-        createdIds.push(result.booking_id);
       }
 
-      const svcCount = allBookings.length;
       toast({
         title: "Sucesso",
-        description: svcCount > 1
-          ? `${svcCount} agendamentos criados com sucesso!`
+        description: additionalServices.length > 0
+          ? `Agendamento criado com ${additionalServices.length + 1} serviço(s)!`
           : "Agendamento criado com sucesso!",
       });
 
