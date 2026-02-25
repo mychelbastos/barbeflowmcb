@@ -104,6 +104,7 @@ export default function Bookings() {
   const [editServices, setEditServices] = useState<any[]>([]);
   const [editStaff, setEditStaff] = useState<any[]>([]);
   const [conflictWarning, setConflictWarning] = useState<{ open: boolean; conflicts: any[] }>({ open: false, conflicts: [] });
+  const [editExtraServices, setEditExtraServices] = useState<Array<{ id: string; title: string; duration_minutes: number; unit_price_cents: number }>>([]);
   
 
   // List view state
@@ -352,12 +353,23 @@ export default function Bookings() {
       end_time: endTime,
     });
     // Load services and staff for editing
-    const [sRes, stRes] = await Promise.all([
+    const [sRes, stRes, extraRes] = await Promise.all([
       supabase.from("services").select("*").eq("tenant_id", currentTenant.id).eq("active", true).order("name"),
       supabase.from("staff").select("*").eq("tenant_id", currentTenant.id).eq("active", true).order("name"),
+      supabase.from("booking_items").select("id, title, ref_id, unit_price_cents").eq("booking_id", selectedBooking.id).eq("type", "extra_service"),
     ]);
     setEditServices(sRes.data || []);
     setEditStaff(stRes.data || []);
+    const extras = (extraRes.data || []).map(item => {
+      const svc = sRes.data?.find(s => s.id === item.ref_id);
+      return {
+        id: item.id,
+        title: item.title,
+        duration_minutes: svc?.duration_minutes || 0,
+        unit_price_cents: item.unit_price_cents,
+      };
+    });
+    setEditExtraServices(extras);
     setEditMode(true);
   };
 
@@ -755,7 +767,8 @@ export default function Bookings() {
                   setEditForm((f) => {
                     if (svc && f.time) {
                       const [h, m] = f.time.split(":").map(Number);
-                      const endMins = h * 60 + m + (svc.duration_minutes || 30);
+                      const extraDuration = editExtraServices.reduce((sum, e) => sum + e.duration_minutes, 0);
+                      const endMins = h * 60 + m + (svc.duration_minutes || 30) + extraDuration;
                       const endH = Math.floor(endMins / 60).toString().padStart(2, "0");
                       const endM = (endMins % 60).toString().padStart(2, "0");
                       return { ...f, service_id: v, end_time: `${endH}:${endM}` };
@@ -771,6 +784,24 @@ export default function Bookings() {
                   </SelectContent>
                 </Select>
               </div>
+              {editExtraServices.length > 0 && (
+                <div className="space-y-1.5 p-3 bg-muted/30 rounded-lg border border-border/50">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Serviços adicionais ({editExtraServices.length})
+                  </span>
+                  {editExtraServices.map(extra => (
+                    <div key={extra.id} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">{extra.title} — {extra.duration_minutes}min</span>
+                      <span className="text-muted-foreground text-xs">
+                        {extra.unit_price_cents === 0 ? 'Incluso' : `R$ ${(extra.unit_price_cents / 100).toFixed(2)}`}
+                      </span>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Para editar serviços adicionais, use a Comanda.
+                  </p>
+                </div>
+              )}
               <div>
                 <Label className="text-sm font-medium">Profissional</Label>
                 <Select value={editForm.staff_id} onValueChange={(v) => setEditForm((f) => ({ ...f, staff_id: v }))}>
@@ -796,7 +827,8 @@ export default function Bookings() {
                       const svc = editServices.find((s) => s.id === f.service_id);
                       if (svc && newTime) {
                         const [h, m] = newTime.split(":").map(Number);
-                        const endMins = h * 60 + m + (svc.duration_minutes || 30);
+                        const extraDuration = editExtraServices.reduce((sum, e) => sum + e.duration_minutes, 0);
+                        const endMins = h * 60 + m + (svc.duration_minutes || 30) + extraDuration;
                         const endH = Math.floor(endMins / 60).toString().padStart(2, "0");
                         const endM = (endMins % 60).toString().padStart(2, "0");
                         return { ...f, time: newTime, end_time: `${endH}:${endM}` };
