@@ -192,8 +192,8 @@ export function ScheduleGrid({
   }
 
   // Detect overlapping bookings and assign columns (Google Calendar style)
-  function assignColumns(bookingList: BookingData[]): Map<string, { col: number; totalCols: number }> {
-    const result = new Map<string, { col: number; totalCols: number }>();
+  function assignColumns(bookingList: BookingData[]): Map<string, { col: number; totalCols: number; hasOverlap: boolean }> {
+    const result = new Map<string, { col: number; totalCols: number; hasOverlap: boolean }>();
 
     const sorted = [...bookingList].sort((a, b) => {
       const aStart = timeToMinutes(formatInTimeZone(new Date(a.starts_at), TZ, "HH:mm"));
@@ -222,8 +222,9 @@ export function ScheduleGrid({
 
     for (const group of groups) {
       const totalCols = group.length;
+      const hasOverlap = totalCols > 1;
       group.forEach((booking, idx) => {
-        result.set(booking.id, { col: idx, totalCols });
+        result.set(booking.id, { col: idx, totalCols, hasOverlap });
       });
     }
 
@@ -300,7 +301,7 @@ export function ScheduleGrid({
         {/* Overlay: absolutely positioned booking cards */}
         {staffBookings.map((booking) => {
           const { top, height } = getBookingPosition(booking);
-          const colInfo = columnAssignments.get(booking.id) || { col: 0, totalCols: 1 };
+          const colInfo = columnAssignments.get(booking.id) || { col: 0, totalCols: 1, hasOverlap: false };
           const widthPercent = 100 / colInfo.totalCols;
           const leftPercent = colInfo.col * widthPercent;
 
@@ -320,6 +321,7 @@ export function ScheduleGrid({
                 booking={booking}
                 onClick={() => onBookingClick(booking)}
                 isRecurring={recurringCustomerIds?.has(booking.customer_id)}
+                hasOverlap={colInfo.hasOverlap}
               />
             </div>
           );

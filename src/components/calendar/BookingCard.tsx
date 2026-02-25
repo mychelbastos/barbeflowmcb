@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { AlertTriangle } from "lucide-react";
 import type { BookingData } from "@/hooks/useBookingsByDate";
 
 const TZ = "America/Bahia";
@@ -15,9 +16,10 @@ interface BookingCardProps {
   booking: BookingData;
   onClick: () => void;
   isRecurring?: boolean;
+  hasOverlap?: boolean;
 }
 
-export function BookingCard({ booking, onClick, isRecurring }: BookingCardProps) {
+export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: BookingCardProps) {
   const startTime = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
   const endTime = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
   const style = statusStyles[booking.status] || statusStyles.confirmed;
@@ -25,9 +27,12 @@ export function BookingCard({ booking, onClick, isRecurring }: BookingCardProps)
   return (
     <button
       onClick={onClick}
-      className={`w-full h-full rounded-lg px-2 py-1 text-left transition-all hover:brightness-110 cursor-pointer flex flex-col justify-center gap-0 overflow-hidden ${style}`}
+      className={`w-full h-full rounded-lg px-2 py-1 text-left transition-all hover:brightness-110 cursor-pointer flex flex-col justify-center gap-0 overflow-hidden ${style} ${hasOverlap ? 'ring-1 ring-amber-500/50 ring-inset' : ''}`}
     >
       <div className="flex items-center gap-1 min-w-0">
+        {hasOverlap && (
+          <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+        )}
         <p className="text-[11px] font-semibold text-foreground truncate leading-tight">
           {booking.customer?.name || "Cliente"}
         </p>
