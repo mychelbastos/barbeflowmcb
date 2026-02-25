@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { BookingDetailsModal } from "@/components/modals/BookingDetailsModal";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -56,6 +57,8 @@ import {
   CreditCard,
   Banknote,
   AlertCircle,
+  AlertTriangle,
+  Loader2,
   Ban,
   MessageCircle,
 } from "lucide-react";
@@ -358,7 +361,7 @@ export default function Bookings() {
     setEditMode(true);
   };
 
-  const saveBookingEdit = async () => {
+  const saveBookingEdit = async (forceOverlap = false) => {
     if (!selectedBooking || !currentTenant) return;
     setEditLoading(true);
     try {
@@ -371,9 +374,9 @@ export default function Bookings() {
         return;
       }
 
-      // Check for conflicts
+      // Check for conflicts (skip if force override)
       const staffId = editForm.staff_id === "none" ? null : editForm.staff_id;
-      if (staffId) {
+      if (staffId && !forceOverlap) {
         const { data: conflicts } = await supabase
           .from("bookings")
           .select("id, starts_at, ends_at, customer:customers(name)")
@@ -403,6 +406,7 @@ export default function Bookings() {
       if (error) throw error;
 
       toast({ title: "Sucesso", description: "Agendamento atualizado" });
+      setConflictWarning({ open: false, conflicts: [] });
       setShowDetails(false);
       setEditMode(false);
       refetch();
@@ -786,7 +790,7 @@ export default function Bookings() {
                 </div>
               </div>
               <div className="flex gap-2 pt-2 border-t border-border">
-                <Button size="sm" onClick={saveBookingEdit} disabled={editLoading}>
+                <Button size="sm" onClick={() => saveBookingEdit()} disabled={editLoading}>
                   {editLoading ? "Salvando..." : "Salvar"}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setEditMode(false)} disabled={editLoading}>
@@ -803,12 +807,12 @@ export default function Bookings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
               Conflito de horário
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
-                <p>Não é possível salvar. Os seguintes agendamentos ocupam este horário:</p>
+                <p>Os seguintes agendamentos ocupam este horário:</p>
                 <ul className="list-disc pl-4 space-y-1">
                   {conflictWarning.conflicts.map((c) => (
                     <li key={c.id} className="text-sm">
@@ -818,11 +822,21 @@ export default function Bookings() {
                     </li>
                   ))}
                 </ul>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Ao forçar o encaixe, ambos os agendamentos ficarão visíveis na grade lado a lado.
+                </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Entendi</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={() => saveBookingEdit(true)}
+            >
+              {editLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Forçar encaixe
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
