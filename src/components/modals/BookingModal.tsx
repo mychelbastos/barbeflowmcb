@@ -109,6 +109,7 @@ export function BookingModal() {
   const [serviceBenefitsMap, setServiceBenefitsMap] = useState<Map<string, DetectedBenefit>>(new Map());
   const [scheduleWarning, setScheduleWarning] = useState<string | null>(null);
   const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
+  const classifiedSlotsRef = useRef<Array<AvailableSlot & { hasConflict: boolean }>>([]);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -417,14 +418,16 @@ export function BookingModal() {
     if (!currentTenant || !watchedDate) return;
     setLoadingSlots(true);
     try {
+      // For admin bookings, fetch ALL slots using minimum slot_duration
+      // so that partial-availability slots are returned and classified locally
+      const slotDuration = (currentTenant as any)?.settings?.slot_duration || 15;
       const body: any = {
         tenant_id: currentTenant.id,
         date: watchedDate,
         allow_past: true,
+        custom_duration: effectiveDuration || slotDuration, // Use slotDuration to get ALL slots
       };
-      if (watchedServiceId) body.service_id = watchedServiceId;
       if (watchedStaffId && watchedStaffId !== "none") body.staff_id = watchedStaffId;
-      if (effectiveDuration) body.custom_duration = effectiveDuration;
 
       const { data, error } = await supabase.functions.invoke('get-available-slots', { body });
       if (error) throw error;
@@ -593,6 +596,10 @@ export function BookingModal() {
       const createdIds: string[] = [];
       for (let i = 0; i < allBookings.length; i++) {
         const b = allBookings[i];
+        // Determine if this slot has a conflict (for admin overlap override)
+        const selectedSlot = classifiedSlotsRef.current?.find(s => s.time === data.time);
+        const hasConflict = selectedSlot?.hasConflict || false;
+
         const body: any = {
           tenant_id: currentTenant.id,
           service_id: b.service_id,
@@ -604,6 +611,7 @@ export function BookingModal() {
           notes: i === 0 ? (data.notes || undefined) : undefined,
           created_via: 'admin',
           payment_method: 'onsite',
+          allow_overlap: hasConflict,
         };
 
         // Only apply package/subscription benefit to the main service
@@ -1141,6 +1149,9 @@ export function BookingModal() {
 
                   return { ...slot, hasConflict };
                 });
+
+                // Store in ref so handleSubmit can access conflict status
+                classifiedSlotsRef.current = classifiedSlots;
 
                 return (
                   <FormItem>
