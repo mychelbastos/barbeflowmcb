@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, XCircle, Trash2, AlertTriangle, DollarSign, RotateCcw, MoreVertical, Search } from "lucide-react";
+import { Loader2, Package, CheckCircle, Clock, Pencil, Save, X, XCircle, Trash2, AlertTriangle, DollarSign, RotateCcw, MoreVertical, Search, Plus } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -72,6 +72,14 @@ export function PackageCustomersList() {
   const [cancelWithRefund, setCancelWithRefund] = useState(true);
   const [cancelling, setCancelling] = useState(false);
 
+  // Assign package
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [assignCustomerId, setAssignCustomerId] = useState('');
+  const [assignPackageId, setAssignPackageId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [customers, setCustomers] = useState<{id: string; name: string; phone: string}[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+
   useEffect(() => {
     if (currentTenant) loadData();
   }, [currentTenant]);
@@ -80,7 +88,7 @@ export function PackageCustomersList() {
     if (!currentTenant) return;
     try {
       setLoading(true);
-      const [cpRes, pkgRes] = await Promise.all([
+      const [cpRes, pkgRes, custRes] = await Promise.all([
         supabase
           .from('customer_packages')
           .select('*, customer:customers(name, phone, email), package:service_packages(name, price_cents)')
@@ -88,8 +96,13 @@ export function PackageCustomersList() {
           .order('created_at', { ascending: false }),
         supabase
           .from('service_packages')
-          .select('id, name')
+          .select('id, name, active, price_cents')
           .eq('tenant_id', currentTenant.id),
+        supabase
+          .from('customers')
+          .select('id, name, phone')
+          .eq('tenant_id', currentTenant.id)
+          .order('name'),
       ]);
 
       const cps = cpRes.data || [];
@@ -108,6 +121,7 @@ export function PackageCustomersList() {
 
       setCustomerPackages(cps);
       setPackages(pkgRes.data || []);
+      setCustomers(custRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -193,6 +207,60 @@ export function PackageCustomersList() {
     }
   };
 
+  const handleAssignPackage = async () => {
+    if (!assignCustomerId || !assignPackageId || !currentTenant) return;
+    setAssigning(true);
+    try {
+      const pkg = packages.find((p: any) => p.id === assignPackageId);
+      if (!pkg) return;
+
+      const { data: pkgSvcs } = await supabase
+        .from('package_services')
+        .select('service_id, sessions_count')
+        .eq('package_id', pkg.id);
+
+      const totalSessions = (pkgSvcs || []).reduce((sum: number, s: any) => sum + s.sessions_count, 0);
+
+      const { data: newCp, error } = await supabase
+        .from('customer_packages')
+        .insert({
+          customer_id: assignCustomerId,
+          package_id: pkg.id,
+          tenant_id: currentTenant.id,
+          sessions_total: totalSessions,
+          sessions_used: 0,
+          status: 'active',
+          payment_status: 'confirmed',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (newCp && pkgSvcs && pkgSvcs.length > 0) {
+        await supabase.from('customer_package_services').insert(
+          pkgSvcs.map((ps: any) => ({
+            customer_package_id: newCp.id,
+            service_id: ps.service_id,
+            sessions_total: ps.sessions_count,
+            sessions_used: 0,
+          }))
+        );
+      }
+
+      toast({ title: 'Pacote atribuído com sucesso' });
+      setShowAssignDialog(false);
+      setAssignCustomerId('');
+      setAssignPackageId('');
+      setCustomerSearch('');
+      loadData();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const statusPriority: Record<string, number> = { active: 0, pending_payment: 1, completed: 2, cancelled: 3 };
 
   const filtered = customerPackages
@@ -244,8 +312,11 @@ export function PackageCustomersList() {
             </SelectContent>
           </Select>
           {filtered.length > 0 && (
-            <span className="text-xs text-muted-foreground ml-auto">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-muted-foreground">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
           )}
+          <Button size="sm" onClick={() => setShowAssignDialog(true)} className="ml-auto">
+            <Plus className="h-4 w-4 mr-1" /> Atribuir pacote
+          </Button>
         </div>
       </div>
 
@@ -415,6 +486,69 @@ export function PackageCustomersList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Assign Package Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={(open) => {
+        setShowAssignDialog(open);
+        if (!open) { setAssignCustomerId(''); setAssignPackageId(''); setCustomerSearch(''); }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Atribuir pacote a cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Pacote *</Label>
+              <Select value={assignPackageId} onValueChange={setAssignPackageId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o pacote" /></SelectTrigger>
+                <SelectContent>
+                  {packages.filter((p: any) => p.active !== false).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} — R$ {((p.price_cents || 0) / 100).toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Cliente *</Label>
+              <Input
+                placeholder="Buscar por nome ou telefone..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+              />
+              {customerSearch.length >= 2 && (
+                <div className="max-h-40 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                  {customers
+                    .filter(c =>
+                      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                      c.phone.includes(customerSearch)
+                    )
+                    .slice(0, 10)
+                    .map(c => (
+                      <button
+                        key={c.id}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${assignCustomerId === c.id ? 'bg-primary/10 font-medium' : ''}`}
+                        onClick={() => { setAssignCustomerId(c.id); setCustomerSearch(c.name); }}
+                      >
+                        <span className="font-medium">{c.name}</span>
+                        <span className="text-muted-foreground ml-2">{c.phone}</span>
+                      </button>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>Cancelar</Button>
+            <Button onClick={handleAssignPackage} disabled={!assignCustomerId || !assignPackageId || assigning}>
+              {assigning ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Atribuir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

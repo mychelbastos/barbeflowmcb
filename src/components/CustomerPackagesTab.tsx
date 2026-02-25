@@ -174,7 +174,7 @@ export function CustomerPackagesTab({ customerId }: CustomerPackagesTabProps) {
           sessions_total: totalSessions,
           sessions_used: 0,
           status: "active",
-          payment_status: "pending",
+          payment_status: "confirmed",
         })
         .select()
         .single();
