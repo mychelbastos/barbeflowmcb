@@ -327,6 +327,7 @@ export type Database = {
           occurred_at: string
           payment_id: string | null
           payment_method: string | null
+          product_sale_id: string | null
           session_id: string | null
           source: string | null
           staff_id: string | null
@@ -343,6 +344,7 @@ export type Database = {
           occurred_at?: string
           payment_id?: string | null
           payment_method?: string | null
+          product_sale_id?: string | null
           session_id?: string | null
           source?: string | null
           staff_id?: string | null
@@ -359,6 +361,7 @@ export type Database = {
           occurred_at?: string
           payment_id?: string | null
           payment_method?: string | null
+          product_sale_id?: string | null
           session_id?: string | null
           source?: string | null
           staff_id?: string | null
@@ -385,6 +388,13 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_entries_product_sale_id_fkey"
+            columns: ["product_sale_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
             referencedColumns: ["id"]
           },
           {
