@@ -9,10 +9,12 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { isDashboardDomain, isPublicDomain, isPreviewOrLocal, isCustomDomain } from "@/lib/hostname";
 
-// Public pages — loaded eagerly (these are what public visitors need)
-import Landing from "./pages/Landing";
+// Public page — loaded eagerly (main public page, must load instantly)
 import BookingPublic from "./pages/BookingPublic";
-import NotFound from "./pages/NotFound";
+
+// Public pages — lazy loaded (landing/404 are secondary)
+const Landing = lazy(() => import("./pages/Landing"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Auth pages — small, lazy loaded
 const Login = lazy(() => import("./pages/Login"));
