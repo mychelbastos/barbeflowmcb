@@ -1,13 +1,17 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Banknote, CreditCard, Smartphone, Plus, Trash2, Receipt, Loader2, Gift,
+  Banknote, CreditCard, Smartphone, Plus, Trash2, Receipt, Loader2, Gift, Percent, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -299,11 +303,90 @@ export function ComandaPaymentSection({
         </div>
       )}
 
+      {/* Bulk discount */}
+      {totalUnpaid > 0 && <BulkDiscountButton items={items} onApplied={onPaymentRecorded} />}
+
       {/* Submit */}
       <Button className="w-full" onClick={handleSubmit} disabled={saving}>
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
         Registrar Pagamento {totalReceived > 0 ? `(${fmt(totalReceived)})` : ""}
       </Button>
     </div>
+  );
+}
+
+/* ── Bulk Discount Button (inline component) ── */
+function BulkDiscountButton({ items, onApplied }: { items: BookingItem[]; onApplied: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [percent, setPercent] = useState("");
+
+  const unpaidItems = items.filter(i => i.paid_status === "unpaid");
+  const totalDiscount = items.reduce((s, i) => s + (i.discount_cents || 0), 0);
+  const fmt = (cents: number) => `R$ ${(cents / 100).toFixed(2)}`;
+
+  const apply = async () => {
+    const pct = Math.min(100, Math.max(0, parseFloat(percent || "0")));
+    if (pct <= 0) return;
+    await Promise.all(
+      unpaidItems.map(item =>
+        supabase.from("booking_items").update({
+          discount_cents: Math.round(item.total_price_cents * pct / 100),
+        }).eq("id", item.id)
+      )
+    );
+    toast.success(`Desconto de ${pct}% aplicado em ${unpaidItems.length} item(ns)`);
+    setOpen(false);
+    setPercent("");
+    onApplied();
+  };
+
+  const removeAll = async () => {
+    await Promise.all(
+      items.filter(i => (i.discount_cents || 0) > 0).map(item =>
+        supabase.from("booking_items").update({ discount_cents: 0 }).eq("id", item.id)
+      )
+    );
+    toast.success("Descontos removidos");
+    onApplied();
+  };
+
+  if (totalDiscount > 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-1.5 h-9 px-3 rounded-md border border-border bg-muted/50 text-sm text-muted-foreground">
+          <Percent className="h-3.5 w-3.5" />
+          <span>Desconto aplicado: <strong className="text-foreground">−{fmt(totalDiscount)}</strong></span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={removeAll}>
+          <X className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full h-9 text-xs">
+          <Percent className="h-3.5 w-3.5 mr-1.5" /> Aplicar desconto
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-3" align="center">
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-foreground">Desconto % em todos os itens pendentes</p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number" min="0" max="100"
+              placeholder="Ex: 10"
+              value={percent}
+              onChange={(e) => setPercent(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">%</span>
+          </div>
+          <Button size="sm" className="w-full h-7 text-xs" onClick={apply}>Aplicar</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

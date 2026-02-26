@@ -193,35 +193,6 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
           <ShoppingBag className="h-4 w-4" /> Itens da Comanda
         </h4>
         <div className="flex items-center gap-1.5">
-          {!comandaClosed && hasUnpaidItems && (
-            <Popover open={bulkDiscountOpen} onOpenChange={setBulkDiscountOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 text-xs">
-                  <Percent className="h-3 w-3 mr-1" /> Desconto geral
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-3" align="end">
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-foreground">Desconto % em todos os itens pendentes</p>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      placeholder="Ex: 10"
-                      value={bulkDiscountPercent}
-                      onChange={(e) => setBulkDiscountPercent(e.target.value)}
-                      className="h-8 text-sm"
-                    />
-                    <span className="text-xs text-muted-foreground">%</span>
-                  </div>
-                  <Button size="sm" className="w-full h-7 text-xs" onClick={applyBulkDiscount}>
-                    Aplicar
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
           {!comandaClosed && (
             <Popover open={searchOpen} onOpenChange={setSearchOpen}>
               <PopoverTrigger asChild>
