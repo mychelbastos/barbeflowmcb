@@ -124,7 +124,6 @@ export type Database = {
         Row: {
           booking_id: string
           created_at: string
-          discount_cents: number
           id: string
           paid_at: string | null
           paid_status: string
@@ -143,7 +142,6 @@ export type Database = {
         Insert: {
           booking_id: string
           created_at?: string
-          discount_cents?: number
           id?: string
           paid_at?: string | null
           paid_status?: string
@@ -162,7 +160,6 @@ export type Database = {
         Update: {
           booking_id?: string
           created_at?: string
-          discount_cents?: number
           id?: string
           paid_at?: string | null
           paid_status?: string

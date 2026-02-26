@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Banknote, CreditCard, Smartphone, Plus, Trash2, Receipt, Loader2, Gift,
+  Banknote, CreditCard, Smartphone, Plus, Trash2, Receipt, Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,7 +18,6 @@ const METHODS = [
   { value: "pix", label: "PIX", icon: Smartphone },
   { value: "credit_card", label: "Cartão Crédito", icon: CreditCard },
   { value: "debit_card", label: "Cartão Débito", icon: CreditCard },
-  { value: "courtesy", label: "Cortesia", icon: Gift },
 ];
 
 interface PaymentLine {

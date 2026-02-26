@@ -88,7 +88,6 @@ export function BookingDetailsModal({
       quantity: d.quantity,
       unit_price_cents: d.unit_price_cents,
       total_price_cents: d.total_price_cents,
-      discount_cents: d.discount_cents || 0,
       staff_id: d.staff_id,
       staff_name: d.staff?.name || null,
       paid_status: d.paid_status,

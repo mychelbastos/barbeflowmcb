@@ -1,17 +1,13 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Banknote, CreditCard, Smartphone, Plus, Trash2, Receipt, Loader2, Gift, Percent, X,
+  Banknote, CreditCard, Smartphone, Plus, Trash2, Receipt, Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,7 +18,6 @@ const METHODS = [
   { value: "pix", label: "PIX", icon: Smartphone },
   { value: "credit_card", label: "Cartão Crédito", icon: CreditCard },
   { value: "debit_card", label: "Cartão Débito", icon: CreditCard },
-  { value: "courtesy", label: "Cortesia", icon: Gift },
 ];
 
 interface PaymentLine {
@@ -52,15 +47,13 @@ export function ComandaPaymentSection({
   const [keepChangeAsCredit, setKeepChangeAsCredit] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const effectivePrice = (i: BookingItem) => i.total_price_cents - (i.discount_cents || 0);
-
   const totalUnpaid = useMemo(() =>
-    items.filter(i => i.paid_status === "unpaid").reduce((sum, i) => sum + effectivePrice(i), 0),
+    items.filter(i => i.paid_status === "unpaid").reduce((sum, i) => sum + i.total_price_cents, 0),
     [items]
   );
 
   const totalPaid = useMemo(() =>
-    items.filter(i => i.paid_status !== "unpaid").reduce((sum, i) => sum + effectivePrice(i), 0),
+    items.filter(i => i.paid_status !== "unpaid").reduce((sum, i) => sum + i.total_price_cents, 0),
     [items]
   );
 
@@ -71,13 +64,7 @@ export function ComandaPaymentSection({
     [lines]
   );
 
-  const totalCourtesy = useMemo(() =>
-    lines.filter(l => l.method === "courtesy").reduce((sum, l) => sum + Math.round(parseFloat(l.amount || "0") * 100), 0),
-    [lines]
-  );
-
-  const totalRealMoney = totalReceived - totalCourtesy;
-  const change = Math.max(0, totalRealMoney - Math.max(0, totalToCharge - totalCourtesy));
+  const change = Math.max(0, totalReceived - totalToCharge);
   const remaining = Math.max(0, totalToCharge - totalReceived);
 
   const addLine = () => {
@@ -91,15 +78,6 @@ export function ComandaPaymentSection({
 
   const updateLine = (id: string, field: keyof PaymentLine, value: string) => {
     setLines(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
-  };
-
-  const fillCourtesy = (lineId: string) => {
-    // Auto-fill courtesy with total unpaid amount
-    setLines(prev => prev.map(l =>
-      l.id === lineId && l.method === "courtesy"
-        ? { ...l, amount: (totalToCharge / 100).toFixed(2) }
-        : l
-    ));
   };
 
   const handleSubmit = async () => {
@@ -121,6 +99,7 @@ export function ComandaPaymentSection({
         .limit(1)
         .maybeSingle();
 
+      // No extra_items — extras are already in booking_items
       const { data: result, error } = await supabase.rpc("record_local_payment_for_booking", {
         p_booking_id: bookingId,
         p_tenant_id: tenantId,
@@ -130,7 +109,7 @@ export function ComandaPaymentSection({
         p_keep_change_as_credit: keepChangeAsCredit,
         p_cash_session_id: openSession?.id || null,
         p_staff_id: staffId || null,
-        p_extra_items: [],
+        p_extra_items: [], // extras already saved in booking_items
       });
 
       if (error) throw error;
@@ -145,14 +124,8 @@ export function ComandaPaymentSection({
       }
 
       let msg = `Pagamento registrado`;
-      if (res.total_courtesy > 0) {
-        msg = `Cortesia de R$ ${(res.total_courtesy / 100).toFixed(2)} registrada`;
-      }
-      if (res.total_received > 0 && res.total_received > res.total_courtesy) {
-        msg = `Pagamento de R$ ${((res.total_received - (res.total_courtesy || 0)) / 100).toFixed(2)} registrado`;
-        if (res.total_courtesy > 0) {
-          msg += ` + Cortesia R$ ${(res.total_courtesy / 100).toFixed(2)}`;
-        }
+      if (res.total_received > 0) {
+        msg = `Pagamento de R$ ${(res.total_received / 100).toFixed(2)} registrado`;
       }
       if (res.change > 0) {
         msg += res.kept_as_credit
@@ -219,60 +192,38 @@ export function ComandaPaymentSection({
       {/* Payment lines */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Formas de pagamento</Label>
-        {lines.map((line) => {
-          const methodCfg = METHODS.find(m => m.value === line.method);
-          const isCourtesy = line.method === "courtesy";
-
-          return (
-            <div key={line.id} className={`flex items-center gap-2 ${isCourtesy ? "bg-purple-500/5 rounded-lg p-1.5" : ""}`}>
-              <Select value={line.method} onValueChange={(v) => {
-                updateLine(line.id, "method", v);
-                if (v === "courtesy") {
-                  fillCourtesy(line.id);
-                }
-              }}>
-                <SelectTrigger className={`w-36 h-9 text-xs ${isCourtesy ? "border-purple-500/30" : ""}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {METHODS.map(m => (
-                    <SelectItem key={m.value} value={m.value}>
-                      <span className={`flex items-center gap-1.5 ${m.value === "courtesy" ? "text-purple-500" : ""}`}>
-                        <m.icon className="h-3 w-3" /> {m.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <CurrencyInput
-                value={line.amount}
-                onChange={(v) => updateLine(line.id, "amount", v)}
-                className={`flex-1 h-9 ${isCourtesy ? "border-purple-500/30" : ""}`}
-              />
-              {lines.length > 1 && (
-                <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => removeLine(line.id)}>
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              )}
-            </div>
-          );
-        })}
+        {lines.map((line) => (
+          <div key={line.id} className="flex items-center gap-2">
+            <Select value={line.method} onValueChange={(v) => updateLine(line.id, "method", v)}>
+              <SelectTrigger className="w-36 h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {METHODS.map(m => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <span className="flex items-center gap-1.5">
+                      <m.icon className="h-3 w-3" /> {m.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <CurrencyInput
+              value={line.amount}
+              onChange={(v) => updateLine(line.id, "amount", v)}
+              className="flex-1 h-9"
+            />
+            {lines.length > 1 && (
+              <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => removeLine(line.id)}>
+                <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            )}
+          </div>
+        ))}
         <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={addLine}>
           <Plus className="h-3 w-3 mr-1" /> Adicionar forma
         </Button>
       </div>
-
-      {/* Courtesy info */}
-      {totalCourtesy > 0 && (
-        <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-          <p className="text-sm font-medium text-purple-500 flex items-center gap-1.5">
-            <Gift className="h-3.5 w-3.5" /> Cortesia: {fmt(totalCourtesy)}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            O valor será registrado no financeiro mas não conta como receita real
-          </p>
-        </div>
-      )}
 
       {/* Change / remaining */}
       {totalReceived > 0 && (
@@ -303,90 +254,11 @@ export function ComandaPaymentSection({
         </div>
       )}
 
-      {/* Bulk discount */}
-      {totalUnpaid > 0 && <BulkDiscountButton items={items} onApplied={onPaymentRecorded} />}
-
       {/* Submit */}
       <Button className="w-full" onClick={handleSubmit} disabled={saving}>
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
         Registrar Pagamento {totalReceived > 0 ? `(${fmt(totalReceived)})` : ""}
       </Button>
     </div>
-  );
-}
-
-/* ── Bulk Discount Button (inline component) ── */
-function BulkDiscountButton({ items, onApplied }: { items: BookingItem[]; onApplied: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [percent, setPercent] = useState("");
-
-  const unpaidItems = items.filter(i => i.paid_status === "unpaid");
-  const totalDiscount = items.reduce((s, i) => s + (i.discount_cents || 0), 0);
-  const fmt = (cents: number) => `R$ ${(cents / 100).toFixed(2)}`;
-
-  const apply = async () => {
-    const pct = Math.min(100, Math.max(0, parseFloat(percent || "0")));
-    if (pct <= 0) return;
-    await Promise.all(
-      unpaidItems.map(item =>
-        supabase.from("booking_items").update({
-          discount_cents: Math.round(item.total_price_cents * pct / 100),
-        }).eq("id", item.id)
-      )
-    );
-    toast.success(`Desconto de ${pct}% aplicado em ${unpaidItems.length} item(ns)`);
-    setOpen(false);
-    setPercent("");
-    onApplied();
-  };
-
-  const removeAll = async () => {
-    await Promise.all(
-      items.filter(i => (i.discount_cents || 0) > 0).map(item =>
-        supabase.from("booking_items").update({ discount_cents: 0 }).eq("id", item.id)
-      )
-    );
-    toast.success("Descontos removidos");
-    onApplied();
-  };
-
-  if (totalDiscount > 0) {
-    return (
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-1.5 h-9 px-3 rounded-md border border-border bg-muted/50 text-sm text-muted-foreground">
-          <Percent className="h-3.5 w-3.5" />
-          <span>Desconto aplicado: <strong className="text-foreground">−{fmt(totalDiscount)}</strong></span>
-        </div>
-        <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={removeAll}>
-          <X className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full h-9 text-xs">
-          <Percent className="h-3.5 w-3.5 mr-1.5" /> Aplicar desconto
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-3" align="center">
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-foreground">Desconto % em todos os itens pendentes</p>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number" min="0" max="100"
-              placeholder="Ex: 10"
-              value={percent}
-              onChange={(e) => setPercent(e.target.value)}
-              className="h-8 text-sm"
-            />
-            <span className="text-xs text-muted-foreground">%</span>
-          </div>
-          <Button size="sm" className="w-full h-7 text-xs" onClick={apply}>Aplicar</Button>
-        </div>
-      </PopoverContent>
-    </Popover>
   );
 }
