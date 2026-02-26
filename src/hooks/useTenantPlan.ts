@@ -9,6 +9,7 @@ export const PLAN_FEATURES = {
     whatsapp_chatbot: false,
     max_included_staff: 1,
     commission_rate: 0.025,
+    extra_staff_price: "R$ 14,90/mês",
   },
   ilimitado: {
     ai_image: true,
@@ -18,6 +19,7 @@ export const PLAN_FEATURES = {
     whatsapp_chatbot: true,
     max_included_staff: Infinity,
     commission_rate: 0.01,
+    extra_staff_price: null,
   },
 } as const;
 
