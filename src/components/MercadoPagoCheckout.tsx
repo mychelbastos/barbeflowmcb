@@ -729,6 +729,33 @@ export const MercadoPagoCheckout = ({
     );
   }
 
+  // PIX processing state - show skeleton while QR code is being generated
+  if (status === 'processing' && paymentMethod === 'pix') {
+    return (
+      <div className="flex flex-col items-center gap-4 py-8">
+        {/* Skeleton do QR Code */}
+        <div className="relative">
+          <div className="w-48 h-48 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+            <QrCode className="w-12 h-12 text-muted-foreground/30" />
+          </div>
+          {/* Overlay com spinner */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium text-foreground">Gerando QR Code PIX...</p>
+          <p className="text-xs text-muted-foreground">Aguarde um momento</p>
+        </div>
+        {/* Skeleton do código copia-e-cola */}
+        <div className="w-full max-w-sm space-y-2">
+          <div className="h-10 bg-muted rounded animate-pulse" />
+          <div className="h-9 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   // Card form state (card-form, ready, or processing with card method)
   if (status === 'card-form' || status === 'ready' || (status === 'processing' && paymentMethod === 'card')) {
     return (
