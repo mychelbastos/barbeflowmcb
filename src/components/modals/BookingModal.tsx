@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useTenant } from "@/hooks/useTenant";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,6 +136,13 @@ export function BookingModal() {
   const watchedUseCustomDuration = form.watch("use_custom_duration");
   const watchedCustomDuration = form.watch("custom_duration");
   const watchedExtraSlots = form.watch("extra_slots") || 0;
+  const watchedTime = form.watch("time");
+
+  const isPastBooking = useMemo(() => {
+    if (!watchedDate || !watchedTime) return false;
+    const selectedDateTime = new Date(`${watchedDate}T${watchedTime}:00`);
+    return selectedDateTime < new Date();
+  }, [watchedDate, watchedTime]);
 
   useEffect(() => {
     if (isOpen && currentTenant) {
@@ -1231,7 +1238,14 @@ export function BookingModal() {
                     ) : (
                       <div className="space-y-2">
                         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto p-1">
-                          {classifiedSlots.map((slot) => (
+                          {classifiedSlots.map((slot) => {
+                            const slotIsPast = (() => {
+                              if (!watchedDate) return false;
+                              const [sh, sm] = slot.time.split(':').map(Number);
+                              const slotDt = new Date(`${watchedDate}T${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}:00`);
+                              return slotDt < new Date();
+                            })();
+                            return (
                             <button
                               key={slot.time}
                               type="button"
@@ -1243,14 +1257,16 @@ export function BookingModal() {
                                     : "bg-primary text-primary-foreground border-primary"
                                   : slot.hasConflict
                                     ? "bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20"
-                                    : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
+                                    : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground",
+                                slotIsPast && field.value !== slot.time && "opacity-70 border-dashed"
                               )}
                               onClick={() => field.onChange(slot.time)}
                             >
                               <Clock className="h-3 w-3" />
                               {slot.time}
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
 
                         {/* Warning when a conflicting slot is selected */}
@@ -1301,6 +1317,16 @@ export function BookingModal() {
                 </FormItem>
               )}
             />
+
+            {/* Retroactive booking warning */}
+            {isPastBooking && (
+              <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg text-amber-800 dark:text-amber-400 text-sm">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span>
+                  <strong>Agendamento retroativo:</strong> Este horário já passou. O agendamento será criado normalmente para fins de registro.
+                </span>
+              </div>
+            )}
 
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
               <Button 
