@@ -57,6 +57,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { AiTextButton, AiGenerateImageButton } from "@/components/AiContentButtons";
 import { OrderBumpConfig } from "@/components/OrderBumpConfig";
+import { PlanGate } from "@/components/PlanGate";
 import {
   Form,
   FormControl,
@@ -782,10 +783,12 @@ export default function Services() {
               {/* Order Bump Config — only show when editing */}
               {editingService && currentTenant && (
                 <div className="border-t border-border pt-4">
-                  <OrderBumpConfig
-                    tenantId={currentTenant.id}
-                    serviceId={editingService.id}
-                  />
+                  <PlanGate feature="order_bump" featureLabel="Vitrine Inteligente">
+                    <OrderBumpConfig
+                      tenantId={currentTenant.id}
+                      serviceId={editingService.id}
+                    />
+                  </PlanGate>
                 </div>
               )}
 

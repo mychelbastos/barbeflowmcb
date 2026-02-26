@@ -795,16 +795,17 @@ const Landing = () => {
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-            {/* Essencial */}
+          <div className="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto">
+            {/* Profissional */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.2 }}
               className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
             >
-              <p className="text-lg font-semibold text-zinc-100 mb-3">Essencial</p>
+              <p className="text-lg font-semibold text-zinc-100 mb-3">Profissional</p>
+              <p className="text-xs text-zinc-500 mb-2">1 profissional incluso • Extras a R$ 14,90/mês</p>
               <div className="mb-1">
                 {billingCycle === 'annual' ? (
                   <>
@@ -816,50 +817,6 @@ const Landing = () => {
                 ) : (
                   <>
                     <span className="text-3xl font-bold text-zinc-100">R$ 59,90</span>
-                    <span className="text-zinc-400 text-sm">/mês</span>
-                  </>
-                )}
-              </div>
-              <ul className="space-y-2.5 my-6 flex-1">
-                {PLANS.essencial.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
-                    <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <div className="space-y-0.5 mb-4">
-                <p className="text-xs text-zinc-500">Taxa sobre transações: {PLANS.essencial.commission}</p>
-                <p className="text-[11px] text-zinc-600 leading-tight">{PLANS.essencial.commissionNote}</p>
-              </div>
-              <p className="text-xs text-zinc-500 font-medium mb-6">{PLANS.essencial.staffLabel}</p>
-              <a href={getDashboardUrl('/app/register')}>
-                <Button variant="outline" className="w-full rounded-xl h-12 border-zinc-700/50 text-zinc-100 hover:bg-zinc-800 font-semibold">
-                  Escolher
-                </Button>
-              </a>
-            </motion.div>
-
-            {/* Profissional */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="p-8 rounded-2xl bg-zinc-900/40 border border-zinc-800/40 flex flex-col"
-            >
-              <p className="text-lg font-semibold text-zinc-100 mb-3">Profissional</p>
-              <div className="mb-1">
-                {billingCycle === 'annual' ? (
-                  <>
-                    <span className="text-sm text-zinc-500 line-through">R$ 89,90/mês</span>{" "}
-                    <span className="text-3xl font-bold text-zinc-100">R$ 71,90</span>
-                    <span className="text-zinc-400 text-sm">/mês</span>
-                    <p className="text-xs text-zinc-500 mt-1">Cobrado R$ 862,80/ano</p>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-3xl font-bold text-zinc-100">R$ 89,90</span>
                     <span className="text-zinc-400 text-sm">/mês</span>
                   </>
                 )}

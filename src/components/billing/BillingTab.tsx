@@ -44,7 +44,7 @@ import {
 
 type PlanKey = "profissional" | "ilimitado";
 
-const PLAN_ORDER: Record<string, number> = { essencial: 0, profissional: 1, ilimitado: 2 };
+const PLAN_ORDER: Record<string, number> = { profissional: 1, ilimitado: 2 };
 
 export function BillingTab() {
   const { subscription, loading, hasActiveSubscription, isTrialing, isPastDue, needsSubscription, checkSubscription, planName } = useSubscription();
@@ -452,11 +452,11 @@ export function BillingTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Essencial */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Profissional */}
         <Card className="relative">
           <CardHeader>
-            <CardTitle className="text-lg">Essencial</CardTitle>
+            <CardTitle className="text-lg">Profissional</CardTitle>
             <div className="mt-2">
               {isYearly ? (
                 <>
@@ -468,58 +468,6 @@ export function BillingTab() {
               ) : (
                 <>
                   <span className="text-3xl font-bold">R$ 59,90</span>
-                  <span className="text-muted-foreground text-sm">/mês</span>
-                </>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-2">
-              {PLANS.essencial.features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">Taxa sobre transações: {PLANS.essencial.commission}</p>
-              <p className="text-[11px] text-muted-foreground/60 leading-tight">{PLANS.essencial.commissionNote}</p>
-            </div>
-            <p className="text-xs text-muted-foreground font-medium">{PLANS.essencial.staffLabel}</p>
-            <Button
-              onClick={() => handleSubscribe("essencial")}
-              disabled={!!checkoutLoading}
-              variant="outline"
-              className="w-full"
-            >
-              {checkoutLoading === `essencial-${billingInterval}` && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Começar trial
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Profissional */}
-        <Card className="relative border-primary/30">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <Badge className="bg-primary text-primary-foreground">
-              <Star className="h-3 w-3 mr-1" />
-              Recomendado
-            </Badge>
-          </div>
-          <CardHeader>
-            <CardTitle className="text-lg">Profissional</CardTitle>
-            <div className="mt-2">
-              {isYearly ? (
-                <>
-                  <span className="text-sm text-muted-foreground line-through">R$ 89,90/mês</span>{" "}
-                  <span className="text-3xl font-bold">R$ 71,90</span>
-                  <span className="text-muted-foreground text-sm">/mês</span>
-                  <p className="text-xs text-muted-foreground mt-1">Cobrado R$ 862,80/ano</p>
-                </>
-              ) : (
-                <>
-                  <span className="text-3xl font-bold">R$ 89,90</span>
                   <span className="text-muted-foreground text-sm">/mês</span>
                 </>
               )}
@@ -571,8 +519,14 @@ export function BillingTab() {
           </CardContent>
         </Card>
 
-        {/* Ilimitado */}
-        <Card className="relative">
+        {/* Ilimitado — Recomendado */}
+        <Card className="relative border-primary/30">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <Badge className="bg-primary text-primary-foreground">
+              <Star className="h-3 w-3 mr-1" />
+              Recomendado
+            </Badge>
+          </div>
           <CardHeader>
             <CardTitle className="text-lg">Ilimitado</CardTitle>
             <div className="mt-2">
