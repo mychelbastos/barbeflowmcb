@@ -8,6 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { Sparkles, Loader2, ImagePlus, Wand2 } from "lucide-react";
+import { PlanGate } from "@/components/PlanGate";
 
 interface AiTextButtonProps {
   table: string;
@@ -17,6 +18,14 @@ interface AiTextButtonProps {
 }
 
 export function AiTextButton({ table, currentName, currentDescription, onResult }: AiTextButtonProps) {
+  return (
+    <PlanGate feature="ai_text" featureLabel="Texto que Vende" inline>
+      <AiTextButtonInner table={table} currentName={currentName} currentDescription={currentDescription} onResult={onResult} />
+    </PlanGate>
+  );
+}
+
+function AiTextButtonInner({ table, currentName, currentDescription, onResult }: AiTextButtonProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
@@ -118,6 +127,14 @@ interface AiGenerateImageButtonProps {
 }
 
 export function AiGenerateImageButton({ table, itemId, hasImage, onGenerated }: AiGenerateImageButtonProps) {
+  return (
+    <PlanGate feature="ai_image" featureLabel="Foto Profissional" inline>
+      <AiGenerateImageButtonInner table={table} itemId={itemId} hasImage={hasImage} onGenerated={onGenerated} />
+    </PlanGate>
+  );
+}
+
+function AiGenerateImageButtonInner({ table, itemId, hasImage, onGenerated }: AiGenerateImageButtonProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 

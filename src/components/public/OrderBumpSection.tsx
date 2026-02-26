@@ -31,6 +31,23 @@ export function OrderBumpSection({ tenantId, serviceId, onSelectionChange }: Pro
     setSelectedIds(new Set());
     onSelectionChange([]);
 
+    // Check if tenant has order_bump feature (ilimitado or trialing)
+    const { data: subData } = await supabase
+      .from("stripe_subscriptions")
+      .select("plan_name, status")
+      .eq("tenant_id", tenantId)
+      .in("status", ["active", "trialing"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const hasOrderBump = subData?.plan_name === "ilimitado" || subData?.status === "trialing";
+    if (!hasOrderBump) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("service_order_bumps")
       .select("product_id, sort_order")

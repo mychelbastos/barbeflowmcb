@@ -11,7 +11,7 @@ import logoBranca from "@/assets/modoGESTOR_branca.png";
 import { trackEvent } from "@/utils/metaTracking";
 import { getFbp, getPersistedFbc } from "@/utils/metaTracking";
 
-type PlanKey = "essencial" | "profissional" | "ilimitado";
+type PlanKey = "profissional" | "ilimitado";
 
 interface PlanCardProps {
   planKey: PlanKey;
@@ -209,14 +209,14 @@ export default function Onboarding() {
         </div>
 
         {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PlanCard
-            planKey="essencial"
-            plan={PLANS.essencial}
+            planKey="profissional"
+            plan={PLANS.profissional}
             isYearly={isYearly}
             checkoutLoading={checkoutLoading}
             onSubscribe={handleSubscribe}
-            buttonLabel="Escolher"
+            buttonLabel="Começar grátis"
           />
           <PlanCard
             planKey="profissional"

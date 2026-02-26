@@ -30,9 +30,9 @@ const SHARED_FEATURES = [
 ];
 
 export const PLANS = {
-  essencial: {
-    product_id: "prod_Ty1Jvoc0qpDOUu",
-    name: "Essencial",
+  profissional: {
+    product_id: "prod_Ty1KYrBniQmXyi",
+    name: "Profissional",
     commission: "2,5%",
     commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
     staffLabel: "1 profissional incluso",
@@ -48,27 +48,6 @@ export const PLANS = {
     },
     features: SHARED_FEATURES,
     exclusiveFeatures: [] as string[],
-  },
-  profissional: {
-    product_id: "prod_Ty1KYrBniQmXyi",
-    name: "Profissional",
-    commission: "1,5%",
-    commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
-    staffLabel: "1 profissional incluso",
-    month: {
-      price_monthly: 8990,
-      display: "R$ 89,90/mês",
-    },
-    year: {
-      price_monthly: 7190,
-      price_yearly: 86280,
-      display: "R$ 71,90/mês",
-      display_yearly: "R$ 862,80/ano",
-    },
-    features: SHARED_FEATURES,
-    exclusiveFeatures: [
-      "Agendamento direto pelo WhatsApp (chatbot)",
-    ],
   },
   ilimitado: {
     product_id: "prod_U24ZNzDkfp2fU5",
@@ -88,8 +67,11 @@ export const PLANS = {
     },
     features: SHARED_FEATURES,
     exclusiveFeatures: [
-      "Agendamento direto pelo WhatsApp (chatbot)",
+      "Foto Profissional (IA de imagem)",
+      "Texto que Vende (IA de texto)",
+      "Vitrine Inteligente (order bump)",
       "Profissionais ilimitados sem custo adicional",
+      "Taxa de transação reduzida (1,0%)",
     ],
   },
 };
@@ -134,7 +116,7 @@ export function useSubscription() {
   }, [checkSubscription]);
 
   const status = subscription?.status;
-  const planName = (subscription?.plan_name || "essencial") as keyof typeof PLANS;
+  const planName = (subscription?.plan_name === "ilimitado" ? "ilimitado" : "profissional") as keyof typeof PLANS;
 
   const hasActiveSubscription =
     status === "active" || status === "trialing";
