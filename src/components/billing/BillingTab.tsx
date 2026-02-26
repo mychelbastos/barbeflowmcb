@@ -7,6 +7,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Check,
   Crown,
@@ -19,7 +37,14 @@ import {
   RefreshCw,
   Download,
   Infinity,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
+
+type PlanKey = "profissional" | "ilimitado";
+
+const PLAN_ORDER: Record<string, number> = { essencial: 0, profissional: 1, ilimitado: 2 };
 
 export function BillingTab() {
   const { subscription, loading, hasActiveSubscription, isTrialing, isPastDue, needsSubscription, checkSubscription, planName } = useSubscription();
@@ -32,6 +57,13 @@ export function BillingTab() {
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [additionalProfessionals, setAdditionalProfessionals] = useState(0);
+
+  // Change plan states
+  const [showPlanDialog, setShowPlanDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey | null>(null);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [currentBillingInterval, setCurrentBillingInterval] = useState<"month" | "year">("month");
 
   useEffect(() => {
     if (searchParams.get("success") === "true") {
@@ -48,9 +80,9 @@ export function BillingTab() {
   useEffect(() => {
     if (hasActiveSubscription || isPastDue) {
       loadInvoices();
-      loadAdditionalProfessionals();
+      loadSubscriptionDetails();
     }
-  }, [hasActiveSubscription, isPastDue]);
+  }, [hasActiveSubscription, isPastDue, currentTenant]);
 
   const loadInvoices = async () => {
     setInvoicesLoading(true);
@@ -68,17 +100,24 @@ export function BillingTab() {
     }
   };
 
-  const loadAdditionalProfessionals = async () => {
+  const loadSubscriptionDetails = async () => {
     if (!currentTenant) return;
     try {
       const { data } = await supabase
         .from("stripe_subscriptions")
-        .select("additional_professionals")
+        .select("additional_professionals, billing_interval")
         .eq("tenant_id", currentTenant.id)
+        .in("status", ["active", "trialing"])
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       setAdditionalProfessionals(data?.additional_professionals || 0);
+      if (data?.billing_interval) {
+        setCurrentBillingInterval(data.billing_interval as "month" | "year");
+        setBillingInterval(data.billing_interval as "month" | "year");
+      }
     } catch (err) {
-      console.error("Error loading additional professionals:", err);
+      console.error("Error loading subscription details:", err);
     }
   };
 
@@ -110,6 +149,38 @@ export function BillingTab() {
       setPortalLoading(false);
     }
   };
+
+  const handleSelectPlan = (plan: PlanKey) => {
+    setSelectedPlan(plan);
+    setShowConfirmDialog(true);
+  };
+
+  const handleChangePlan = async () => {
+    if (!selectedPlan) return;
+
+    try {
+      setChangingPlan(true);
+      const { data, error } = await supabase.functions.invoke("change-plan", {
+        body: { plan: selectedPlan, billing_interval: billingInterval },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: data?.message || "Plano alterado com sucesso!" });
+      setShowConfirmDialog(false);
+      setShowPlanDialog(false);
+      await checkSubscription();
+      await loadSubscriptionDetails();
+    } catch (err: any) {
+      toast({ title: "Erro ao alterar plano", description: err.message, variant: "destructive" });
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
+  const isUpgrade = selectedPlan ? (PLAN_ORDER[selectedPlan] || 0) > (PLAN_ORDER[planName] || 0) : false;
+  const isDowngrade = selectedPlan ? (PLAN_ORDER[selectedPlan] || 0) < (PLAN_ORDER[planName] || 0) : false;
+  const isIntervalChangeOnly = selectedPlan === planName && billingInterval !== currentBillingInterval;
 
   if (loading) {
     return (
@@ -146,7 +217,8 @@ export function BillingTab() {
 
   // Active/trialing
   if (hasActiveSubscription && subscription) {
-    const plan = PLANS[planName] || PLANS.essencial;
+    const plan = PLANS[planName] || PLANS.profissional;
+    const currentPrice = currentBillingInterval === "year" ? plan.year.price_monthly : plan.month.price_monthly;
     const endDate = subscription.subscription_end
       ? new Date(subscription.subscription_end).toLocaleDateString("pt-BR")
       : "";
@@ -174,14 +246,17 @@ export function BillingTab() {
                   }>
                     {isTrialing ? "Trial" : "Ativo"}
                   </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {currentBillingInterval === "year" ? "Anual" : "Mensal"}
+                  </Badge>
                 </div>
                 {isTrialing ? (
                   <p className="text-muted-foreground text-sm mt-1">
-                    Seu trial termina em {trialEndDate}. Após o trial, será cobrado R$ {(plan.month.price_monthly / 100).toFixed(2).replace(".", ",")}/mês.
+                    Seu trial termina em {trialEndDate}. Após o trial, será cobrado R$ {(currentPrice / 100).toFixed(2).replace(".", ",")}/mês.
                   </p>
                 ) : (
                   <p className="text-muted-foreground text-sm mt-1">
-                    Próxima cobrança: R$ {(plan.month.price_monthly / 100).toFixed(2).replace(".", ",")} em {endDate}
+                    Próxima cobrança: R$ {(currentPrice / 100).toFixed(2).replace(".", ",")} em {endDate}
                   </p>
                 )}
                 <p className="text-muted-foreground text-xs mt-1">
@@ -197,7 +272,11 @@ export function BillingTab() {
                 )}
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-6 flex-wrap">
+              <Button onClick={() => setShowPlanDialog(true)} variant="outline">
+                <ArrowUpDown className="h-4 w-4 mr-2" />
+                Alterar plano
+              </Button>
               <Button onClick={handleManageSubscription} disabled={portalLoading} variant="outline">
                 {portalLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CreditCard className="h-4 w-4 mr-2" />}
                 Gerenciar assinatura
@@ -263,6 +342,77 @@ export function BillingTab() {
             )}
           </CardContent>
         </Card>
+
+        {/* Change Plan Dialog */}
+        <ChangePlanDialog
+          open={showPlanDialog}
+          onOpenChange={setShowPlanDialog}
+          currentPlan={planName}
+          currentBillingInterval={currentBillingInterval}
+          billingInterval={billingInterval}
+          setBillingInterval={setBillingInterval}
+          onSelectPlan={handleSelectPlan}
+        />
+
+        {/* Confirmation AlertDialog */}
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {isIntervalChangeOnly
+                  ? `Mudar para cobrança ${billingInterval === "year" ? "anual" : "mensal"}`
+                  : isUpgrade
+                    ? `Confirmar upgrade para ${PLANS[selectedPlan || "profissional"]?.name}`
+                    : `Confirmar mudança para ${PLANS[selectedPlan || "profissional"]?.name}`}
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm">
+                  {isIntervalChangeOnly ? (
+                    <p>
+                      Seu plano será alterado para cobrança {billingInterval === "year" ? "anual" : "mensal"}.
+                      {billingInterval === "year" && " Você economizará 20% no valor mensal."}
+                    </p>
+                  ) : isUpgrade ? (
+                    <>
+                      <p>Seu plano será atualizado imediatamente. A diferença de valor será cobrada proporcionalmente ao período restante.</p>
+                      <ul className="space-y-1">
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Profissionais ilimitados (sem custo extra)</li>
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Taxa reduzida de 1,0% (era {PLANS[planName]?.commission})</li>
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Chatbot WhatsApp incluso</li>
+                      </ul>
+                    </>
+                  ) : (
+                    <>
+                      <p>Seu plano será alterado para {PLANS[selectedPlan || "profissional"]?.name}.</p>
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-amber-200">
+                        <p className="font-medium mb-1">⚠️ Você perderá acesso a:</p>
+                        <ul className="space-y-1 text-xs">
+                          <li>• Profissionais ilimitados (limite de 1 + extras pagos)</li>
+                          <li>• Taxa será alterada de 1,0% para {PLANS[selectedPlan || "profissional"]?.commission}</li>
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={changingPlan}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleChangePlan} disabled={changingPlan}>
+                {changingPlan ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Processando...
+                  </>
+                ) : isUpgrade ? (
+                  "Confirmar upgrade"
+                ) : (
+                  "Confirmar mudança"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -488,5 +638,121 @@ export function BillingTab() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/* ─── Change Plan Dialog ─── */
+
+interface ChangePlanDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  currentPlan: string;
+  currentBillingInterval: "month" | "year";
+  billingInterval: "month" | "year";
+  setBillingInterval: (v: "month" | "year") => void;
+  onSelectPlan: (plan: PlanKey) => void;
+}
+
+function ChangePlanDialog({ open, onOpenChange, currentPlan, currentBillingInterval, billingInterval, setBillingInterval, onSelectPlan }: ChangePlanDialogProps) {
+  const isYearly = billingInterval === "year";
+  const plans: { key: PlanKey; plan: typeof PLANS.profissional }[] = [
+    { key: "profissional", plan: PLANS.profissional },
+    { key: "ilimitado", plan: PLANS.ilimitado },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Alterar plano</DialogTitle>
+          <DialogDescription>Escolha o plano ideal para o seu negócio</DialogDescription>
+        </DialogHeader>
+
+        {/* Billing toggle */}
+        <div className="flex items-center justify-center gap-3 py-2">
+          <span className={`text-sm ${!isYearly ? "text-foreground font-medium" : "text-muted-foreground"}`}>Mensal</span>
+          <Switch checked={isYearly} onCheckedChange={(checked) => setBillingInterval(checked ? "year" : "month")} />
+          <span className={`text-sm flex items-center gap-1 ${isYearly ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+            Anual
+            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">-20%</Badge>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {plans.map(({ key, plan }) => {
+            const isCurrent = key === currentPlan;
+            const order = PLAN_ORDER[key] || 0;
+            const currentOrder = PLAN_ORDER[currentPlan] || 0;
+            const upgrade = order > currentOrder;
+            const downgrade = order < currentOrder;
+            const price = isYearly ? plan.year.price_monthly : plan.month.price_monthly;
+            const intervalChanged = isCurrent && billingInterval !== currentBillingInterval;
+
+            return (
+              <Card key={key} className={`relative ${isCurrent && !intervalChanged ? "border-primary/50" : ""} ${key === "ilimitado" && !isCurrent ? "border-primary/30" : ""}`}>
+                {isCurrent && !intervalChanged && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-primary text-primary-foreground text-[10px]">Plano atual</Badge>
+                  </div>
+                )}
+                {key === "ilimitado" && !isCurrent && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">Recomendado</Badge>
+                  </div>
+                )}
+                <CardContent className="pt-5 space-y-3">
+                  <h3 className="font-semibold text-lg">{plan.name}</h3>
+                  <div>
+                    <span className="text-2xl font-bold">R$ {(price / 100).toFixed(2).replace(".", ",")}</span>
+                    <span className="text-muted-foreground text-sm">/mês</span>
+                    {isYearly && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Cobrado R$ {(plan.year.price_yearly / 100).toFixed(2).replace(".", ",")}/ano
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Taxa de transação: {plan.commission}</p>
+
+                  <ul className="space-y-1.5 text-sm">
+                    {plan.exclusiveFeatures.map((f) => (
+                      <li key={f} className="flex items-center gap-2">
+                        <Star className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span>{plan.staffLabel}</span>
+                    </li>
+                  </ul>
+
+                  {isCurrent && !intervalChanged ? (
+                    <Button disabled variant="outline" className="w-full">
+                      <Check className="h-4 w-4 mr-2" />
+                      Seu plano atual
+                    </Button>
+                  ) : intervalChanged ? (
+                    <Button onClick={() => onSelectPlan(key)} variant="outline" className="w-full">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Mudar para {billingInterval === "year" ? "anual" : "mensal"}
+                    </Button>
+                  ) : upgrade ? (
+                    <Button onClick={() => onSelectPlan(key)} className="w-full">
+                      <ArrowUp className="h-4 w-4 mr-2" />
+                      Fazer upgrade
+                    </Button>
+                  ) : (
+                    <Button onClick={() => onSelectPlan(key)} variant="outline" className="w-full">
+                      <ArrowDown className="h-4 w-4 mr-2" />
+                      Mudar para este plano
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
