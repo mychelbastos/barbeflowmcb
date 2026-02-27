@@ -246,8 +246,9 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       // This covers: admin rescheduled to different time, admin created manual booking, etc.
       // We match by customer_id + staff_id without time constraint,
       // so any real booking for that pair suppresses the virtual slot
+      // Any real booking (including cancelled) for this customer+staff suppresses the virtual slot.
+      // This prevents a cancelled recurring booking from reappearing as a virtual "confirmed" slot.
       const alreadyExists = allDayBookings.some((b) => {
-        if (b.status === 'cancelled') return false;
         return b.staff_id === rc.staff_id &&
           b.customer_id === rc.customer_id;
       });
