@@ -608,17 +608,23 @@ serve(async (req) => {
     const createdVia = payload.created_via || 'public';
     if (bookingStatus === 'confirmed' && createdVia !== 'recurring') {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
       // WhatsApp notification
+      console.log(`[Notification] Sending booking_confirmed for booking ${booking.id}, tenant ${tenant_id}`);
       try {
-        await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+        const waResp = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${serviceRoleKey}`,
+          },
           body: JSON.stringify({ type: 'booking_confirmed', booking_id: booking.id, tenant_id }),
         });
+        const waBody = await waResp.text();
+        console.log(`[Notification] WhatsApp response: ${waResp.status} ${waBody}`);
       } catch (notifError) {
-        console.error('WhatsApp notification error:', notifError);
+        console.error('[Notification] WhatsApp notification error:', notifError);
       }
 
       // Push notification to admin
@@ -629,9 +635,12 @@ serve(async (req) => {
         const tz = (tenantSettings as any)?.timezone || 'America/Sao_Paulo';
         const startTime = new Date(booking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: tz });
 
-        fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        const pushResp = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${serviceRoleKey}`,
+          },
           body: JSON.stringify({
             tenant_id,
             title: '📅 Novo agendamento!',
@@ -639,9 +648,11 @@ serve(async (req) => {
             url: '/app/bookings',
             data: { booking_id: booking.id },
           }),
-        }).catch(e => console.error('Push notification error:', e));
+        });
+        console.log(`[Notification] Push response: ${pushResp.status}`);
+        await pushResp.text(); // consume body
       } catch (pushError) {
-        console.error('Push notification error:', pushError);
+        console.error('[Notification] Push notification error:', pushError);
       }
     }
 
