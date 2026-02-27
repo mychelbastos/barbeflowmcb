@@ -42,9 +42,6 @@ export function LocalPaymentSection({
   bookingId, customerId, tenantId, staffId,
   servicePriceCents, customerBalance, hasPaidOnline, onPaymentRecorded,
 }: Props) {
-  const [lines, setLines] = useState<PaymentLine[]>([
-    { id: crypto.randomUUID(), method: "cash", amount: "" },
-  ]);
   const [keepChangeAsCredit, setKeepChangeAsCredit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [extraItems, setExtraItems] = useState<ExtraItem[]>([]);
@@ -57,6 +54,11 @@ export function LocalPaymentSection({
   // Total = service + extras - credit (or + debt)
   const totalToCharge = Math.max(0, servicePriceCents + extraTotal - customerBalance);
 
+  const initialAmount = Math.max(0, servicePriceCents - customerBalance);
+  const [lines, setLines] = useState<PaymentLine[]>([
+    { id: crypto.randomUUID(), method: "cash", amount: initialAmount > 0 ? (initialAmount / 100).toFixed(2) : "" },
+  ]);
+
   const totalReceived = useMemo(() =>
     lines.reduce((sum, l) => sum + Math.round(parseFloat(l.amount || "0") * 100), 0),
     [lines]
@@ -66,7 +68,9 @@ export function LocalPaymentSection({
   const remaining = Math.max(0, totalToCharge - totalReceived);
 
   const addLine = () => {
-    setLines(prev => [...prev, { id: crypto.randomUUID(), method: "pix", amount: "" }]);
+    const currentSum = lines.reduce((sum, l) => sum + Math.round(parseFloat(l.amount || "0") * 100), 0);
+    const remainingCents = Math.max(0, totalToCharge - currentSum);
+    setLines(prev => [...prev, { id: crypto.randomUUID(), method: "pix", amount: remainingCents > 0 ? (remainingCents / 100).toFixed(2) : "" }]);
   };
 
   const removeLine = (id: string) => {
@@ -79,6 +83,10 @@ export function LocalPaymentSection({
   };
 
   const handleSubmit = async () => {
+    if (totalReceived <= 0) {
+      toast.error("Insira um valor para registrar o pagamento");
+      return;
+    }
     setSaving(true);
     try {
       const receiptId = crypto.randomUUID();
