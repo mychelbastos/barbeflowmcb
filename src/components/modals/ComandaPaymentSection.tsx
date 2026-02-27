@@ -42,18 +42,20 @@ export function ComandaPaymentSection({
   bookingId, customerId, tenantId, staffId,
   items, customerBalance, onPaymentRecorded, comandaClosed,
 }: Props) {
-  const [lines, setLines] = useState<PaymentLine[]>([
-    { id: crypto.randomUUID(), method: "cash", amount: "" },
-  ]);
-  const [keepChangeAsCredit, setKeepChangeAsCredit] = useState(false);
-  const [saving, setSaving] = useState(false);
-
   const effectivePrice = (i: BookingItem) => i.total_price_cents - (i.discount_cents || 0);
 
   const totalUnpaid = useMemo(() =>
     items.filter(i => i.paid_status === "unpaid").reduce((sum, i) => sum + effectivePrice(i), 0),
     [items]
   );
+
+  const totalToChargeInitial = Math.max(0, totalUnpaid - customerBalance);
+
+  const [lines, setLines] = useState<PaymentLine[]>([
+    { id: crypto.randomUUID(), method: "cash", amount: totalToChargeInitial > 0 ? (totalToChargeInitial / 100).toFixed(2) : "" },
+  ]);
+  const [keepChangeAsCredit, setKeepChangeAsCredit] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const totalPaid = useMemo(() =>
     items.filter(i => i.paid_status !== "unpaid").reduce((sum, i) => sum + effectivePrice(i), 0),
@@ -77,7 +79,9 @@ export function ComandaPaymentSection({
   const remaining = Math.max(0, totalToCharge - totalReceived);
 
   const addLine = () => {
-    setLines(prev => [...prev, { id: crypto.randomUUID(), method: "pix", amount: "" }]);
+    const currentSum = lines.reduce((sum, l) => sum + Math.round(parseFloat(l.amount || "0") * 100), 0);
+    const remainingCents = Math.max(0, totalToCharge - currentSum);
+    setLines(prev => [...prev, { id: crypto.randomUUID(), method: "pix", amount: remainingCents > 0 ? (remainingCents / 100).toFixed(2) : "" }]);
   };
 
   const removeLine = (id: string) => {
@@ -99,6 +103,10 @@ export function ComandaPaymentSection({
   };
 
   const handleSubmit = async () => {
+    if (totalReceived <= 0) {
+      toast.error("Insira um valor para registrar o pagamento");
+      return;
+    }
     setSaving(true);
     try {
       const receiptId = crypto.randomUUID();
