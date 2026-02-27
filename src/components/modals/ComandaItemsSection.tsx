@@ -16,9 +16,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Package, Scissors, Users, ShoppingBag, Percent, Gift, Tag } from "lucide-react";
+import { Plus, Trash2, Package, Scissors, Users, ShoppingBag, Percent, Gift, Tag, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { addMinutes } from "date-fns";
 
 export interface BookingItem {
   id: string;
@@ -52,13 +53,16 @@ interface Props {
   items: BookingItem[];
   onItemsChange: () => void;
   comandaClosed: boolean;
+  bookingStartsAt?: string;
 }
 
-export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange, comandaClosed }: Props) {
+export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange, comandaClosed, bookingStartsAt }: Props) {
   const [products, setProducts] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [staffList, setStaffList] = useState<any[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [swapServiceItemId, setSwapServiceItemId] = useState<string | null>(null);
+  const [swapSearchOpen, setSwapSearchOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [discountItemId, setDiscountItemId] = useState<string | null>(null);
   const [discountMode, setDiscountMode] = useState<"value" | "percent">("value");
@@ -70,7 +74,7 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
     const load = async () => {
       const [prodRes, svcRes, staffRes] = await Promise.all([
         supabase.from("products").select("id, name, sale_price_cents, purchase_price_cents").eq("tenant_id", tenantId).eq("active", true).order("name"),
-        supabase.from("services").select("id, name, price_cents").eq("tenant_id", tenantId).eq("active", true).order("name"),
+        supabase.from("services").select("id, name, price_cents, duration_minutes").eq("tenant_id", tenantId).eq("active", true).order("name"),
         supabase.from("staff").select("id, name").eq("tenant_id", tenantId).eq("active", true).order("name"),
       ]);
       setProducts(prodRes.data || []);
@@ -107,7 +111,51 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
   };
 
   const removeItem = async (itemId: string) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Block if it's the last item
+    if (items.length <= 1) {
+      toast.error("A comanda precisa ter pelo menos um item");
+      return;
+    }
+
     setDeletingId(itemId);
+
+    // If removing main service, promote first extra_service
+    if (item.type === "service") {
+      const nextService = items.find(i => i.id !== itemId && i.type === "extra_service" && i.paid_status === "unpaid");
+      if (nextService) {
+        // Promote extra_service → service
+        const svc = services.find(s => s.id === nextService.ref_id);
+        const newEndsAt = svc && bookingStartsAt
+          ? addMinutes(new Date(bookingStartsAt), svc.duration_minutes).toISOString()
+          : undefined;
+
+        const [promoteRes, bookingRes] = await Promise.all([
+          supabase.from("booking_items").update({ type: "service" }).eq("id", nextService.id),
+          supabase.from("bookings").update({
+            service_id: nextService.ref_id,
+            ...(newEndsAt ? { ends_at: newEndsAt } : {}),
+          }).eq("id", bookingId),
+        ]);
+
+        if (promoteRes.error || bookingRes.error) {
+          toast.error("Erro ao promover serviço");
+          setDeletingId(null);
+          return;
+        }
+      } else {
+        // No extra_service to promote — check if there are other items (products)
+        const otherServices = items.filter(i => i.id !== itemId && (i.type === "service" || i.type === "extra_service"));
+        if (otherServices.length === 0) {
+          toast.error("A comanda precisa ter pelo menos um serviço. Adicione outro serviço antes de remover este.");
+          setDeletingId(null);
+          return;
+        }
+      }
+    }
+
     const { error } = await supabase.from("booking_items").delete().eq("id", itemId);
     setDeletingId(null);
     if (error) {
@@ -115,6 +163,45 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
       return;
     }
     toast.success("Item removido");
+    onItemsChange();
+  };
+
+  const swapMainService = async (itemId: string, newService: any) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Update the booking_item
+    const { error: itemError } = await supabase.from("booking_items").update({
+      ref_id: newService.id,
+      title: newService.name,
+      unit_price_cents: newService.price_cents,
+    }).eq("id", itemId);
+
+    if (itemError) {
+      toast.error("Erro ao alterar serviço");
+      return;
+    }
+
+    // If it's the main service, also update bookings.service_id and ends_at
+    if (item.type === "service") {
+      const newEndsAt = bookingStartsAt
+        ? addMinutes(new Date(bookingStartsAt), newService.duration_minutes).toISOString()
+        : undefined;
+
+      const { error: bookingError } = await supabase.from("bookings").update({
+        service_id: newService.id,
+        ...(newEndsAt ? { ends_at: newEndsAt } : {}),
+      }).eq("id", bookingId);
+
+      if (bookingError) {
+        toast.error("Erro ao atualizar agendamento");
+        return;
+      }
+    }
+
+    toast.success(`Serviço alterado para ${newService.name}`);
+    setSwapServiceItemId(null);
+    setSwapSearchOpen(false);
     onItemsChange();
   };
 
@@ -269,7 +356,8 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
         {items.map((item) => {
           const statusCfg = PAID_STATUS_CONFIG[item.paid_status] || PAID_STATUS_CONFIG.unpaid;
           const isPaid = item.paid_status !== "unpaid";
-          const canRemove = !isPaid && !comandaClosed && item.type !== "service";
+          const canRemove = !isPaid && !comandaClosed;
+          const canSwap = !isPaid && !comandaClosed && (item.type === "service" || item.type === "extra_service");
           const canEditStaff = !isPaid && !comandaClosed;
           const canDiscount = !isPaid && !comandaClosed;
           const hasDiscount = (item.discount_cents || 0) > 0;
@@ -283,7 +371,12 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
                 ) : (
                   <Scissors className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                 )}
-                <span className="text-xs font-medium flex-1 truncate">{item.title}</span>
+                <span className="text-xs font-medium flex-1 truncate">
+                  {item.title}
+                  {item.type === "service" && (
+                    <span className="text-[10px] text-muted-foreground ml-1">(principal)</span>
+                  )}
+                </span>
                 <span className="text-xs font-semibold text-foreground flex-shrink-0">
                   {hasDiscount ? (
                     <span className="flex items-center gap-1">
@@ -298,6 +391,19 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
                   {item.paid_status === "courtesy" && <Gift className="h-2.5 w-2.5 mr-0.5" />}
                   {statusCfg.label}
                 </Badge>
+                {canSwap && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 flex-shrink-0"
+                    onClick={() => {
+                      setSwapServiceItemId(item.id);
+                      setSwapSearchOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                )}
                 {canDiscount && (
                   <Button
                     variant="ghost"
@@ -327,7 +433,10 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remover item?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {item.title} será removido da comanda.
+                          Tem certeza que deseja remover <strong>{item.title}</strong> da comanda?
+                          {item.type === "service" && items.filter(i => i.type === "extra_service" && i.paid_status === "unpaid").length > 0 && (
+                            <span className="block mt-1 text-muted-foreground">O próximo serviço extra será promovido a serviço principal.</span>
+                          )}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -418,6 +527,32 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
           );
         })}
       </div>
+
+      {/* Swap service popover */}
+      <Popover open={swapSearchOpen} onOpenChange={(open) => { setSwapSearchOpen(open); if (!open) setSwapServiceItemId(null); }}>
+        <PopoverTrigger asChild><span /></PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="center">
+          <Command>
+            <CommandInput placeholder="Buscar serviço..." />
+            <CommandList>
+              <CommandEmpty>Nenhum serviço encontrado</CommandEmpty>
+              <CommandGroup heading="Serviços">
+                {services.map(s => (
+                  <CommandItem
+                    key={s.id}
+                    onSelect={() => swapServiceItemId && swapMainService(swapServiceItemId, s)}
+                    className="cursor-pointer"
+                  >
+                    <Scissors className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{fmt(s.price_cents)}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       {/* Summary */}
       <div className="p-2.5 rounded-lg bg-muted/30 border border-border space-y-1 text-xs">
