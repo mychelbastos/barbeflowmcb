@@ -114,7 +114,15 @@ export function SubscriptionCardPayment({
       brickControllerRef.current = await bricksBuilder.create('cardPayment', 'subscriptionCardBrick_container', {
         initialization: {
           amount: priceCents / 100,
-          payer: { email: customerEmail },
+          payer: {
+            email: customerEmail,
+            firstName: customerName.split(' ')[0] || '',
+            lastName: customerName.split(' ').slice(1).join(' ') || '',
+            identification: customerCpf ? {
+              type: 'CPF',
+              number: customerCpf.replace(/\D/g, ''),
+            } : undefined,
+          },
         },
         customization: {
           paymentMethods: {
