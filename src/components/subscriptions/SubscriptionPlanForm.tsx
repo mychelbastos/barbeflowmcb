@@ -14,8 +14,11 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Upload, Loader2 } from "lucide-react";
+import { Plus, X, Upload, Loader2, DollarSign, PieChart } from "lucide-react";
 import { AiTextButton } from "@/components/AiContentButtons";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { CurrencyInput as CurrencyField } from "@/components/ui/currency-input";
+import { formatBRL } from "@/utils/formatBRL";
 
 interface PlanServiceItem {
   service_id: string;
@@ -58,6 +61,9 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, staff
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(
     plan?.plan_staff?.map((ps: any) => ps.staff_id) || []
   );
+  const [commissionMode, setCommissionMode] = useState<"fixed_per_service" | "proportional_pool">("proportional_pool");
+  const [fixedAmountValue, setFixedAmountValue] = useState("");
+  const [poolPercent, setPoolPercent] = useState("40");
 
   // Reset form when plan changes
   const resetForm = () => {
@@ -78,11 +84,33 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, staff
       setPlanServices([{ service_id: '', sessions_per_cycle: '', unlimited: true }]);
     }
     setSelectedStaffIds(plan?.plan_staff?.map((ps: any) => ps.staff_id) || []);
+    // Commission config will be loaded separately
+    setCommissionMode("proportional_pool");
+    setFixedAmountValue("");
+    setPoolPercent("40");
   };
 
   // Sync form with plan prop when dialog opens
   useEffect(() => {
-    if (open) resetForm();
+    if (open) {
+      resetForm();
+      if (plan?.id && currentTenant) {
+        // Load commission config
+        supabase
+          .from("subscription_commission_config" as any)
+          .select("*")
+          .eq("plan_id", plan.id)
+          .eq("tenant_id", currentTenant.id)
+          .maybeSingle()
+          .then(({ data }: any) => {
+            if (data) {
+              setCommissionMode(data.commission_mode || "proportional_pool");
+              setFixedAmountValue(data.fixed_amount_cents ? (data.fixed_amount_cents / 100).toFixed(2) : "");
+              setPoolPercent(String(data.pool_percent ?? 40));
+            }
+          });
+      }
+    }
   }, [open, plan]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +173,14 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, staff
             selectedStaffIds.map(sid => ({ plan_id: plan.id, staff_id: sid }))
           );
         }
+        // Save commission config
+        await (supabase.from("subscription_commission_config" as any) as any).upsert({
+          tenant_id: currentTenant.id,
+          plan_id: plan.id,
+          commission_mode: commissionMode,
+          fixed_amount_cents: commissionMode === "fixed_per_service" ? Math.round(parseFloat(fixedAmountValue || "0") * 100) : 0,
+          pool_percent: commissionMode === "proportional_pool" ? parseFloat(poolPercent || "40") : 40,
+        }, { onConflict: "tenant_id,plan_id" });
         toast({ title: "Plano atualizado" });
       } else {
         // Create
@@ -172,6 +208,14 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, staff
             selectedStaffIds.map(sid => ({ plan_id: newPlan.id, staff_id: sid }))
           );
         }
+        // Save commission config
+        await (supabase.from("subscription_commission_config" as any) as any).upsert({
+          tenant_id: currentTenant.id,
+          plan_id: newPlan.id,
+          commission_mode: commissionMode,
+          fixed_amount_cents: commissionMode === "fixed_per_service" ? Math.round(parseFloat(fixedAmountValue || "0") * 100) : 0,
+          pool_percent: commissionMode === "proportional_pool" ? parseFloat(poolPercent || "40") : 40,
+        }, { onConflict: "tenant_id,plan_id" });
         toast({ title: "Plano criado" });
       }
 
@@ -333,6 +377,54 @@ export function SubscriptionPlanForm({ open, onOpenChange, plan, services, staff
                   </div>
                 </Button>
               )}
+            </div>
+
+            {/* Commission Configuration */}
+            <div className="space-y-3 border-t border-border pt-4">
+              <Label className="text-sm font-semibold">Comissão dos Profissionais</Label>
+              <RadioGroup value={commissionMode} onValueChange={(v) => setCommissionMode(v as any)} className="space-y-2">
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="fixed_per_service" className="mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-emerald-400" />
+                      <span className="text-sm font-medium">Valor fixo por atendimento</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Cada profissional receberá este valor por atendimento de assinante</p>
+                    {commissionMode === "fixed_per_service" && (
+                      <div className="pt-1">
+                        <Label className="text-xs">Valor por atendimento (R$)</Label>
+                        <Input type="number" step="0.01" min="0" value={fixedAmountValue} onChange={(e) => setFixedAmountValue(e.target.value)} className="mt-1 max-w-[180px]" placeholder="15.00" />
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <RadioGroupItem value="proportional_pool" className="mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <PieChart className="h-4 w-4 text-violet-400" />
+                      <span className="text-sm font-medium">Rateio proporcional (fichas)</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Percentual dividido proporcionalmente aos atendimentos</p>
+                    {commissionMode === "proportional_pool" && (
+                      <div className="pt-1 space-y-2">
+                        <div>
+                          <Label className="text-xs">Percentual do pool (%)</Label>
+                          <Input type="number" step="1" min="0" max="100" value={poolPercent} onChange={(e) => setPoolPercent(e.target.value)} className="mt-1 max-w-[120px]" placeholder="40" />
+                        </div>
+                        {price && (
+                          <div className="p-2 rounded bg-muted/40 border border-border">
+                            <p className="text-xs text-muted-foreground">
+                              Pool estimado: <span className="font-semibold text-emerald-400">{formatBRL(Math.round(parseFloat(price || "0") * 100 * (parseFloat(poolPercent || "40") / 100)))}</span>/assinante/mês
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </RadioGroup>
             </div>
 
             <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border px-4 py-3">

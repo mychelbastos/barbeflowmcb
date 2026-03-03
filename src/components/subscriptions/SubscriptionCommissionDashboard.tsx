@@ -35,7 +35,12 @@ interface SubscriptionSummary {
   staff_breakdown: StaffBreakdown[];
 }
 
-export function SubscriptionCommissionDashboard() {
+interface Props {
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Props) {
   const { currentTenant } = useTenant();
   const [summaries, setSummaries] = useState<SubscriptionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,9 +55,10 @@ export function SubscriptionCommissionDashboard() {
     if (!currentTenant) return;
     setLoading(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("get_subscription_commission_summary", {
-        p_tenant_id: currentTenant.id,
-      });
+      const params: any = { p_tenant_id: currentTenant.id };
+      if (periodStart) params.p_period_start = periodStart;
+      if (periodEnd) params.p_period_end = periodEnd;
+      const { data, error } = await (supabase.rpc as any)("get_subscription_commission_summary", params);
       if (error) throw error;
       setSummaries((data || []) as SubscriptionSummary[]);
     } catch (err) {
@@ -60,7 +66,7 @@ export function SubscriptionCommissionDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [currentTenant]);
+  }, [currentTenant, periodStart, periodEnd]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

@@ -33,20 +33,25 @@ interface Settlement {
   subscription_commission_settlement_items: SettlementItem[];
 }
 
-export function SubscriptionCommissionHistory() {
+interface Props {
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+export function SubscriptionCommissionHistory({ periodStart, periodEnd }: Props) {
   const { currentTenant } = useTenant();
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (currentTenant) loadData();
-  }, [currentTenant]);
+  }, [currentTenant, periodStart, periodEnd]);
 
   const loadData = async () => {
     if (!currentTenant) return;
     setLoading(true);
     try {
-      const { data, error } = await (supabase
+      let query = (supabase
         .from("subscription_commission_settlements" as any)
         .select(`
           *,
@@ -61,9 +66,12 @@ export function SubscriptionCommissionHistory() {
             staff:staff(name)
           )
         `)
-        .eq("tenant_id", currentTenant.id)
+        .eq("tenant_id", currentTenant.id) as any);
+      if (periodStart) query = query.gte("period_start", periodStart);
+      if (periodEnd) query = query.lte("period_end", periodEnd);
+      const { data, error } = await query
         .order("settled_at", { ascending: false })
-        .limit(50) as any);
+        .limit(50);
 
       if (error) throw error;
       setSettlements((data || []) as Settlement[]);
@@ -85,7 +93,7 @@ export function SubscriptionCommissionHistory() {
   if (settlements.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
-        Nenhuma liquidação realizada. Liquide fichas pendentes na aba "Pendentes".
+        Nenhuma liquidação realizada no período selecionado.
       </div>
     );
   }
