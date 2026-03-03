@@ -3044,6 +3044,10 @@ export type Database = {
         Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
       }
+      merge_customers: {
+        Args: { p_keep_id: string; p_remove_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       record_local_payment_for_booking: {
         Args: {
           p_booking_id: string

@@ -9,6 +9,7 @@ import { CustomerPackagesTab } from "@/components/CustomerPackagesTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
 import { CustomerImportModal } from "@/components/CustomerImportModal";
+import { CustomerMergeModal } from "@/components/CustomerMergeModal";
 import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +58,8 @@ import {
   FileText,
   Upload,
   CreditCard,
-  MapPin
+  MapPin,
+  Merge
 } from "lucide-react";
 import {
   Select,
@@ -102,6 +104,7 @@ export default function Customers() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Duplicate warning states
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
@@ -539,6 +542,10 @@ export default function Customers() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowMergeModal(true)} className="shrink-0">
+              <Merge className="h-4 w-4 mr-1" />
+              Duplicados
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)} className="shrink-0">
               <Upload className="h-4 w-4 mr-1" />
               Importar
@@ -997,6 +1004,13 @@ export default function Customers() {
         open={showImportModal}
         onOpenChange={setShowImportModal}
         onComplete={() => loadCustomers(0, true)}
+      />
+
+      <CustomerMergeModal
+        open={showMergeModal}
+        onOpenChange={setShowMergeModal}
+        tenantId={currentTenant?.id || ""}
+        onMerged={() => loadCustomers(0, true)}
       />
     </div>
   );
