@@ -538,7 +538,9 @@ export default function Customers() {
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">Clientes</h1>
             <p className="text-sm md:text-base text-muted-foreground">
-              Gerencie a base de clientes do seu estabelecimento
+              {customers.length > 0
+                ? `${customers.length} cliente${customers.length !== 1 ? "s" : ""} cadastrado${customers.length !== 1 ? "s" : ""}`
+                : "Gerencie a base de clientes do seu estabelecimento"}
             </p>
           </div>
           <div className="flex gap-2">
