@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
@@ -16,6 +16,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 import {
   Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Lock, Unlock,
   Plus, Minus, Receipt, AlertTriangle, Clock, Banknote, CreditCard, Smartphone,
@@ -55,6 +56,7 @@ const SOURCE_LABELS: Record<string, string> = {
   supply: "Suprimento",
   withdrawal: "Sangria",
   expense: "Despesa",
+  business_expense: "Despesa",
 };
 
 type CashSession = {
@@ -71,6 +73,13 @@ type CashSession = {
   notes: string | null;
 };
 
+type ExpenseCategory = {
+  id: string;
+  name: string;
+  icon: string | null;
+  active: boolean;
+};
+
 type CashEntry = {
   id: string;
   amount_cents: number;
@@ -82,6 +91,8 @@ type CashEntry = {
   session_id: string | null;
   staff_id: string | null;
   booking_id: string | null;
+  expense_category_id: string | null;
+  expense_categories?: { id: string; name: string; icon: string | null } | null;
 };
 
 type StaffMember = {
@@ -128,6 +139,12 @@ export default function CashRegister() {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<{product_id: string; quantity: number; unit_price_cents: number}[]>([]);
 
+  // Expense category state
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringDay, setRecurringDay] = useState("");
+
   const resetEntryForm = () => {
     setEntryAmount('');
     setEntryNotes('');
@@ -135,6 +152,9 @@ export default function CashRegister() {
     setEntryStaffId('none');
     setEntryType('manual');
     setSelectedProducts([]);
+    setSelectedCategoryId(null);
+    setIsRecurring(false);
+    setRecurringDay("");
   };
 
   const loadData = useCallback(async () => {
@@ -159,6 +179,15 @@ export default function CashRegister() {
         .order('name');
       setProducts(productsData || []);
 
+      // Load expense categories
+      const { data: catData } = await supabase
+        .from('expense_categories')
+        .select('id, name, icon, active')
+        .eq('tenant_id', currentTenant.id)
+        .eq('active', true)
+        .order('sort_order');
+      setExpenseCategories(catData || []);
+
       // Get open session
       const { data: openSession } = await supabase
         .from("cash_sessions")
@@ -175,10 +204,10 @@ export default function CashRegister() {
       if (openSession) {
         const { data: sessionEntries } = await supabase
           .from("cash_entries")
-          .select("*")
+          .select("*, expense_categories(id, name, icon)")
           .eq("session_id", openSession.id)
           .order("occurred_at", { ascending: false });
-        setEntries(sessionEntries || []);
+        setEntries(sessionEntries as any || []);
 
         // Get orphan entries (session_id IS NULL, kind=income, today)
         const todayStart = startOfDay(new Date()).toISOString();
@@ -346,7 +375,7 @@ export default function CashRegister() {
       let source: string;
       if (entryModal === "supply") { kind = "income"; source = "supply"; }
       else if (entryModal === "withdrawal") { kind = "expense"; source = "withdrawal"; }
-      else if (entryModal === "expense") { kind = "expense"; source = "expense"; }
+      else if (entryModal === "expense") { kind = "expense"; source = selectedCategoryId ? "business_expense" : "expense"; }
       else { kind = "income"; source = "manual"; }
 
       const staffId = entryModal === "income" && entryStaffId !== "none" ? entryStaffId : null;
@@ -361,6 +390,9 @@ export default function CashRegister() {
         payment_method: entryPaymentMethod,
         occurred_at: new Date().toISOString(),
         staff_id: staffId,
+        expense_category_id: entryModal === "expense" ? selectedCategoryId : null,
+        is_recurring: entryModal === "expense" ? isRecurring : false,
+        recurring_day: entryModal === "expense" && isRecurring && recurringDay ? parseInt(recurringDay) : null,
       });
       if (error) throw error;
       toast.success("Lançamento registrado!");
@@ -578,6 +610,67 @@ export default function CashRegister() {
             </Card>
           )}
 
+          {/* Breakdown by expense category */}
+          {(() => {
+            const categorizedExpenses = entries
+              .filter(e => e.kind === 'expense' && e.expense_categories)
+              .reduce((acc: Record<string, { icon: string; total: number }>, e) => {
+                const catName = e.expense_categories!.name;
+                const catIcon = e.expense_categories!.icon || '📦';
+                if (!acc[catName]) acc[catName] = { icon: catIcon, total: 0 };
+                acc[catName].total += e.amount_cents;
+                return acc;
+              }, {});
+            const uncategorized = entries
+              .filter(e => e.kind === 'expense' && !e.expense_categories && e.source !== 'withdrawal')
+              .reduce((sum, e) => sum + e.amount_cents, 0);
+            const withdrawals = entries
+              .filter(e => e.source === 'withdrawal')
+              .reduce((sum, e) => sum + e.amount_cents, 0);
+            const hasData = Object.keys(categorizedExpenses).length > 0 || uncategorized > 0 || withdrawals > 0;
+            if (!hasData) return null;
+            return (
+              <Card>
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-semibold mb-3">Saídas por Categoria</h3>
+                  <div className="space-y-2">
+                    {Object.entries(categorizedExpenses).map(([name, { icon, total }]) => (
+                      <div key={name} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{icon}</span>
+                          <span className="text-sm">{name}</span>
+                        </div>
+                        <span className="text-sm font-medium text-red-400">-{fmt(total)}</span>
+                      </div>
+                    ))}
+                    {withdrawals > 0 && (
+                      <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">💸</span>
+                          <span className="text-sm">Retiradas</span>
+                        </div>
+                        <span className="text-sm font-medium text-red-400">-{fmt(withdrawals)}</span>
+                      </div>
+                    )}
+                    {uncategorized > 0 && (
+                      <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">📦</span>
+                          <span className="text-sm">Outras saídas</span>
+                        </div>
+                        <span className="text-sm font-medium text-red-400">-{fmt(uncategorized)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between py-2 px-3 rounded-lg border-t border-border">
+                      <span className="text-sm font-semibold">Total Saídas</span>
+                      <span className="text-sm font-bold text-red-400">-{fmt(totalOut)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {/* Entries list */}
           {entries.length > 0 && (
             <Card>
@@ -607,7 +700,14 @@ export default function CashRegister() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs">
-                            {SOURCE_LABELS[e.source || ""] || e.source || "-"}
+                            {e.expense_categories ? (
+                              <span className="flex items-center gap-1">
+                                <span>{e.expense_categories.icon || "📦"}</span>
+                                <span>{e.expense_categories.name}</span>
+                              </span>
+                            ) : (
+                              SOURCE_LABELS[e.source || ""] || e.source || "-"
+                            )}
                           </TableCell>
                           <TableCell className="text-xs">
                             {PAYMENT_METHODS.find(m => m.value === e.payment_method)?.label || e.payment_method || "-"}
@@ -809,6 +909,30 @@ export default function CashRegister() {
               </div>
             )}
 
+            {/* === EXPENSE: Category selector === */}
+            {entryModal === 'expense' && expenseCategories.length > 0 && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">Categoria</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {expenseCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs font-medium transition-all ${
+                        selectedCategoryId === cat.id
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                      }`}
+                      onClick={() => setSelectedCategoryId(cat.id)}
+                    >
+                      <span className="text-lg">{cat.icon || "📦"}</span>
+                      <span className="truncate w-full text-center">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* === MANUAL: amount field === */}
             {(entryModal !== 'income' || entryType === 'manual') && (
               <div>
@@ -817,6 +941,28 @@ export default function CashRegister() {
                   type="number" step="0.01" min="0" placeholder="0,00"
                   value={entryAmount} onChange={e => setEntryAmount(e.target.value)}
                 />
+              </div>
+            )}
+
+            {/* === EXPENSE: Recurring toggle === */}
+            {entryModal === 'expense' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">Despesa fixa mensal</p>
+                    <p className="text-xs text-muted-foreground">Marque se é uma despesa recorrente</p>
+                  </div>
+                  <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+                </div>
+                {isRecurring && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Dia do vencimento</label>
+                    <Input
+                      type="number" min="1" max="31" placeholder="Ex: 10"
+                      value={recurringDay} onChange={e => setRecurringDay(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

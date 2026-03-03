@@ -324,13 +324,16 @@ export type Database = {
           amount_cents: number
           booking_id: string | null
           created_at: string | null
+          expense_category_id: string | null
           id: string
+          is_recurring: boolean | null
           kind: string
           notes: string | null
           occurred_at: string
           payment_id: string | null
           payment_method: string | null
           product_sale_id: string | null
+          recurring_day: number | null
           session_id: string | null
           source: string | null
           staff_id: string | null
@@ -341,13 +344,16 @@ export type Database = {
           amount_cents: number
           booking_id?: string | null
           created_at?: string | null
+          expense_category_id?: string | null
           id?: string
+          is_recurring?: boolean | null
           kind: string
           notes?: string | null
           occurred_at?: string
           payment_id?: string | null
           payment_method?: string | null
           product_sale_id?: string | null
+          recurring_day?: number | null
           session_id?: string | null
           source?: string | null
           staff_id?: string | null
@@ -358,13 +364,16 @@ export type Database = {
           amount_cents?: number
           booking_id?: string | null
           created_at?: string | null
+          expense_category_id?: string | null
           id?: string
+          is_recurring?: boolean | null
           kind?: string
           notes?: string | null
           occurred_at?: string
           payment_id?: string | null
           payment_method?: string | null
           product_sale_id?: string | null
+          recurring_day?: number | null
           session_id?: string | null
           source?: string | null
           staff_id?: string | null
@@ -385,6 +394,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_booking_received_amount"
             referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "cash_entries_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "cash_entries_payment_id_fkey"
@@ -870,6 +886,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "customers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          active: boolean
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_default: boolean
+          name: string
+          sort_order: number | null
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          sort_order?: number | null
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          sort_order?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2970,6 +3030,10 @@ export type Database = {
       reopen_comanda: {
         Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
+      }
+      seed_default_expense_categories: {
+        Args: { p_tenant_id: string }
+        Returns: undefined
       }
       settle_all_subscription_commissions: {
         Args: {
