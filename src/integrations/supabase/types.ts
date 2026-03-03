@@ -847,9 +847,11 @@ export type Database = {
         Row: {
           birthday: string | null
           cancellation_streak: number
+          cpf: string | null
           created_at: string
           email: string | null
           forced_online_payment: boolean
+          gender: string | null
           id: string
           name: string
           notes: string | null
@@ -860,9 +862,11 @@ export type Database = {
         Insert: {
           birthday?: string | null
           cancellation_streak?: number
+          cpf?: string | null
           created_at?: string
           email?: string | null
           forced_online_payment?: boolean
+          gender?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -873,9 +877,11 @@ export type Database = {
         Update: {
           birthday?: string | null
           cancellation_streak?: number
+          cpf?: string | null
           created_at?: string
           email?: string | null
           forced_online_payment?: boolean
+          gender?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -3006,6 +3012,10 @@ export type Database = {
           p_period_start?: string
           p_tenant_id: string
         }
+        Returns: Json
+      }
+      import_customers_batch: {
+        Args: { p_customers: Json; p_tenant_id: string }
         Returns: Json
       }
       is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }

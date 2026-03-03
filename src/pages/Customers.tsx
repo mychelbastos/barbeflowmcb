@@ -8,6 +8,7 @@ import { CustomerBalanceTab } from "@/components/CustomerBalanceTab";
 import { CustomerPackagesTab } from "@/components/CustomerPackagesTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
+import { CustomerImportModal } from "@/components/CustomerImportModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +53,17 @@ import {
   DollarSign,
   Edit,
   Trash2,
-  FileText
+  FileText,
+  Upload,
+  CreditCard
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -89,6 +99,7 @@ export default function Customers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Duplicate warning states
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
@@ -96,9 +107,10 @@ export default function Customers() {
   const [pendingAction, setPendingAction] = useState<'add' | 'edit'>('add');
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '' });
-  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '' });
+  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '' });
   const [saving, setSaving] = useState(false);
+  const [genderFilter, setGenderFilter] = useState<string>('');
 
   // Debounce search
   useEffect(() => {
@@ -113,7 +125,7 @@ export default function Customers() {
     if (currentTenant) {
       loadCustomers(0, true);
     }
-  }, [currentTenant, debouncedSearch]);
+  }, [currentTenant, debouncedSearch, genderFilter]);
 
   const loadCustomers = async (pageNum: number = 0, reset: boolean = false) => {
     if (!currentTenant) return;
@@ -135,6 +147,10 @@ export default function Customers() {
 
       if (debouncedSearch) {
         query = query.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
+      }
+
+      if (genderFilter) {
+        query = query.eq('gender', genderFilter);
       }
 
       const [customersResult, recurringResult, packageResult, subscriptionResult] = await Promise.all([
@@ -257,7 +273,9 @@ export default function Customers() {
       phone: customer.phone,
       email: customer.email || '',
       birthday: customer.birthday || '',
-      notes: customer.notes || ''
+      notes: customer.notes || '',
+      gender: customer.gender || '',
+      cpf: customer.cpf || ''
     });
     setShowEditModal(true);
   };
@@ -299,13 +317,15 @@ export default function Customers() {
           email: addForm.email.trim() || null,
           birthday: addForm.birthday || null,
           notes: addForm.notes.trim() || null,
+          gender: addForm.gender || null,
+          cpf: addForm.cpf.trim() || null,
         });
 
       if (error) throw error;
 
       toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso" });
       setShowAddModal(false);
-      setAddForm({ name: '', phone: '', email: '', birthday: '', notes: '' });
+      setAddForm({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '' });
       loadCustomers(0, true);
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -353,6 +373,8 @@ export default function Customers() {
           email: editForm.email.trim() || null,
           birthday: editForm.birthday || null,
           notes: editForm.notes.trim() || null,
+          gender: editForm.gender || null,
+          cpf: editForm.cpf.trim() || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', customerToEdit.id);
@@ -493,10 +515,39 @@ export default function Customers() {
               Gerencie a base de clientes do seu estabelecimento
             </p>
           </div>
-          <Button onClick={() => setShowAddModal(true)} size="sm" className="shrink-0">
-            <Plus className="h-4 w-4 mr-1" />
-            Adicionar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)} className="shrink-0">
+              <Upload className="h-4 w-4 mr-1" />
+              Importar
+            </Button>
+            <Button onClick={() => setShowAddModal(true)} size="sm" className="shrink-0">
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, telefone ou email..."
+              className="pl-10 h-11"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Select value={genderFilter} onValueChange={(val) => { setGenderFilter(val === 'all' ? '' : val); setPage(0); }}>
+            <SelectTrigger className="w-[140px] h-11">
+              <SelectValue placeholder="Gênero" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="M">Masculino</SelectItem>
+              <SelectItem value="F">Feminino</SelectItem>
+              <SelectItem value="O">Outro</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         <div className="relative">
@@ -642,6 +693,37 @@ export default function Customers() {
                 onChange={(e) => setAddForm(prev => ({ ...prev, birthday: e.target.value }))}
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Gênero</Label>
+                <Select value={addForm.gender || 'none'} onValueChange={(val) => setAddForm(prev => ({ ...prev, gender: val === 'none' ? '' : val }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não informado</SelectItem>
+                    <SelectItem value="M">Masculino</SelectItem>
+                    <SelectItem value="F">Feminino</SelectItem>
+                    <SelectItem value="O">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>CPF</Label>
+                <Input
+                  placeholder="000.000.000-00"
+                  value={addForm.cpf}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    let formatted = digits;
+                    if (digits.length > 3) formatted = digits.slice(0, 3) + '.' + digits.slice(3);
+                    if (digits.length > 6) formatted = formatted.slice(0, 7) + '.' + digits.slice(6);
+                    if (digits.length > 9) formatted = formatted.slice(0, 11) + '-' + digits.slice(9);
+                    setAddForm(prev => ({ ...prev, cpf: formatted }));
+                  }}
+                  inputMode="numeric"
+                  maxLength={14}
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -695,6 +777,37 @@ export default function Customers() {
                 value={editForm.birthday}
                 onChange={(e) => setEditForm(prev => ({ ...prev, birthday: e.target.value }))}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Gênero</Label>
+                <Select value={editForm.gender || 'none'} onValueChange={(val) => setEditForm(prev => ({ ...prev, gender: val === 'none' ? '' : val }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não informado</SelectItem>
+                    <SelectItem value="M">Masculino</SelectItem>
+                    <SelectItem value="F">Feminino</SelectItem>
+                    <SelectItem value="O">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>CPF</Label>
+                <Input
+                  placeholder="000.000.000-00"
+                  value={editForm.cpf}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    let formatted = digits;
+                    if (digits.length > 3) formatted = digits.slice(0, 3) + '.' + digits.slice(3);
+                    if (digits.length > 6) formatted = formatted.slice(0, 7) + '.' + digits.slice(6);
+                    if (digits.length > 9) formatted = formatted.slice(0, 11) + '-' + digits.slice(9);
+                    setEditForm(prev => ({ ...prev, cpf: formatted }));
+                  }}
+                  inputMode="numeric"
+                  maxLength={14}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Observações</Label>
@@ -766,6 +879,8 @@ export default function Customers() {
                       <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {selectedCustomer.phone}</div>
                       {selectedCustomer.email && <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {selectedCustomer.email}</div>}
                       {selectedCustomer.birthday && <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> {format(parseISO(selectedCustomer.birthday), "dd/MM/yyyy")}</div>}
+                      {selectedCustomer.gender && <div className="flex items-center gap-2"><User className="h-3.5 w-3.5" /> {selectedCustomer.gender === 'M' ? 'Masculino' : selectedCustomer.gender === 'F' ? 'Feminino' : 'Outro'}</div>}
+                      {selectedCustomer.cpf && <div className="flex items-center gap-2"><CreditCard className="h-3.5 w-3.5" /> {selectedCustomer.cpf}</div>}
                     </div>
                   </div>
                   
@@ -843,6 +958,12 @@ export default function Customers() {
           )}
         </DialogContent>
       </Dialog>
+
+      <CustomerImportModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        onComplete={() => loadCustomers(0, true)}
+      />
     </div>
   );
 }
