@@ -12,6 +12,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Ticket, DollarSign, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL } from "@/utils/formatBRL";
+import { format } from "date-fns";
+
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function fmtDate(dateStr: string): string {
+  return format(parseLocalDate(dateStr), "dd/MM/yyyy");
+}
 
 interface StaffBreakdown {
   staff_id: string;
@@ -215,8 +225,8 @@ export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Prop
                     {s.plan_name} — {formatBRL(s.plan_price_cents)}/mês
                   </p>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    <Badge variant="outline" className="text-[10px]">
-                      {s.period_start} → {s.period_end}
+                    <Badge variant="outline" className="text-[10px] text-foreground">
+                      {fmtDate(s.period_start)} — {fmtDate(s.period_end)}
                     </Badge>
                     <Badge variant="secondary" className="text-[10px]">
                       {modeLabel}
