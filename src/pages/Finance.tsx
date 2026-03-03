@@ -27,6 +27,7 @@ import { RevenueHeatmap } from "@/components/finance/RevenueHeatmap";
 import { PeriodComparisonChart } from "@/components/finance/PeriodComparisonChart";
 import { BookingStatusChart } from "@/components/finance/BookingStatusChart";
 import { useCashRevenue } from "@/hooks/useCashRevenue";
+import { BusinessExpensesSection } from "@/components/finance/BusinessExpensesSection";
 
 const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444"];
 
@@ -571,6 +572,18 @@ export default function Finance() {
               </Table>
             </div>
           </ChartCard>
+        </Section>
+      )}
+
+      {/* Business Expenses */}
+      {currentTenant && (
+        <Section>
+          <BusinessExpensesSection
+            tenantId={currentTenant.id}
+            startDate={dateRange.from.toISOString()}
+            endDate={dateRange.to.toISOString()}
+            totalIncome={cashData?.totalIncome || 0}
+          />
         </Section>
       )}
 
