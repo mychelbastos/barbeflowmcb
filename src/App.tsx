@@ -33,6 +33,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Finance = lazy(() => import("./pages/Finance"));
 const CommissionsPage = lazy(() => import("./pages/CommissionsPage"));
+const SubscriptionCommissionsPage = lazy(() => import("./pages/SubscriptionCommissionsPage"));
 const CashRegister = lazy(() => import("./pages/CashRegister"));
 const PackagesPage = lazy(() => import("./pages/PackagesPage"));
 const SubscriptionPlansPage = lazy(() => import("./pages/SubscriptionPlansPage"));
@@ -147,6 +148,7 @@ const App = () => {
                     <Route path="recurring-clients" element={<RecurringClients />} />
                     <Route path="finance" element={<Finance />} />
                     <Route path="commissions" element={<CommissionsPage />} />
+                    <Route path="subscriptions/commissions" element={<SubscriptionCommissionsPage />} />
                     <Route path="caixa" element={<CashRegister />} />
                     <Route path="products" element={<Products />} />
                     <Route path="reports" element={<Reports />} />

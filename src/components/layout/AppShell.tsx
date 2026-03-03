@@ -73,6 +73,7 @@ import {
   Receipt,
   CalendarDays,
   AlertTriangle,
+  Ticket,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { format } from "date-fns";
@@ -124,6 +125,7 @@ const baseNavigationItems: NavItem[] = [
       { title: "Recebíveis", url: "/app/subscriptions/receivables", icon: Receipt },
       { title: "Calendário", url: "/app/subscriptions/calendar", icon: CalendarDays },
       { title: "Inadimplentes", url: "/app/subscriptions/delinquents", icon: AlertTriangle },
+      { title: "Comissões", url: "/app/subscriptions/commissions", icon: Ticket },
     ]
   },
   { title: "Profissionais", url: "/app/staff", icon: Users },

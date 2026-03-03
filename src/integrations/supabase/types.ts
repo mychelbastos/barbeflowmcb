@@ -1946,6 +1946,289 @@ export type Database = {
           },
         ]
       }
+      subscription_commission_config: {
+        Row: {
+          commission_mode: string
+          created_at: string | null
+          fixed_amount_cents: number | null
+          id: string
+          plan_id: string
+          pool_percent: number | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          commission_mode?: string
+          created_at?: string | null
+          fixed_amount_cents?: number | null
+          id?: string
+          plan_id: string
+          pool_percent?: number | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          commission_mode?: string
+          created_at?: string | null
+          fixed_amount_cents?: number | null
+          id?: string
+          plan_id?: string
+          pool_percent?: number | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_commission_config_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_commission_settlement_items: {
+        Row: {
+          cash_entry_id: string | null
+          commission_cents: number
+          created_at: string | null
+          id: string
+          settlement_id: string
+          staff_id: string
+          tokens_count: number
+        }
+        Insert: {
+          cash_entry_id?: string | null
+          commission_cents?: number
+          created_at?: string | null
+          id?: string
+          settlement_id: string
+          staff_id: string
+          tokens_count?: number
+        }
+        Update: {
+          cash_entry_id?: string | null
+          commission_cents?: number
+          created_at?: string | null
+          id?: string
+          settlement_id?: string
+          staff_id?: string
+          tokens_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_commission_settlement_items_cash_entry_id_fkey"
+            columns: ["cash_entry_id"]
+            isOneToOne: false
+            referencedRelation: "cash_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_settlement_items_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_commission_settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_settlement_items_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_commission_settlements: {
+        Row: {
+          commission_mode: string
+          created_at: string | null
+          customer_subscription_id: string
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          pool_amount_cents: number
+          pool_percent: number
+          settled_at: string | null
+          settled_by: string | null
+          status: string
+          subscription_amount_cents: number
+          tenant_id: string
+          total_tokens: number
+          updated_at: string | null
+        }
+        Insert: {
+          commission_mode: string
+          created_at?: string | null
+          customer_subscription_id: string
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          pool_amount_cents?: number
+          pool_percent?: number
+          settled_at?: string | null
+          settled_by?: string | null
+          status?: string
+          subscription_amount_cents: number
+          tenant_id: string
+          total_tokens?: number
+          updated_at?: string | null
+        }
+        Update: {
+          commission_mode?: string
+          created_at?: string | null
+          customer_subscription_id?: string
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          pool_amount_cents?: number
+          pool_percent?: number
+          settled_at?: string | null
+          settled_by?: string | null
+          status?: string
+          subscription_amount_cents?: number
+          tenant_id?: string
+          total_tokens?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_commission_settlemen_customer_subscription_id_fkey"
+            columns: ["customer_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_settlements_settled_by_fkey"
+            columns: ["settled_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_settlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_commission_tokens: {
+        Row: {
+          booking_id: string
+          booking_item_id: string
+          commission_mode: string
+          created_at: string | null
+          customer_subscription_id: string
+          fixed_amount_cents: number | null
+          id: string
+          period_end: string
+          period_start: string
+          service_id: string | null
+          settled: boolean
+          settlement_id: string | null
+          staff_id: string
+          tenant_id: string
+          token_value: number
+        }
+        Insert: {
+          booking_id: string
+          booking_item_id: string
+          commission_mode: string
+          created_at?: string | null
+          customer_subscription_id: string
+          fixed_amount_cents?: number | null
+          id?: string
+          period_end: string
+          period_start: string
+          service_id?: string | null
+          settled?: boolean
+          settlement_id?: string | null
+          staff_id: string
+          tenant_id: string
+          token_value?: number
+        }
+        Update: {
+          booking_id?: string
+          booking_item_id?: string
+          commission_mode?: string
+          created_at?: string | null
+          customer_subscription_id?: string
+          fixed_amount_cents?: number | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          service_id?: string | null
+          settled?: boolean
+          settlement_id?: string | null
+          staff_id?: string
+          tenant_id?: string
+          token_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_commission_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_tokens_booking_item_id_fkey"
+            columns: ["booking_item_id"]
+            isOneToOne: true
+            referencedRelation: "booking_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_tokens_customer_subscription_id_fkey"
+            columns: ["customer_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_tokens_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_tokens_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_commission_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_payments: {
         Row: {
           amount_cents: number
@@ -2644,6 +2927,10 @@ export type Database = {
             }
             Returns: string
           }
+      generate_subscription_commission_tokens: {
+        Args: { p_booking_id: string; p_tenant_id: string }
+        Returns: Json
+      }
       get_customer_stats: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -2652,6 +2939,14 @@ export type Database = {
           total_bookings: number
           total_spent: number
         }[]
+      }
+      get_subscription_commission_summary: {
+        Args: {
+          p_period_end?: string
+          p_period_start?: string
+          p_tenant_id: string
+        }
+        Returns: Json
       }
       is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }
       mark_booking_no_show: {
@@ -2674,6 +2969,25 @@ export type Database = {
       }
       reopen_comanda: {
         Args: { p_booking_id: string; p_tenant_id: string }
+        Returns: Json
+      }
+      settle_all_subscription_commissions: {
+        Args: {
+          p_cash_session_id?: string
+          p_settled_by?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      settle_subscription_commission: {
+        Args: {
+          p_cash_session_id?: string
+          p_customer_subscription_id: string
+          p_period_end: string
+          p_period_start: string
+          p_settled_by?: string
+          p_tenant_id: string
+        }
         Returns: Json
       }
       user_belongs_to_tenant: {

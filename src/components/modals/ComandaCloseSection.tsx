@@ -46,12 +46,18 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
       const snaps = result?.snapshots_created || 0;
       const totalComm = result?.total_commission_cents || 0;
       const commFormatted = (totalComm / 100).toFixed(2);
+      const tokensCreated = result?.subscription_tokens?.tokens_created || 0;
 
       toast.success(
         snaps > 0
           ? `Comanda fechada — ${snaps} comissão(ões) gerada(s): R$ ${commFormatted}`
           : "Comanda fechada com sucesso"
       );
+
+      if (tokensCreated > 0) {
+        toast.info(`💰 ${tokensCreated} ficha(s) de comissão de assinatura registrada(s)`);
+      }
+
       onClose();
     } catch (err: any) {
       const msg = err.message || "";
