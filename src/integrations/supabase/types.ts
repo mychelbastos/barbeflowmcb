@@ -845,6 +845,13 @@ export type Database = {
       }
       customers: {
         Row: {
+          address_cep: string | null
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
           birthday: string | null
           cancellation_streak: number
           cpf: string | null
@@ -860,6 +867,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
           birthday?: string | null
           cancellation_streak?: number
           cpf?: string | null
@@ -875,6 +889,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
           birthday?: string | null
           cancellation_streak?: number
           cpf?: string | null

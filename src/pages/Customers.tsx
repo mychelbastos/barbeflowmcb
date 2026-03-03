@@ -9,6 +9,7 @@ import { CustomerPackagesTab } from "@/components/CustomerPackagesTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
 import { CustomerImportModal } from "@/components/CustomerImportModal";
+import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +56,8 @@ import {
   Trash2,
   FileText,
   Upload,
-  CreditCard
+  CreditCard,
+  MapPin
 } from "lucide-react";
 import {
   Select,
@@ -107,8 +109,8 @@ export default function Customers() {
   const [pendingAction, setPendingAction] = useState<'add' | 'edit'>('add');
   const [customerToEdit, setCustomerToEdit] = useState<any>(null);
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '' });
-  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '', address_cep: '', address_street: '', address_number: '', address_complement: '', address_neighborhood: '', address_city: '', address_state: '' });
+  const [addForm, setAddForm] = useState({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '', address_cep: '', address_street: '', address_number: '', address_complement: '', address_neighborhood: '', address_city: '', address_state: '' });
   const [saving, setSaving] = useState(false);
   const [genderFilter, setGenderFilter] = useState<string>('');
 
@@ -275,7 +277,14 @@ export default function Customers() {
       birthday: customer.birthday || '',
       notes: customer.notes || '',
       gender: customer.gender || '',
-      cpf: customer.cpf || ''
+      cpf: customer.cpf || '',
+      address_cep: customer.address_cep || '',
+      address_street: customer.address_street || '',
+      address_number: customer.address_number || '',
+      address_complement: customer.address_complement || '',
+      address_neighborhood: customer.address_neighborhood || '',
+      address_city: customer.address_city || '',
+      address_state: customer.address_state || '',
     });
     setShowEditModal(true);
   };
@@ -319,13 +328,20 @@ export default function Customers() {
           notes: addForm.notes.trim() || null,
           gender: addForm.gender || null,
           cpf: addForm.cpf.trim() || null,
+          address_cep: addForm.address_cep.trim() || null,
+          address_street: addForm.address_street.trim() || null,
+          address_number: addForm.address_number.trim() || null,
+          address_complement: addForm.address_complement.trim() || null,
+          address_neighborhood: addForm.address_neighborhood.trim() || null,
+          address_city: addForm.address_city.trim() || null,
+          address_state: addForm.address_state.trim() || null,
         });
 
       if (error) throw error;
 
       toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso" });
       setShowAddModal(false);
-      setAddForm({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '' });
+      setAddForm({ name: '', phone: '', email: '', birthday: '', notes: '', gender: '', cpf: '', address_cep: '', address_street: '', address_number: '', address_complement: '', address_neighborhood: '', address_city: '', address_state: '' });
       loadCustomers(0, true);
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -375,6 +391,13 @@ export default function Customers() {
           notes: editForm.notes.trim() || null,
           gender: editForm.gender || null,
           cpf: editForm.cpf.trim() || null,
+          address_cep: editForm.address_cep.trim() || null,
+          address_street: editForm.address_street.trim() || null,
+          address_number: editForm.address_number.trim() || null,
+          address_complement: editForm.address_complement.trim() || null,
+          address_neighborhood: editForm.address_neighborhood.trim() || null,
+          address_city: editForm.address_city.trim() || null,
+          address_state: editForm.address_state.trim() || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', customerToEdit.id);
@@ -645,7 +668,7 @@ export default function Customers() {
 
       {/* Add Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
             <DialogDescription>Cadastre um novo cliente manualmente.</DialogDescription>
@@ -714,6 +737,10 @@ export default function Customers() {
                 />
               </div>
             </div>
+            <AddressFieldsGroup
+              values={addForm}
+              onChange={(fields) => setAddForm(prev => ({ ...prev, ...fields }))}
+            />
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -734,7 +761,7 @@ export default function Customers() {
 
       {/* Edit Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
@@ -799,6 +826,10 @@ export default function Customers() {
                 />
               </div>
             </div>
+            <AddressFieldsGroup
+              values={editForm}
+              onChange={(fields) => setEditForm(prev => ({ ...prev, ...fields }))}
+            />
             <div className="space-y-2">
               <Label>Observações</Label>
               <Textarea
@@ -871,6 +902,19 @@ export default function Customers() {
                       {selectedCustomer.birthday && <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" /> {format(parseISO(selectedCustomer.birthday), "dd/MM/yyyy")}</div>}
                       {selectedCustomer.gender && <div className="flex items-center gap-2"><User className="h-3.5 w-3.5" /> {selectedCustomer.gender === 'M' ? 'Masculino' : selectedCustomer.gender === 'F' ? 'Feminino' : 'Outro'}</div>}
                       {selectedCustomer.cpf && <div className="flex items-center gap-2"><CreditCard className="h-3.5 w-3.5" /> {selectedCustomer.cpf}</div>}
+                      {selectedCustomer.address_street && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>
+                            {selectedCustomer.address_street}{selectedCustomer.address_number ? `, ${selectedCustomer.address_number}` : ''}
+                            {selectedCustomer.address_complement ? ` - ${selectedCustomer.address_complement}` : ''}
+                            {selectedCustomer.address_neighborhood ? `, ${selectedCustomer.address_neighborhood}` : ''}
+                            {selectedCustomer.address_city ? ` — ${selectedCustomer.address_city}` : ''}
+                            {selectedCustomer.address_state ? `/${selectedCustomer.address_state}` : ''}
+                            {selectedCustomer.address_cep ? ` (${selectedCustomer.address_cep})` : ''}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
