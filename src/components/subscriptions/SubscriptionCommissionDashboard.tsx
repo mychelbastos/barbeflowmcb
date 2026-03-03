@@ -159,8 +159,8 @@ export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Prop
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-violet-500/10 rounded-lg flex items-center justify-center">
-                <Ticket className="h-5 w-5 text-violet-400" />
+              <div className="w-10 h-10 bg-violet-100 dark:bg-violet-500/10 rounded-lg flex items-center justify-center">
+                <Ticket className="h-5 w-5 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Fichas Pendentes</p>
@@ -172,12 +172,12 @@ export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Prop
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-emerald-400" />
+              <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Estimativa Total</p>
-                <p className="text-lg font-bold text-emerald-400">{formatBRL(totalEstimated)}</p>
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(totalEstimated)}</p>
               </div>
             </div>
           </CardContent>
@@ -221,13 +221,13 @@ export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Prop
                     <Badge variant="secondary" className="text-[10px]">
                       {modeLabel}
                     </Badge>
-                    <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/30 text-[10px]">
+                    <Badge className="bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/30 text-[10px]">
                       {s.total_tokens} ficha{s.total_tokens !== 1 ? "s" : ""}
                     </Badge>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-sm font-bold text-emerald-400">{formatBRL(s.estimated_pool_cents)}</span>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatBRL(s.estimated_pool_cents)}</span>
                   {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </div>
               </div>
@@ -241,7 +241,7 @@ export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Prop
                     <span className="font-medium">{staff.staff_name}</span>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{staff.tokens} ficha{staff.tokens !== 1 ? "s" : ""}</span>
-                      <span className="text-emerald-400 font-medium">{formatBRL(staff.estimated_commission_cents)}</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">{formatBRL(staff.estimated_commission_cents)}</span>
                     </div>
                   </div>
                 ))}
