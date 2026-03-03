@@ -6,6 +6,8 @@ import { toast } from '@/hooks/use-toast';
 
 interface PayerInfo {
   email: string;
+  firstName?: string;
+  lastName?: string;
   identification?: {
     type: string;
     number: string;
@@ -25,6 +27,24 @@ interface MercadoPagoCheckoutProps {
   packageAmountCents?: number;
   paymentId?: string;
 }
+
+const getFunctionErrorMessage = (error: any): string => {
+  if (!error) return 'Erro ao processar pagamento';
+
+  const context = error.context;
+  if (typeof context === 'string' && context.trim()) {
+    try {
+      const parsed = JSON.parse(context);
+      if (parsed?.error) return String(parsed.error);
+      if (parsed?.message) return String(parsed.message);
+      if (parsed?.details?.message) return String(parsed.details.message);
+    } catch {
+      return context;
+    }
+  }
+
+  return error.message || 'Erro ao processar pagamento';
+};
 
 type PaymentMethod = 'card' | 'pix' | null;
 type PaymentStatus = 'idle' | 'loading' | 'method-select' | 'card-form' | 'ready' | 'processing' | 'pix-waiting' | 'success' | 'error' | 'pending';
@@ -193,6 +213,9 @@ export const MercadoPagoCheckout = ({
           amount: amount,
           payer: {
             email: payer.email,
+            firstName: payer.firstName,
+            lastName: payer.lastName,
+            identification: payer.identification,
           },
         },
         customization: {
@@ -287,7 +310,7 @@ export const MercadoPagoCheckout = ({
       );
 
       if (!isMountedRef.current) return;
-      if (error) throw error;
+      if (error) throw new Error(getFunctionErrorMessage(error));
 
       console.log('Payment result:', data);
 
@@ -425,7 +448,7 @@ export const MercadoPagoCheckout = ({
       );
 
       if (!isMountedRef.current) return;
-      if (error) throw error;
+      if (error) throw new Error(getFunctionErrorMessage(error));
 
       console.log('PIX result:', data);
 

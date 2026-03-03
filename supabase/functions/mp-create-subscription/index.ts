@@ -29,6 +29,7 @@ serve(async (req) => {
     if (!customer_name) missingFields.push('customer_name');
     if (!customer_phone) missingFields.push('customer_phone');
     if (!customer_email) missingFields.push('customer_email');
+    if (card_token_id && !customer_cpf) missingFields.push('customer_cpf');
 
     if (missingFields.length > 0) {
       console.error('Missing fields:', missingFields);
@@ -198,18 +199,61 @@ serve(async (req) => {
 
     console.log('Creating MP preapproval:', JSON.stringify(mpBody));
 
-    const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${mpToken.access_token}`,
-        'User-Agent': 'MercadoPago DX-Nodejs/2.11.0',
-        'x-product-id': 'BC32BHVTRPP001U8NHJ0',
-      },
-      body: JSON.stringify(mpBody),
-    });
+    const createPreapproval = async (attempt = 1): Promise<Response> => {
+      try {
+        const response = await fetch('https://api.mercadopago.com/preapproval', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${mpToken.access_token}`,
+            'User-Agent': 'MercadoPago DX-Nodejs/2.11.0',
+            'x-product-id': 'BC32BHVTRPP001U8NHJ0',
+            'X-Idempotency-Key': `${subscription.id}-${Date.now()}-${attempt}`,
+          },
+          body: JSON.stringify(mpBody),
+          signal: AbortSignal.timeout(90000),
+        });
 
-    const mpData = await mpResponse.json();
+        if (response.status >= 500 && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+          return createPreapproval(attempt + 1);
+        }
+
+        return response;
+      } catch (fetchError) {
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+          return createPreapproval(attempt + 1);
+        }
+        throw fetchError;
+      }
+    };
+
+    const mpResponse = await createPreapproval();
+
+    const contentType = mpResponse.headers.get('content-type') || '';
+    let mpData: any = null;
+
+    if (contentType.includes('application/json')) {
+      try {
+        mpData = await mpResponse.json();
+      } catch (parseErr) {
+        console.error('MP returned malformed JSON:', parseErr);
+        return new Response(JSON.stringify({
+          error: 'Resposta inválida do Mercado Pago. Tente novamente.'
+        }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      const rawText = await mpResponse.text();
+      console.error('MP returned non-JSON response:', rawText?.slice(0, 500));
+      return new Response(JSON.stringify({
+        error: 'Mercado Pago indisponível no momento. Tente novamente em instantes.'
+      }), {
+        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (mpResponse.status === 401) {
       console.error('MP returned 401 - token expired or invalid:', JSON.stringify(mpData));
@@ -222,8 +266,16 @@ serve(async (req) => {
 
     if (!mpResponse.ok) {
       console.error('MP preapproval error:', JSON.stringify(mpData));
-      return new Response(JSON.stringify({ error: 'Failed to create subscription in MP', details: mpData }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      const causeMessage = Array.isArray(mpData?.cause) && mpData.cause[0]?.description
+        ? String(mpData.cause[0].description)
+        : undefined;
+      const fallbackMessage = mpData?.message || mpData?.error || 'Falha ao criar assinatura no Mercado Pago';
+
+      return new Response(JSON.stringify({
+        error: causeMessage || fallbackMessage,
+        details: mpData,
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -359,8 +411,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Error in mp-create-subscription:', error);
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
+    return new Response(JSON.stringify({ error: message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

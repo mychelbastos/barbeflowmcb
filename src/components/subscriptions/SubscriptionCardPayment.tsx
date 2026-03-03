@@ -25,6 +25,24 @@ export interface SubscriptionCardPaymentProps {
 
 type Status = 'loading' | 'card-form' | 'ready' | 'processing' | 'success' | 'error';
 
+const getFunctionErrorMessage = (error: any): string => {
+  if (!error) return 'Erro ao processar assinatura';
+
+  const context = error.context;
+  if (typeof context === 'string' && context.trim()) {
+    try {
+      const parsed = JSON.parse(context);
+      if (parsed?.error) return String(parsed.error);
+      if (parsed?.message) return String(parsed.message);
+      if (parsed?.details?.message) return String(parsed.details.message);
+    } catch {
+      return context;
+    }
+  }
+
+  return error.message || 'Erro ao processar assinatura';
+};
+
 export function SubscriptionCardPayment({
   tenantSlug,
   tenantId,
@@ -192,7 +210,7 @@ export function SubscriptionCardPayment({
       });
 
       if (!isMountedRef.current) return;
-      if (error) throw error;
+      if (error) throw new Error(getFunctionErrorMessage(error));
       if (data?.error) throw new Error(data.error);
 
       if (data?.activated) {

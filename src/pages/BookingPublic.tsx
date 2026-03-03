@@ -2091,6 +2091,8 @@ END:VCALENDAR`;
               }
               payer={{
                 email: customerEmail || 'cliente@email.com',
+                firstName: customerName.trim().split(' ')[0] || undefined,
+                lastName: customerName.trim().split(' ').slice(1).join(' ') || undefined,
                 identification: customerCpf.replace(/\D/g, '').length === 11 
                   ? { type: 'CPF', number: customerCpf.replace(/\D/g, '') } 
                   : undefined,

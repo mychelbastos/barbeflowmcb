@@ -195,6 +195,8 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           paymentId={paymentRecordId}
           payer={{
             email: email.trim(),
+            firstName: name.trim().split(' ')[0] || undefined,
+            lastName: name.trim().split(' ').slice(1).join(' ') || undefined,
             identification: {
               type: 'CPF',
               number: cpf.replace(/\D/g, ''),
