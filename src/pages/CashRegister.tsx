@@ -142,6 +142,7 @@ export default function CashRegister() {
   // Expense category state
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringDay, setRecurringDay] = useState("");
 
@@ -153,6 +154,7 @@ export default function CashRegister() {
     setEntryType('manual');
     setSelectedProducts([]);
     setSelectedCategoryId(null);
+    setShowCategoryGrid(false);
     setIsRecurring(false);
     setRecurringDay("");
   };
@@ -914,8 +916,8 @@ export default function CashRegister() {
               <div>
                 <button
                   type="button"
-                  className="flex items-center justify-between w-full text-sm font-medium mb-2"
-                  onClick={() => setSelectedCategoryId(prev => prev ? "" : prev)}
+                  className="flex items-center justify-between w-full text-sm font-medium mb-2 p-2.5 rounded-xl border border-border bg-muted/20"
+                  onClick={() => setShowCategoryGrid(prev => !prev)}
                 >
                   <span className="flex items-center gap-2">
                     {selectedCategoryId ? (
@@ -927,16 +929,20 @@ export default function CashRegister() {
                       <span className="text-muted-foreground">Categoria (opcional)</span>
                     )}
                   </span>
-                  <span className="text-muted-foreground text-xs">{selectedCategoryId ? "Alterar" : "Selecionar"}</span>
+                  <span className="text-muted-foreground text-xs">{showCategoryGrid ? "Ocultar" : "Selecionar"}</span>
                 </button>
-                {!selectedCategoryId && (
-                  <div className="grid grid-cols-3 gap-2">
+                {showCategoryGrid && (
+                  <div className="grid grid-cols-3 gap-2 mt-1">
                     {expenseCategories.map(cat => (
                       <button
                         key={cat.id}
                         type="button"
-                        className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 text-xs font-medium transition-all"
-                        onClick={() => setSelectedCategoryId(cat.id)}
+                        className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs font-medium transition-all ${
+                          selectedCategoryId === cat.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                        }`}
+                        onClick={() => { setSelectedCategoryId(cat.id); setShowCategoryGrid(false); }}
                       >
                         <span className="text-lg">{cat.icon || "📦"}</span>
                         <span className="truncate w-full text-center">{cat.name}</span>
@@ -944,11 +950,11 @@ export default function CashRegister() {
                     ))}
                   </div>
                 )}
-                {selectedCategoryId && (
+                {selectedCategoryId && !showCategoryGrid && (
                   <button
                     type="button"
                     className="text-xs text-destructive hover:underline mt-1"
-                    onClick={() => setSelectedCategoryId("")}
+                    onClick={() => { setSelectedCategoryId(null); setShowCategoryGrid(false); }}
                   >
                     Remover categoria
                   </button>
