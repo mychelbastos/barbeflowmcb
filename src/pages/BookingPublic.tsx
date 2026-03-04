@@ -56,9 +56,10 @@ type CreateBookingParsedError = {
   message: string;
 };
 
-const parseCreateBookingError = (invokeError: any, data: any): CreateBookingParsedError => {
+const parseCreateBookingError = async (invokeError: any, data: any): Promise<CreateBookingParsedError> => {
   const fallbackMessage = invokeError?.message || 'Erro ao criar agendamento';
 
+  // Check data first (some versions populate it even on error)
   if (data?.error && typeof data.error === 'object') {
     return {
       type: data.error.type,
@@ -74,9 +75,17 @@ const parseCreateBookingError = (invokeError: any, data: any): CreateBookingPars
     return { message: data.message };
   }
 
+  // In supabase-js v2.90+, error.context is a Response object
   if (invokeError?.context) {
     try {
-      const parsedContext = JSON.parse(invokeError.context);
+      let parsedContext: any;
+      if (invokeError.context instanceof Response) {
+        parsedContext = await invokeError.context.json();
+      } else if (typeof invokeError.context === 'string') {
+        parsedContext = JSON.parse(invokeError.context);
+      } else if (typeof invokeError.context === 'object') {
+        parsedContext = invokeError.context;
+      }
       if (parsedContext?.error && typeof parsedContext.error === 'object') {
         return {
           type: parsedContext.error.type,
@@ -825,7 +834,7 @@ const BookingPublic = () => {
 
       // Handle structured error responses (e.g. 403 forced_online_payment)
       if (error) {
-        const parsedError = parseCreateBookingError(error, data);
+        const parsedError = await parseCreateBookingError(error, data);
         const typedError = new Error(parsedError.message);
         (typedError as any).type = parsedError.type;
         throw typedError;
