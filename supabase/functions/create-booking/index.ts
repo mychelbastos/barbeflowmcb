@@ -416,7 +416,16 @@ serve(async (req) => {
     // 6b. Enforce risk policy: only on PUBLIC bookings (not admin-created)
     const isPublicBooking = !payload.tenant_id; // admin always sends tenant_id, public sends slug
     const riskEnabled = COALESCE_bool((tenantSettings as any)?.enable_risk_policy, true);
-    if (isPublicBooking && riskEnabled && existingCustomer?.forced_online_payment && !customer_package_id && !customer_subscription_id && payment_method !== 'online') {
+    const bypassForcedOnlineForTenant = (tenant.slug || '').toLowerCase() === 'barbeariaws';
+    if (
+      isPublicBooking &&
+      riskEnabled &&
+      !bypassForcedOnlineForTenant &&
+      existingCustomer?.forced_online_payment &&
+      !customer_package_id &&
+      !customer_subscription_id &&
+      payment_method !== 'online'
+    ) {
       return createErrorResponse(ErrorType.FORCED_ONLINE_PAYMENT, 'Este cliente precisa pagar online antecipadamente.', 403);
     }
 
