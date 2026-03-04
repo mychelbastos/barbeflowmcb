@@ -35,18 +35,33 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { 
   Plus, 
   Calendar, 
+  CalendarDays,
   Clock, 
   Trash2, 
   Loader2,
   CalendarOff,
-  Ban
+  Ban,
+  X
 } from "lucide-react";
 import { parseISO, isBefore, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { ptBR } from "date-fns/locale";
+
+type BlockMode = "dates" | "weekdays";
+
+const WEEKDAY_LABELS = [
+  { value: "0", short: "Dom", full: "Domingo" },
+  { value: "1", short: "Seg", full: "Segunda-feira" },
+  { value: "2", short: "Ter", full: "Terça-feira" },
+  { value: "3", short: "Qua", full: "Quarta-feira" },
+  { value: "4", short: "Qui", full: "Quinta-feira" },
+  { value: "5", short: "Sex", full: "Sexta-feira" },
+  { value: "6", short: "Sáb", full: "Sábado" },
+];
 
 const TIMEZONE = "America/Bahia";
 
@@ -78,12 +93,44 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Form state
-  const [blockDate, setBlockDate] = useState("");
+  const [mode, setMode] = useState<BlockMode>("dates");
+  const [dates, setDates] = useState<string[]>([]);
+  const [dateInput, setDateInput] = useState("");
+  const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
+  const [weeksAhead, setWeeksAhead] = useState("4");
   const [isFullDay, setIsFullDay] = useState(true);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
   const [selectedStaff, setSelectedStaff] = useState<string>("all");
   const [reason, setReason] = useState("");
+
+  const addDate = () => {
+    if (dateInput && !dates.includes(dateInput)) {
+      setDates(prev => [...prev, dateInput].sort());
+      setDateInput("");
+    }
+  };
+
+  const removeDate = (d: string) => setDates(prev => prev.filter(x => x !== d));
+
+  const formatDateBR = (d: string) => {
+    const [y, m, day] = d.split("-");
+    return `${day}/${m}/${y}`;
+  };
+
+  const generateWeekdayDates = (): string[] => {
+    const weeks = parseInt(weeksAhead) || 4;
+    const result: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < weeks * 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      if (selectedWeekdays.includes(d.getDay().toString())) {
+        result.push(d.toISOString().split("T")[0]);
+      }
+    }
+    return result;
+  };
 
   useEffect(() => {
     loadData();
@@ -131,11 +178,28 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
     }
   };
 
+  const resetForm = () => {
+    setMode("dates");
+    setDates([]);
+    setDateInput("");
+    setSelectedWeekdays([]);
+    setWeeksAhead("4");
+    setIsFullDay(true);
+    setStartTime("09:00");
+    setEndTime("18:00");
+    setSelectedStaff("all");
+    setReason("");
+  };
+
+  const totalBlocks = mode === "dates" ? dates.length : generateWeekdayDates().length;
+
   const handleCreateBlock = async () => {
-    if (!blockDate) {
+    const targetDates = mode === "dates" ? dates : generateWeekdayDates();
+
+    if (targetDates.length === 0) {
       toast({
         title: "Erro",
-        description: "Selecione uma data",
+        description: "Selecione ao menos uma data ou dia da semana",
         variant: "destructive",
       });
       return;
@@ -144,44 +208,27 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
     try {
       setSaving(true);
 
-      let startsAt: string;
-      let endsAt: string;
+      const sTime = isFullDay ? "00:00" : startTime;
+      const eTime = isFullDay ? "23:59" : endTime;
 
-      if (isFullDay) {
-        startsAt = `${blockDate}T00:00:00-03:00`;
-        endsAt = `${blockDate}T23:59:59-03:00`;
-      } else {
-        startsAt = `${blockDate}T${startTime}:00-03:00`;
-        endsAt = `${blockDate}T${endTime}:00-03:00`;
-      }
+      const rows = targetDates.map(date => ({
+        tenant_id: tenantId,
+        staff_id: selectedStaff === "all" ? null : selectedStaff,
+        starts_at: `${date}T${sTime}:00-03:00`,
+        ends_at: `${date}T${eTime}:00-03:00`,
+        reason: reason || null,
+      }));
 
-      const { error } = await supabase
-        .from('blocks')
-        .insert({
-          tenant_id: tenantId,
-          staff_id: selectedStaff === "all" ? null : selectedStaff,
-          starts_at: startsAt,
-          ends_at: endsAt,
-          reason: reason || null,
-        });
-
+      const { error } = await supabase.from('blocks').insert(rows);
       if (error) throw error;
 
       toast({
         title: "Bloqueio criado",
-        description: "O bloqueio foi adicionado com sucesso.",
+        description: `${targetDates.length} dia(s) bloqueado(s) com sucesso.`,
       });
 
-      // Reset form and close dialog
-      setBlockDate("");
-      setIsFullDay(true);
-      setStartTime("09:00");
-      setEndTime("18:00");
-      setSelectedStaff("all");
-      setReason("");
+      resetForm();
       setDialogOpen(false);
-      
-      // Reload blocks
       loadData();
     } catch (error: any) {
       console.error('Error creating block:', error);
@@ -273,25 +320,122 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
               Novo Bloqueio
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Bloqueio</DialogTitle>
               <DialogDescription>
-                Bloqueie um dia inteiro ou horários específicos
+                Bloqueie um ou mais períodos para impedir agendamentos
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4 py-4">
-              {/* Date Selection */}
-              <div className="space-y-2">
-                <Label>Data</Label>
-                <Input
-                  type="date"
-                  value={blockDate}
-                  onChange={(e) => setBlockDate(e.target.value)}
-                  min={formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd")}
-                />
+            <div className="space-y-4 py-2">
+              {/* Mode selector */}
+              <div>
+                <Label className="mb-2 block">Tipo de bloqueio</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode("dates")}
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                      mode === "dates"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Datas específicas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("weekdays")}
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                      mode === "weekdays"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    Dias da semana
+                  </button>
+                </div>
               </div>
+
+              {/* Dates mode */}
+              {mode === "dates" && (
+                <div className="space-y-2">
+                  <Label>Datas</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="date"
+                      value={dateInput}
+                      onChange={(e) => setDateInput(e.target.value)}
+                      min={formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd")}
+                      className="flex-1"
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDate(); }}}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={addDate} disabled={!dateInput}>
+                      Adicionar
+                    </Button>
+                  </div>
+                  {dates.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {dates.map(d => (
+                        <Badge key={d} variant="secondary" className="gap-1 pr-1">
+                          {formatDateBR(d)}
+                          <button onClick={() => removeDate(d)} className="hover:text-destructive transition-colors">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Weekdays mode */}
+              {mode === "weekdays" && (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="mb-2 block">Dias da semana</Label>
+                    <ToggleGroup
+                      type="multiple"
+                      value={selectedWeekdays}
+                      onValueChange={setSelectedWeekdays}
+                      className="flex flex-wrap gap-1"
+                    >
+                      {WEEKDAY_LABELS.map(w => (
+                        <ToggleGroupItem
+                          key={w.value}
+                          value={w.value}
+                          className="text-xs px-2.5 py-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                        >
+                          {w.short}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Repetir por quantas semanas?</Label>
+                    <Select value={weeksAhead} onValueChange={setWeeksAhead}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 semana</SelectItem>
+                        <SelectItem value="2">2 semanas</SelectItem>
+                        <SelectItem value="4">4 semanas</SelectItem>
+                        <SelectItem value="8">8 semanas</SelectItem>
+                        <SelectItem value="12">12 semanas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {selectedWeekdays.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {generateWeekdayDates().length} dia(s) serão bloqueados: {selectedWeekdays.map(w => WEEKDAY_LABELS[parseInt(w)].full).join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Full Day Toggle */}
               <div className="flex items-center justify-between rounded-lg border p-4">
@@ -307,24 +451,16 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
                 />
               </div>
 
-              {/* Time Selection (only if not full day) */}
+              {/* Time Selection */}
               {!isFullDay && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Início</Label>
-                    <Input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                    />
+                    <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>Fim</Label>
-                    <Input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                    />
+                    <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                   </div>
                 </div>
               )}
@@ -339,9 +475,7 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
                   <SelectContent>
                     <SelectItem value="all">Todos os profissionais</SelectItem>
                     {staff.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -361,21 +495,17 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
             </div>
 
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-                disabled={saving}
-              >
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateBlock} disabled={saving}>
+              <Button onClick={handleCreateBlock} disabled={saving || totalBlocks === 0}>
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Criando...
                   </>
                 ) : (
-                  "Criar Bloqueio"
+                  `Criar Bloqueio${totalBlocks > 1 ? ` (${totalBlocks} dias)` : ""}`
                 )}
               </Button>
             </DialogFooter>
