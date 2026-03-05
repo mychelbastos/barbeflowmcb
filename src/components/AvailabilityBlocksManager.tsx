@@ -506,7 +506,7 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
                     Criando...
                   </>
                 ) : (
-                  `Criar Bloqueio${totalBlocks > 1 ? ` (${totalBlocks} dias)` : ""}`
+                  `Criar Bloqueio${weeksAhead === "52" ? "" : totalBlocks > 1 ? ` (${totalBlocks} dias)` : ""}`
                 )}
               </Button>
             </DialogFooter>
