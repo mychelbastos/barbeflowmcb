@@ -1975,6 +1975,9 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
+          discount_amount_off: number | null
+          discount_name: string | null
+          discount_percent_off: number | null
           id: string
           plan_name: string
           status: string
@@ -1994,6 +1997,9 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          discount_amount_off?: number | null
+          discount_name?: string | null
+          discount_percent_off?: number | null
           id?: string
           plan_name: string
           status?: string
@@ -2013,6 +2019,9 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          discount_amount_off?: number | null
+          discount_name?: string | null
+          discount_percent_off?: number | null
           id?: string
           plan_name?: string
           status?: string
