@@ -90,7 +90,7 @@ function validatePayload(payload: any): { isValid: boolean; errors: string[] } {
   } else {
     const startsAt = new Date(payload.starts_at);
     if (isNaN(startsAt.getTime())) errors.push('starts_at must be a valid ISO date');
-    else if (startsAt <= new Date()) errors.push('starts_at must be in the future');
+    // Past dates allowed for admin (tenant_id provided); public bookings must be future
   }
   if (payload.customer_phone) {
     const normalizedPhone = normalizePhone(payload.customer_phone);
