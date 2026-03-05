@@ -186,6 +186,7 @@ const BookingPublic = () => {
   // Order Bump
   const [orderBumpItems, setOrderBumpItems] = useState<OrderBumpProduct[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
+  const [staffServices, setStaffServices] = useState<{staff_id: string; service_id: string}[]>([]);
   const [showCategories, setShowCategories] = useState(false);
 
   // Dynamic favicon + PWA manifest per tenant
@@ -271,6 +272,7 @@ const BookingPublic = () => {
       setBlockedDates(blocked);
       setServices(data.services || []);
       setStaff(data.staff || []);
+      setStaffServices(data.staff_services || []);
       setPackages(data.packages || []);
       setSubscriptionPlans(data.subscription_plans || []);
     } catch (err) {
@@ -1011,6 +1013,20 @@ END:VCALENDAR`;
   const selectedServiceData = useMemo(() => services.find(s => s.id === selectedService), [services, selectedService]);
   const selectedStaffData = useMemo(() => staff.find(s => s.id === selectedStaff), [staff, selectedStaff]);
 
+  // Filter staff by service assignment and subscription restrictions
+  const eligibleStaff = useMemo(() => {
+    let filtered = staff;
+    // Filter by staff_services if any staff has service assignments
+    if (staffServices.length > 0 && selectedService) {
+      filtered = filtered.filter(m => staffServices.some(ss => ss.staff_id === m.id && ss.service_id === selectedService));
+    }
+    // Filter by subscription allowed staff
+    if (subscriptionAllowedStaff.length > 0) {
+      filtered = filtered.filter(m => subscriptionAllowedStaff.includes(m.id));
+    }
+    return filtered;
+  }, [staff, staffServices, selectedService, subscriptionAllowedStaff]);
+
   // Calculate total steps based on payment settings
   const totalSteps = allowOnlinePayment && !requirePrepayment ? 5 : 4;
   
@@ -1605,8 +1621,8 @@ END:VCALENDAR`;
             </div>
             
             <div className="space-y-3">
-              {/* Any option - only show if no staff restriction or multiple allowed */}
-              {(subscriptionAllowedStaff.length === 0 || subscriptionAllowedStaff.length > 1) && (
+              {/* Any option - only show if multiple eligible staff */}
+              {eligibleStaff.length !== 1 && (
               <button
                 onClick={() => handleStaffSelect("any")}
                 className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
@@ -1623,10 +1639,7 @@ END:VCALENDAR`;
               </button>
               )}
 
-              {(subscriptionAllowedStaff.length > 0
-                ? staff.filter(m => subscriptionAllowedStaff.includes(m.id))
-                : staff
-              ).map((member) => (
+              {eligibleStaff.map((member) => (
                 <button
                   key={member.id}
                   onClick={() => handleStaffSelect(member.id)}

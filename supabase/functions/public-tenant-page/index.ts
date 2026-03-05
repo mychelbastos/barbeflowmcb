@@ -68,6 +68,17 @@ serve(async (req) => {
     const staff = staffRes.data || [];
     const blocks = blocksRes.data || [];
 
+    // Fetch staff_services for active staff
+    const staffIds = staff.map((s: any) => s.id);
+    let staffServices: any[] = [];
+    if (staffIds.length > 0) {
+      const { data: ssData } = await supabase
+        .from("staff_services")
+        .select("staff_id, service_id")
+        .in("staff_id", staffIds);
+      staffServices = ssData || [];
+    }
+
     // 3. Packages (with services) — parallel with subscription plans
     let packagesQuery = supabase
       .from("service_packages")
@@ -152,6 +163,7 @@ serve(async (req) => {
         services,
         staff,
         blocks,
+        staff_services: staffServices,
         packages,
         subscription_plans: plans,
       }),
