@@ -278,12 +278,13 @@ export function BlockDialog({ open, onOpenChange, staff, defaultDate, onCreated 
                     <SelectItem value="4">4 semanas</SelectItem>
                     <SelectItem value="8">8 semanas</SelectItem>
                     <SelectItem value="12">12 semanas</SelectItem>
+                    <SelectItem value="52">Sempre</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {selectedWeekdays.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {generateWeekdayDates().length} dia(s) serão bloqueados: {selectedWeekdays.map(w => WEEKDAY_LABELS[parseInt(w)].full).join(", ")}
+                  {weeksAhead === "52" ? "Bloqueio permanente" : `${generateWeekdayDates().length} dia(s) serão bloqueados`}: {selectedWeekdays.map(w => WEEKDAY_LABELS[parseInt(w)].full).join(", ")}
                 </p>
               )}
             </div>
