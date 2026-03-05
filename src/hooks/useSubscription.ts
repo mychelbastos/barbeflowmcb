@@ -92,6 +92,13 @@ export function useSubscription() {
 
   const checkSubscription = useCallback(async () => {
     if (!tenantLoaded) return;
+    // Don't call if no active session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setSubscription({ subscribed: false, status: "none" });
+      setLoading(false);
+      return;
+    }
     if (isExempt) {
       // Exempt tenants: still call check-subscription to sync data, but never block access
       try {
