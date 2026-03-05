@@ -426,6 +426,8 @@ export default function Bookings() {
         }
       }
 
+      const timeChanged = startsAt.toISOString() !== selectedBooking.starts_at;
+
       const { error } = await supabase
         .from("bookings")
         .update({
@@ -433,10 +435,22 @@ export default function Bookings() {
           staff_id: staffId,
           starts_at: startsAt.toISOString(),
           ends_at: endsAt.toISOString(),
+          ...(timeChanged ? { reminder_sent: false } : {}),
         })
         .eq("id", selectedBooking.id);
 
       if (error) throw error;
+
+      // If time changed, clear reminder dedup entries so reminders fire for new time
+      if (timeChanged) {
+        await supabase
+          .from("notification_log")
+          .delete()
+          .in("dedup_key", [
+            `reminder_24h_${selectedBooking.id}`,
+            `reminder_1h_${selectedBooking.id}`,
+          ]);
+      }
 
       toast({ title: "Sucesso", description: "Agendamento atualizado" });
       setConflictWarning({ open: false, conflicts: [] });
