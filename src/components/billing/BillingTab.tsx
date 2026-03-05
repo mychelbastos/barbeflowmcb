@@ -256,22 +256,55 @@ export function BillingTab() {
                     {currentBillingInterval === "year" ? "Anual" : "Mensal"}
                   </Badge>
                 </div>
-                {isTrialing ? (
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Seu trial termina em {trialEndDate}. Após o trial, será cobrado R$ {(currentPrice / 100).toFixed(2).replace(".", ",")}/mês.
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Próxima cobrança: R$ {(currentPrice / 100).toFixed(2).replace(".", ",")} em {endDate}
-                  </p>
-                )}
+                {(() => {
+                  let discountedPrice = currentPrice;
+                  if (discountInfo.percent_off) {
+                    discountedPrice = Math.round(currentPrice * (1 - discountInfo.percent_off / 100));
+                  } else if (discountInfo.amount_off) {
+                    discountedPrice = Math.max(0, currentPrice - discountInfo.amount_off);
+                  }
+                  const hasDiscount = discountInfo.name && discountedPrice !== currentPrice;
+                  const formatBRL = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
+
+                  return (
+                    <>
+                      {isTrialing ? (
+                        <p className="text-muted-foreground text-sm mt-1">
+                          Seu trial termina em {trialEndDate}. Após o trial, será cobrado{" "}
+                          {hasDiscount ? (
+                            <>
+                              <span className="line-through text-muted-foreground/60">R$ {formatBRL(currentPrice)}</span>{" "}
+                              <span className="text-emerald-400 font-semibold">R$ {formatBRL(discountedPrice)}</span>
+                            </>
+                          ) : (
+                            <>R$ {formatBRL(currentPrice)}</>
+                          )}
+                          /mês.
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground text-sm mt-1">
+                          Próxima cobrança:{" "}
+                          {hasDiscount ? (
+                            <>
+                              <span className="line-through text-muted-foreground/60">R$ {formatBRL(currentPrice)}</span>{" "}
+                              <span className="text-emerald-400 font-semibold">R$ {formatBRL(discountedPrice)}</span>
+                            </>
+                          ) : (
+                            <>R$ {formatBRL(currentPrice)}</>
+                          )}
+                          {" "}em {endDate}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
                 <p className="text-muted-foreground text-xs mt-1">
                   Taxa de transação: {plan.commission}
                 </p>
                 {discountInfo.name && (
                   <p className="text-emerald-400 text-xs mt-1">
                     🏷️ Cupom ativo: <span className="font-medium">{discountInfo.name}</span>
-                    {discountInfo.percent_off ? ` (${discountInfo.percent_off}% de desconto)` : ""}
+                    {discountInfo.percent_off ? ` (${discountInfo.percent_off}% de desconto permanente)` : ""}
                     {discountInfo.amount_off ? ` (R$ ${(discountInfo.amount_off / 100).toFixed(2).replace(".", ",")} de desconto)` : ""}
                   </p>
                 )}

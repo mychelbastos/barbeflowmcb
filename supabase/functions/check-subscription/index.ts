@@ -90,10 +90,11 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Check all subscriptions (active + trialing)
+    // Check all subscriptions (active + trialing) with discount info
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       limit: 1,
+      expand: ["data.discount.coupon"],
     });
 
     if (subscriptions.data.length === 0) {
