@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface NotificationPayload {
-  type: "booking_confirmed" | "booking_reminder" | "booking_cancelled" | "booking_expired" | "payment_received" | "booking_no_show";
+  type: "booking_confirmed" | "booking_reminder" | "booking_reminder_24h" | "booking_cancelled" | "booking_expired" | "payment_received" | "booking_no_show";
   booking_id: string;
   tenant_id: string;
 }
@@ -142,6 +142,25 @@ Seu horário está chegando!
 ${booking.tenant.address ? `📌 ${booking.tenant.address}` : ""}
 
 Te esperamos! 🙂`;
+
+    case "booking_reminder_24h":
+      return `📋 *Lembrete — Agendamento Amanhã*
+
+Olá ${booking.customer.name}!
+
+Passando para lembrar do seu agendamento amanhã:
+
+📅 *Data:* ${dateTime}
+💇 *Serviço:* ${booking.service.name}
+👤 *Profissional:* ${staffName}
+💰 *Valor:* ${price}
+
+📍 *Local:* ${booking.tenant.name}
+${booking.tenant.address ? `📌 ${booking.tenant.address}` : ""}
+
+Caso precise reagendar, entre em contato conosco.
+
+Te esperamos! 😊`;
 
     case "booking_cancelled":
       return `❌ *Agendamento Cancelado*
