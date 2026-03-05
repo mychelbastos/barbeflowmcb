@@ -93,25 +93,21 @@ export function useSubscription() {
   const checkSubscription = useCallback(async () => {
     if (!tenantLoaded) return;
     if (isExempt) {
-      // Exempt tenants: read real plan from DB instead of hardcoding
+      // Exempt tenants: still call check-subscription to sync data, but never block access
       try {
-        const { data } = await supabase
-          .from("stripe_subscriptions")
-          .select("plan_name, status, current_period_end, trial_end, cancel_at_period_end")
-          .eq("tenant_id", currentTenant!.id)
-          .in("status", ["active", "trialing"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        setSubscription({
-          subscribed: true,
-          status: data?.status || "active",
-          plan_name: data?.plan_name || "profissional",
-          subscription_end: data?.current_period_end || undefined,
-          trial_end: data?.trial_end || undefined,
-          cancel_at_period_end: data?.cancel_at_period_end || false,
-        });
+        const { data, error } = await supabase.functions.invoke("check-subscription");
+        if (!error && data) {
+          setSubscription({
+            subscribed: true,
+            status: data.status || "active",
+            plan_name: data.plan_name || "profissional",
+            subscription_end: data.subscription_end,
+            trial_end: data.trial_end,
+            cancel_at_period_end: data.cancel_at_period_end,
+          });
+        } else {
+          setSubscription({ subscribed: true, status: "active", plan_name: "profissional" });
+        }
       } catch {
         setSubscription({ subscribed: true, status: "active", plan_name: "profissional" });
       }
