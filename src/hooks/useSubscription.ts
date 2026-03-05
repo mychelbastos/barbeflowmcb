@@ -91,9 +91,30 @@ export function useSubscription() {
   const tenantLoaded = currentTenant !== null;
 
   const checkSubscription = useCallback(async () => {
-    if (!tenantLoaded) return; // Wait for tenant to load
+    if (!tenantLoaded) return;
     if (isExempt) {
-      setSubscription({ subscribed: true, status: "active", plan_name: "profissional" });
+      // Exempt tenants: read real plan from DB instead of hardcoding
+      try {
+        const { data } = await supabase
+          .from("stripe_subscriptions")
+          .select("plan_name, status, current_period_end, trial_end, cancel_at_period_end")
+          .eq("tenant_id", currentTenant!.id)
+          .in("status", ["active", "trialing"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        setSubscription({
+          subscribed: true,
+          status: data?.status || "active",
+          plan_name: data?.plan_name || "profissional",
+          subscription_end: data?.current_period_end || undefined,
+          trial_end: data?.trial_end || undefined,
+          cancel_at_period_end: data?.cancel_at_period_end || false,
+        });
+      } catch {
+        setSubscription({ subscribed: true, status: "active", plan_name: "profissional" });
+      }
       setLoading(false);
       return;
     }
@@ -107,7 +128,7 @@ export function useSubscription() {
     } finally {
       setLoading(false);
     }
-  }, [isExempt, tenantLoaded]);
+  }, [isExempt, tenantLoaded, currentTenant]);
 
   useEffect(() => {
     checkSubscription();
