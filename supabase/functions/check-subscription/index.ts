@@ -134,6 +134,12 @@ serve(async (req) => {
 
     logStep("Subscription found", { status: sub.status, planName, subscriptionEnd });
 
+    // Extract discount info
+    const discount = (sub as any).discount;
+    const discountName = discount?.coupon?.name || null;
+    const discountPercentOff = discount?.coupon?.percent_off || null;
+    const discountAmountOff = discount?.coupon?.amount_off || null;
+
     // Sync to DB
     await supabaseAdmin.from("stripe_subscriptions").upsert({
       tenant_id: ut.tenant_id,
@@ -149,6 +155,9 @@ serve(async (req) => {
       current_period_end: subscriptionEnd,
       cancel_at_period_end: sub.cancel_at_period_end,
       canceled_at: safeDate(sub.canceled_at),
+      discount_name: discountName,
+      discount_percent_off: discountPercentOff,
+      discount_amount_off: discountAmountOff,
       updated_at: new Date().toISOString(),
     }, { onConflict: "tenant_id" });
 

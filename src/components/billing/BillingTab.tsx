@@ -57,6 +57,7 @@ export function BillingTab() {
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [additionalProfessionals, setAdditionalProfessionals] = useState(0);
+  const [discountInfo, setDiscountInfo] = useState<{ name: string | null; percent_off: number | null; amount_off: number | null }>({ name: null, percent_off: null, amount_off: null });
 
   // Change plan states
   const [showPlanDialog, setShowPlanDialog] = useState(false);
