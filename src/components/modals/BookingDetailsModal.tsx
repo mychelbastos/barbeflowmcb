@@ -150,7 +150,7 @@ export function BookingDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center justify-between">
             Comanda
@@ -167,7 +167,7 @@ export function BookingDetailsModal({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease }}
-          className="space-y-4"
+          className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1"
         >
           {/* ═══════════════ SEÇÃO 1: DADOS DO BOOKING ═══════════════ */}
           <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-2.5">
@@ -292,40 +292,41 @@ export function BookingDetailsModal({
             </div>
           )}
 
-          {/* ═══════════════ AÇÕES ═══════════════ */}
-          {showActions && !isRecurring && (
-            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
-              {!isCancelled && !isCompleted && onEdit && (
-                <Button size="sm" variant="outline" onClick={onEdit}>
-                  <Edit className="h-4 w-4 mr-1" /> Editar
-                </Button>
-              )}
-              {booking.status === "confirmed" && onStatusChange && (
-                <Button size="sm" variant="outline" onClick={() => { onStatusChange(booking.id, "completed", booking); }}>
-                  <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
-                </Button>
-              )}
-              {!isCancelled && onStatusChange && (
-                <Button size="sm" variant="destructive" onClick={() => { onStatusChange(booking.id, "cancelled", booking); onOpenChange(false); }}>
-                  <XCircle className="h-4 w-4 mr-1" /> Cancelar
-                </Button>
-              )}
-              {booking.customer?.phone && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const digits = booking.customer.phone.replace(/\D/g, "");
-                    const phone = digits.startsWith("55") ? digits : "55" + digits;
-                    window.open(`https://web.whatsapp.com/send?phone=${phone}`, "_blank");
-                  }}
-                >
-                  <MessageCircle className="h-4 w-4 mr-1 text-emerald-500" /> WhatsApp
-                </Button>
-              )}
-            </div>
-          )}
         </motion.div>
+
+        {/* ═══════════════ AÇÕES (sticky bottom) ═══════════════ */}
+        {showActions && !isRecurring && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border flex-shrink-0">
+            {!isCancelled && !isCompleted && onEdit && (
+              <Button size="sm" variant="outline" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-1" /> Editar
+              </Button>
+            )}
+            {booking.status === "confirmed" && onStatusChange && (
+              <Button size="sm" variant="outline" onClick={() => { onStatusChange(booking.id, "completed", booking); }}>
+                <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
+              </Button>
+            )}
+            {!isCancelled && onStatusChange && (
+              <Button size="sm" variant="destructive" onClick={() => { onStatusChange(booking.id, "cancelled", booking); onOpenChange(false); }}>
+                <XCircle className="h-4 w-4 mr-1" /> Cancelar
+              </Button>
+            )}
+            {booking.customer?.phone && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const digits = booking.customer.phone.replace(/\D/g, "");
+                  const phone = digits.startsWith("55") ? digits : "55" + digits;
+                  window.open(`https://web.whatsapp.com/send?phone=${phone}`, "_blank");
+                }}
+              >
+                <MessageCircle className="h-4 w-4 mr-1 text-emerald-500" /> WhatsApp
+              </Button>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

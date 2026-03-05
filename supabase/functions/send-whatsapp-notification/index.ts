@@ -81,7 +81,17 @@ async function fetchBookingData(bookingId: string): Promise<BookingData | null> 
     return null;
   }
 
-  return booking as unknown as BookingData;
+  // Fetch all booking_items (services + products) for multi-service support
+  const { data: items } = await supabase
+    .from("booking_items")
+    .select("title, type, quantity, unit_price_cents, total_price_cents, discount_cents, paid_status")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: true });
+
+  const bookingData = booking as unknown as BookingData;
+  (bookingData as any).items = items || [];
+
+  return bookingData;
 }
 
 function formatDateTime(isoString: string, timezone: string = "America/Sao_Paulo"): string {
@@ -104,9 +114,55 @@ function formatCurrency(cents: number): string {
   });
 }
 
+function buildServicesList(booking: BookingData): { servicesText: string; totalPrice: string } {
+  const items = (booking as any).items as Array<{
+    title: string; type: string; quantity: number;
+    unit_price_cents: number; total_price_cents: number;
+    discount_cents: number; paid_status: string;
+  }>;
+
+  // If we have booking_items, use them for the full list
+  if (items && items.length > 0) {
+    const serviceItems = items.filter(i => i.type === 'service' || i.type === 'extra_service');
+    const productItems = items.filter(i => i.type === 'product');
+
+    let lines: string[] = [];
+    for (const item of serviceItems) {
+      const effectivePrice = (item.total_price_cents || 0) - (item.discount_cents || 0);
+      const priceStr = item.paid_status === 'covered' ? '(coberto)' : formatCurrency(effectivePrice);
+      lines.push(`  • ${item.title} — ${priceStr}`);
+    }
+    for (const item of productItems) {
+      const effectivePrice = (item.total_price_cents || 0) - (item.discount_cents || 0);
+      const qty = item.quantity > 1 ? ` (x${item.quantity})` : '';
+      lines.push(`  • ${item.title}${qty} — ${formatCurrency(effectivePrice)}`);
+    }
+
+    const totalCents = items.reduce((sum, i) => {
+      if (i.paid_status === 'covered') return sum;
+      return sum + ((i.total_price_cents || 0) - (i.discount_cents || 0));
+    }, 0);
+
+    return {
+      servicesText: lines.length > 1
+        ? `\n${lines.join('\n')}`
+        : (serviceItems[0]?.title || booking.service.name),
+      totalPrice: formatCurrency(totalCents),
+    };
+  }
+
+  // Fallback: single service from booking
+  return {
+    servicesText: booking.service.name,
+    totalPrice: formatCurrency(booking.service.price_cents),
+  };
+}
+
 function buildMessage(type: NotificationPayload["type"], booking: BookingData): string {
   const dateTime = formatDateTime(booking.starts_at);
-  const price = formatCurrency(booking.service.price_cents);
+  const { servicesText, totalPrice } = buildServicesList(booking);
+  const singleService = !servicesText.startsWith('\n');
+  const serviceLabel = singleService ? `💇 *Serviço:* ${servicesText}` : `💇 *Serviços:* ${servicesText}`;
   const staffName = booking.staff?.name || "Profissional a definir";
 
   switch (type) {
@@ -118,9 +174,9 @@ Olá ${booking.customer.name}!
 Seu agendamento foi confirmado com sucesso.
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 👤 *Profissional:* ${staffName}
-💰 *Valor:* ${price}
+💰 *Valor:* ${totalPrice}
 
 📍 *Local:* ${booking.tenant.name}
 ${booking.tenant.address ? `📌 ${booking.tenant.address}` : ""}
@@ -135,7 +191,7 @@ Olá ${booking.customer.name}!
 Seu horário está chegando!
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 👤 *Profissional:* ${staffName}
 
 📍 *Local:* ${booking.tenant.name}
@@ -151,9 +207,9 @@ Olá ${booking.customer.name}!
 Passando para lembrar do seu agendamento amanhã:
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 👤 *Profissional:* ${staffName}
-💰 *Valor:* ${price}
+💰 *Valor:* ${totalPrice}
 
 📍 *Local:* ${booking.tenant.name}
 ${booking.tenant.address ? `📌 ${booking.tenant.address}` : ""}
@@ -170,7 +226,7 @@ Olá ${booking.customer.name},
 Seu agendamento foi cancelado.
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 
 Caso queira reagendar, acesse nosso site.
 
@@ -185,7 +241,7 @@ Olá ${booking.customer.name},
 Infelizmente seu agendamento expirou por falta de pagamento.
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 
 Caso ainda queira agendar, acesse nosso site para escolher um novo horário.
 
@@ -197,10 +253,10 @@ ${booking.tenant.name}`;
 
 Olá ${booking.customer.name}!
 
-Recebemos seu pagamento de ${price}.
+Recebemos seu pagamento de ${totalPrice}.
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 👤 *Profissional:* ${staffName}
 
 Seu agendamento está confirmado! ✅
@@ -216,7 +272,7 @@ Olá ${booking.customer.name},
 Identificamos que você não compareceu ao seu agendamento.
 
 📅 *Data:* ${dateTime}
-💇 *Serviço:* ${booking.service.name}
+${serviceLabel}
 👤 *Profissional:* ${staffName}
 
 Caso o agendamento tenha sido feito via pacote ou assinatura, a sessão foi contabilizada como utilizada.
