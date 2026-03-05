@@ -6,16 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Reminder window: 24 hours before, with a 15-minute buffer
-const REMINDER_HOURS_BEFORE = 24;
-const BUFFER_MINUTES = 15;
+// Two reminder windows with buffer
+const REMINDER_WINDOWS = [
+  { label: "24h", hoursBefore: 24, bufferMinutes: 15 },
+  { label: "1h", hoursBefore: 1, bufferMinutes: 10 },
+];
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function sendWhatsAppNotification(bookingId: string, tenantId: string): Promise<boolean> {
+async function sendWhatsAppNotification(bookingId: string, tenantId: string, reminderLabel: string): Promise<boolean> {
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
       method: "POST",
@@ -24,7 +26,7 @@ async function sendWhatsAppNotification(bookingId: string, tenantId: string): Pr
         "Authorization": `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-        type: "booking_reminder",
+        type: reminderLabel === "24h" ? "booking_reminder_24h" : "booking_reminder",
         booking_id: bookingId,
         tenant_id: tenantId,
       }),
@@ -32,89 +34,109 @@ async function sendWhatsAppNotification(bookingId: string, tenantId: string): Pr
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Failed to send reminder for booking ${bookingId}:`, errorText);
+      console.error(`Failed to send ${reminderLabel} reminder for booking ${bookingId}:`, errorText);
       return false;
     }
 
     const result = await response.json();
-    console.log(`Reminder sent for booking ${bookingId}:`, result);
+    console.log(`${reminderLabel} reminder sent for booking ${bookingId}:`, result);
     return true;
   } catch (error) {
-    console.error(`Error sending reminder for booking ${bookingId}:`, error);
+    console.error(`Error sending ${reminderLabel} reminder for booking ${bookingId}:`, error);
     return false;
   }
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const now = new Date();
-    console.log(`[${now.toISOString()}] Running send-booking-reminders`);
-
-    // Calculate the time window for reminders (24h before)
-    // We want to find bookings that start in approximately 24 hours
-    const windowStart = new Date(now.getTime() + (REMINDER_HOURS_BEFORE * 60 - BUFFER_MINUTES) * 60000);
-    const windowEnd = new Date(now.getTime() + (REMINDER_HOURS_BEFORE * 60 + BUFFER_MINUTES) * 60000);
-
-    console.log(`Looking for confirmed bookings starting between: ${windowStart.toISOString()} and ${windowEnd.toISOString()}`);
-
-    // Fetch confirmed bookings in the reminder window that haven't had reminder sent
-    const { data: bookings, error } = await supabase
-      .from("bookings")
-      .select("id, tenant_id, starts_at")
-      .eq("status", "confirmed")
-      .eq("reminder_sent", false)
-      .gte("starts_at", windowStart.toISOString())
-      .lte("starts_at", windowEnd.toISOString());
-
-    if (error) {
-      console.error("Error fetching bookings:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch bookings", details: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!bookings || bookings.length === 0) {
-      console.log("No bookings found for reminders");
-      return new Response(
-        JSON.stringify({ success: true, reminders_sent: 0, message: "No bookings found for reminders" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Found ${bookings.length} bookings for reminders`);
+    console.log(`[${now.toISOString()}] Running send-booking-reminders (dual window)`);
 
     const results = {
-      total: bookings.length,
+      total: 0,
       sent: 0,
       failed: 0,
       bookingIds: [] as string[],
     };
 
-    // Process each booking
-    for (const booking of bookings) {
-      const success = await sendWhatsAppNotification(booking.id, booking.tenant_id);
+    for (const window of REMINDER_WINDOWS) {
+      const windowStart = new Date(now.getTime() + (window.hoursBefore * 60 - window.bufferMinutes) * 60000);
+      const windowEnd = new Date(now.getTime() + (window.hoursBefore * 60 + window.bufferMinutes) * 60000);
 
-      if (success) {
-        // Mark reminder as sent
-        const { error: updateError } = await supabase
-          .from("bookings")
-          .update({ reminder_sent: true })
-          .eq("id", booking.id);
+      console.log(`[${window.label}] Looking for confirmed bookings between: ${windowStart.toISOString()} and ${windowEnd.toISOString()}`);
 
-        if (updateError) {
-          console.error(`Failed to update reminder_sent for booking ${booking.id}:`, updateError);
+      // For 24h reminder: check reminder_sent = false
+      // For 1h reminder: reminder_sent can be true (24h already sent) — use dedup via notification_log
+      const query = supabase
+        .from("bookings")
+        .select("id, tenant_id, starts_at")
+        .eq("status", "confirmed")
+        .gte("starts_at", windowStart.toISOString())
+        .lte("starts_at", windowEnd.toISOString());
+
+      // For the 24h window, only pick bookings that haven't had any reminder
+      if (window.label === "24h") {
+        query.eq("reminder_sent", false);
+      }
+
+      const { data: bookings, error } = await query;
+
+      if (error) {
+        console.error(`[${window.label}] Error fetching bookings:`, error);
+        continue;
+      }
+
+      if (!bookings || bookings.length === 0) {
+        console.log(`[${window.label}] No bookings found`);
+        continue;
+      }
+
+      console.log(`[${window.label}] Found ${bookings.length} bookings`);
+      results.total += bookings.length;
+
+      for (const booking of bookings) {
+        // Dedup check: avoid sending same reminder type twice
+        const dedupKey = `reminder_${window.label}_${booking.id}`;
+        const { data: existing } = await supabase
+          .from("notification_log")
+          .select("id")
+          .eq("dedup_key", dedupKey)
+          .maybeSingle();
+
+        if (existing) {
+          console.log(`[${window.label}] Skipping duplicate for booking ${booking.id}`);
+          continue;
         }
 
-        results.sent++;
-        results.bookingIds.push(booking.id);
-      } else {
-        results.failed++;
+        const success = await sendWhatsAppNotification(booking.id, booking.tenant_id, window.label);
+
+        if (success) {
+          // Mark reminder_sent on first reminder (24h)
+          if (window.label === "24h") {
+            await supabase
+              .from("bookings")
+              .update({ reminder_sent: true })
+              .eq("id", booking.id);
+          }
+
+          // Log for dedup
+          await supabase.from("notification_log").upsert({
+            tenant_id: booking.tenant_id,
+            event_type: `booking_reminder_${window.label}`,
+            dedup_key: dedupKey,
+            booking_id: booking.id,
+            sent_at: new Date().toISOString(),
+          }, { onConflict: "dedup_key" });
+
+          results.sent++;
+          results.bookingIds.push(booking.id);
+        } else {
+          results.failed++;
+        }
       }
     }
 
