@@ -57,6 +57,7 @@ export function BillingTab() {
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [additionalProfessionals, setAdditionalProfessionals] = useState(0);
+  const [discountInfo, setDiscountInfo] = useState<{ name: string | null; percent_off: number | null; amount_off: number | null }>({ name: null, percent_off: null, amount_off: null });
 
   // Change plan states
   const [showPlanDialog, setShowPlanDialog] = useState(false);
@@ -105,7 +106,7 @@ export function BillingTab() {
     try {
       const { data } = await supabase
         .from("stripe_subscriptions")
-        .select("additional_professionals, billing_interval")
+        .select("additional_professionals, billing_interval, discount_name, discount_percent_off, discount_amount_off")
         .eq("tenant_id", currentTenant.id)
         .in("status", ["active", "trialing"])
         .order("created_at", { ascending: false })
@@ -116,6 +117,11 @@ export function BillingTab() {
         setCurrentBillingInterval(data.billing_interval as "month" | "year");
         setBillingInterval(data.billing_interval as "month" | "year");
       }
+      setDiscountInfo({
+        name: data?.discount_name || null,
+        percent_off: data?.discount_percent_off || null,
+        amount_off: data?.discount_amount_off || null,
+      });
     } catch (err) {
       console.error("Error loading subscription details:", err);
     }
@@ -262,6 +268,13 @@ export function BillingTab() {
                 <p className="text-muted-foreground text-xs mt-1">
                   Taxa de transação: {plan.commission}
                 </p>
+                {discountInfo.name && (
+                  <p className="text-emerald-400 text-xs mt-1">
+                    🏷️ Cupom ativo: <span className="font-medium">{discountInfo.name}</span>
+                    {discountInfo.percent_off ? ` (${discountInfo.percent_off}% de desconto)` : ""}
+                    {discountInfo.amount_off ? ` (R$ ${(discountInfo.amount_off / 100).toFixed(2).replace(".", ",")} de desconto)` : ""}
+                  </p>
+                )}
                 {additionalProfessionals > 0 && (
                   <p className="text-muted-foreground text-xs mt-1">
                     👥 {additionalProfessionals} profissional(is) adicional(is) — +R$ {(additionalProfessionals * 14.9).toFixed(2).replace(".", ",")}/mês

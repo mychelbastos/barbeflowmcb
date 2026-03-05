@@ -100,6 +100,12 @@ serve(async (req) => {
           }
         }
 
+        // Extract discount info
+        const discount = (sub as any).discount;
+        const discountName = discount?.coupon?.name || null;
+        const discountPercentOff = discount?.coupon?.percent_off || null;
+        const discountAmountOff = discount?.coupon?.amount_off || null;
+
         await supabaseAdmin.from("stripe_subscriptions").upsert({
           tenant_id: tenantId,
           stripe_subscription_id: sub.id,
@@ -115,6 +121,9 @@ serve(async (req) => {
           cancel_at_period_end: sub.cancel_at_period_end,
           canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
           additional_professionals: additionalProfessionals,
+          discount_name: discountName,
+          discount_percent_off: discountPercentOff,
+          discount_amount_off: discountAmountOff,
           updated_at: new Date().toISOString(),
         }, { onConflict: "tenant_id" });
 
