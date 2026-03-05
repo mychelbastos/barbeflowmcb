@@ -91,6 +91,7 @@ export default function RecurringClients() {
 
   // Form
   const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
   const [selectedStaff, setSelectedStaff] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [weekday, setWeekday] = useState("1");
@@ -124,11 +125,29 @@ export default function RecurringClients() {
           .eq("tenant_id", currentTenant.id)
           .eq("active", true)
           .order("name"),
-        supabase
-          .from("customers")
-          .select("id, name, phone")
-          .eq("tenant_id", currentTenant.id)
-          .order("name"),
+        (async () => {
+          const all: Customer[] = [];
+          let offset = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+          while (hasMore) {
+            const { data, error } = await supabase
+              .from("customers")
+              .select("id, name, phone")
+              .eq("tenant_id", currentTenant.id)
+              .order("name")
+              .range(offset, offset + batchSize - 1);
+            if (error) throw error;
+            if (data && data.length > 0) {
+              all.push(...data);
+              offset += batchSize;
+              hasMore = data.length === batchSize;
+            } else {
+              hasMore = false;
+            }
+          }
+          return { data: all, error: null };
+        })(),
         supabase
           .from("customer_packages")
           .select("customer_id")
@@ -157,7 +176,7 @@ export default function RecurringClients() {
       setRecords(enrichedRecords);
       setStaff(staffRes.data || []);
       setServices(svcRes.data || []);
-      setCustomers(custRes.data || []);
+      setCustomers(custRes.data as Customer[] || []);
     } catch (err: any) {
       console.error(err);
       toast({ title: "Erro", description: "Erro ao carregar clientes fixos", variant: "destructive" });
@@ -172,6 +191,7 @@ export default function RecurringClients() {
 
   const resetForm = () => {
     setSelectedCustomer("");
+    setCustomerSearch("");
     setSelectedStaff("");
     setSelectedService("");
     setWeekday("1");
@@ -330,16 +350,28 @@ export default function RecurringClients() {
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Cliente</Label>
+                <Input
+                  placeholder="Buscar por nome ou telefone..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                />
                 <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o cliente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} — {c.phone}
-                      </SelectItem>
-                    ))}
+                    {customers
+                      .filter((c) => {
+                        if (!customerSearch) return true;
+                        const q = customerSearch.toLowerCase();
+                        return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+                      })
+                      .slice(0, 30)
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} — {c.phone}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
