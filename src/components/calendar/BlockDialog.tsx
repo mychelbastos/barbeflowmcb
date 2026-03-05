@@ -320,7 +320,7 @@ export function BlockDialog({ open, onOpenChange, staff, defaultDate, onCreated 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving || totalBlocks === 0}>
-            {saving ? "Salvando..." : `Bloquear ${totalBlocks > 1 ? `(${totalBlocks} dias)` : ""}`}
+            {saving ? "Salvando..." : `Bloquear ${weeksAhead === "52" ? "" : totalBlocks > 1 ? `(${totalBlocks} dias)` : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>
