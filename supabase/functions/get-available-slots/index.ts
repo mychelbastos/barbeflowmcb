@@ -103,7 +103,7 @@ serve(async (req) => {
     const nowLocal = new Date(nowUTC.getTime() + (timezoneOffset * 60 * 60 * 1000));
     const todayLocal = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
     
-    if (targetDate < todayLocal) {
+    if (!allow_past && targetDate < todayLocal) {
       return new Response(
         JSON.stringify({ available_slots: [], occupied_slots: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
