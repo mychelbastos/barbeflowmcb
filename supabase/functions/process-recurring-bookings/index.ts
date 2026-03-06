@@ -106,26 +106,177 @@ Deno.serve(async (req) => {
         const isFuture = slotEndUTC > nowUTC;
         const bookingStatus = isFuture ? "confirmed" : "completed";
 
-        const { error: bookingErr } = await supabase
+        // --- Auto-detect subscription/package benefits (same logic as create-booking) ---
+        let resolvedSubscriptionId: string | null = null;
+        let resolvedPackageId: string | null = null;
+        let benefitSource: string | null = null;
+
+        // Priority 1: Check active subscription covering this service
+        const { data: activeSubs } = await supabase
+          .from("customer_subscriptions")
+          .select("id, status, plan_id, started_at, current_period_start, current_period_end, tenant_id, failed_at")
+          .eq("customer_id", rc.customer_id)
+          .eq("tenant_id", rc.tenant_id)
+          .in("status", ["active", "authorized"]);
+
+        if (activeSubs && activeSubs.length > 0) {
+          for (const sub of activeSubs) {
+            const startDate = sub.current_period_start ? new Date(sub.current_period_start) : (sub.started_at ? new Date(sub.started_at) : null);
+            if (!startDate) continue;
+            const endDate = sub.current_period_end ? new Date(sub.current_period_end) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            if (nowUTC > endDate) continue;
+
+            const { data: planSvc } = await supabase
+              .from("subscription_plan_services")
+              .select("sessions_per_cycle")
+              .eq("plan_id", sub.plan_id)
+              .eq("service_id", rc.service_id)
+              .maybeSingle();
+
+            if (planSvc) {
+              resolvedSubscriptionId = sub.id;
+              benefitSource = "subscription";
+              console.log(`Auto-detected subscription ${sub.id} for ${customerName}`);
+              break;
+            }
+          }
+        }
+
+        // Priority 2: Check active package with remaining sessions
+        if (!resolvedSubscriptionId) {
+          const { data: activePackages } = await supabase
+            .from("customer_packages")
+            .select("id, status, payment_status")
+            .eq("customer_id", rc.customer_id)
+            .eq("tenant_id", rc.tenant_id)
+            .eq("status", "active")
+            .eq("payment_status", "confirmed");
+
+          if (activePackages && activePackages.length > 0) {
+            for (const pkg of activePackages) {
+              const { data: pkgSvc } = await supabase
+                .from("customer_package_services")
+                .select("sessions_used, sessions_total")
+                .eq("customer_package_id", pkg.id)
+                .eq("service_id", rc.service_id)
+                .maybeSingle();
+
+              if (pkgSvc && pkgSvc.sessions_used < pkgSvc.sessions_total) {
+                resolvedPackageId = pkg.id;
+                benefitSource = "package";
+                console.log(`Auto-detected package ${pkg.id} for ${customerName} (${pkgSvc.sessions_total - pkgSvc.sessions_used} remaining)`);
+                break;
+              }
+            }
+          }
+        }
+
+        const insertData: Record<string, any> = {
+          tenant_id: rc.tenant_id,
+          customer_id: rc.customer_id,
+          service_id: rc.service_id,
+          staff_id: rc.staff_id,
+          starts_at: slotStartUTC.toISOString(),
+          ends_at: slotEndUTC.toISOString(),
+          status: bookingStatus,
+          created_via: "recurring",
+          notes: `Cliente Fixo — ${customerName}${rc.notes ? ` | ${rc.notes}` : ""}`,
+        };
+
+        if (resolvedSubscriptionId) insertData.customer_subscription_id = resolvedSubscriptionId;
+        if (resolvedPackageId) insertData.customer_package_id = resolvedPackageId;
+
+        const { data: newBooking, error: bookingErr } = await supabase
           .from("bookings")
-          .insert({
-            tenant_id: rc.tenant_id,
-            customer_id: rc.customer_id,
-            service_id: rc.service_id,
-            staff_id: rc.staff_id,
-            starts_at: slotStartUTC.toISOString(),
-            ends_at: slotEndUTC.toISOString(),
-            status: bookingStatus,
-            created_via: "recurring",
-            notes: `Cliente Fixo — ${customerName}${rc.notes ? ` | ${rc.notes}` : ""}`,
-          });
+          .insert(insertData)
+          .select("id")
+          .single();
 
         if (bookingErr) {
           console.error(`Error creating booking for ${customerName}:`, bookingErr);
           continue;
         }
 
-        console.log(`Created ${bookingStatus} booking for ${customerName} at ${timeStr} on ${targetDate}`);
+        // If benefit was detected, handle session tracking/decrement
+        if (newBooking && resolvedSubscriptionId) {
+          // Track subscription usage
+          const sub = activeSubs!.find(s => s.id === resolvedSubscriptionId)!;
+          const startDate = sub.current_period_start ? new Date(sub.current_period_start) : new Date(sub.started_at!);
+          const endDate = sub.current_period_end ? new Date(sub.current_period_end) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const periodStartStr = startDate.toISOString().split("T")[0];
+          const periodEndStr = endDate.toISOString().split("T")[0];
+          const todayStr = nowLocal.toISOString().slice(0, 10);
+
+          let { data: usage } = await supabase
+            .from("subscription_usage")
+            .select("id, sessions_used, booking_ids")
+            .eq("subscription_id", resolvedSubscriptionId)
+            .eq("service_id", rc.service_id)
+            .lte("period_start", todayStr)
+            .gte("period_end", todayStr)
+            .maybeSingle();
+
+          if (!usage) {
+            const { data: newUsage } = await supabase
+              .from("subscription_usage")
+              .insert({
+                subscription_id: resolvedSubscriptionId,
+                service_id: rc.service_id,
+                period_start: periodStartStr,
+                period_end: periodEndStr,
+                sessions_used: 0,
+                sessions_limit: null,
+              })
+              .select()
+              .single();
+            usage = newUsage;
+          }
+
+          if (usage) {
+            await supabase
+              .from("subscription_usage")
+              .update({
+                sessions_used: (usage.sessions_used || 0) + 1,
+                booking_ids: [...(usage.booking_ids || []), newBooking.id],
+              })
+              .eq("id", usage.id);
+            console.log(`Subscription usage tracked for ${customerName}`);
+          }
+        }
+
+        if (newBooking && resolvedPackageId) {
+          // Decrement package sessions
+          const { data: pkgSvc } = await supabase
+            .from("customer_package_services")
+            .select("id, sessions_used, sessions_total")
+            .eq("customer_package_id", resolvedPackageId)
+            .eq("service_id", rc.service_id)
+            .single();
+
+          if (pkgSvc) {
+            await supabase
+              .from("customer_package_services")
+              .update({ sessions_used: pkgSvc.sessions_used + 1 })
+              .eq("id", pkgSvc.id);
+
+            // Update package-level count
+            const { data: pkg } = await supabase
+              .from("customer_packages")
+              .select("sessions_used, sessions_total")
+              .eq("id", resolvedPackageId)
+              .single();
+
+            if (pkg) {
+              const newUsed = (pkg.sessions_used || 0) + 1;
+              const updateData: Record<string, any> = { sessions_used: newUsed };
+              if (newUsed >= pkg.sessions_total) updateData.status = "completed";
+              await supabase.from("customer_packages").update(updateData).eq("id", resolvedPackageId);
+            }
+            console.log(`Package session decremented for ${customerName}`);
+          }
+        }
+
+        console.log(`Created ${bookingStatus} booking for ${customerName} at ${timeStr} on ${targetDate}${benefitSource ? ` [${benefitSource}]` : ""}`);
         totalCreated++;
       }
     }
