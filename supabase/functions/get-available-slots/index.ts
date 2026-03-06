@@ -62,9 +62,12 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, date, service_id, staff_id, allow_past, custom_duration }: GetSlotsRequest = await req.json();
+    const payload = await req.json();
+    const { tenant_id, date, service_id, staff_id, custom_duration } = payload as GetSlotsRequest;
+    const allowPastRaw = (payload?.allow_past ?? payload?.allowPast) as unknown;
+    const allowPast = allowPastRaw === true || allowPastRaw === 'true' || allowPastRaw === 1 || allowPastRaw === '1';
     
-    console.log('Get available slots request:', { tenant_id, date, service_id, staff_id });
+    console.log('Get available slots request:', { tenant_id, date, service_id, staff_id, allowPast, allowPastRaw });
 
     // Validate required fields
     if (!tenant_id || !date) {
@@ -103,7 +106,7 @@ serve(async (req) => {
     const nowLocal = new Date(nowUTC.getTime() + (timezoneOffset * 60 * 60 * 1000));
     const todayLocal = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
     
-    if (targetDate < todayLocal) {
+    if (!allowPast && targetDate < todayLocal) {
       return new Response(
         JSON.stringify({ available_slots: [], occupied_slots: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -300,7 +303,7 @@ serve(async (req) => {
           const slotEndUTC = new Date(slotStartUTC.getTime() + (serviceDuration * 60 * 1000));
 
           // Skip if slot is in the past (unless admin override)
-          if (!allow_past && slotStartUTC <= nowUTC) {
+          if (!allowPast && slotStartUTC <= nowUTC) {
             currentMin += slotDuration;
             if (currentMin >= 60) {
               currentHour += Math.floor(currentMin / 60);
