@@ -75,6 +75,14 @@ interface Customer {
   phone: string;
 }
 
+interface DetectedBenefit {
+  type: 'subscription' | 'package';
+  name: string;
+  id: string;
+  remaining?: number;
+  validUntil?: string;
+}
+
 function CustomerSearchSelect({ customers, value, onChange }: { customers: Customer[]; value: string; onChange: (id: string) => void }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -162,6 +170,7 @@ export default function RecurringClients() {
   const [notes, setNotes] = useState("");
   const [frequency, setFrequency] = useState("weekly");
   const [customDuration, setCustomDuration] = useState("");
+  const [serviceBenefitsMap, setServiceBenefitsMap] = useState<Map<string, DetectedBenefit>>(new Map());
 
   const loadData = useCallback(async () => {
     if (!currentTenant) return;
@@ -249,6 +258,85 @@ export default function RecurringClients() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Load benefit indicators when customer is selected
+  useEffect(() => {
+    if (!selectedCustomer || !currentTenant || services.length === 0) {
+      setServiceBenefitsMap(new Map());
+      return;
+    }
+    const loadAllBenefits = async () => {
+      const map = new Map<string, DetectedBenefit>();
+      try {
+        const now = new Date();
+        // 1. Subscriptions
+        const { data: subs } = await supabase
+          .from('customer_subscriptions')
+          .select('id, status, plan_id, started_at, current_period_start, current_period_end, plan:subscription_plans(name)')
+          .eq('customer_id', selectedCustomer)
+          .eq('tenant_id', currentTenant.id)
+          .in('status', ['active', 'authorized']);
+
+        if (subs) {
+          for (const sub of subs) {
+            const startDate = sub.current_period_start ? new Date(sub.current_period_start) : (sub.started_at ? new Date(sub.started_at) : null);
+            if (!startDate) continue;
+            const endDate = sub.current_period_end ? new Date(sub.current_period_end) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            if (now > endDate) continue;
+
+            const { data: planSvcs } = await supabase
+              .from('subscription_plan_services')
+              .select('service_id')
+              .eq('plan_id', sub.plan_id);
+
+            for (const ps of (planSvcs || [])) {
+              if (!map.has(ps.service_id)) {
+                map.set(ps.service_id, {
+                  type: 'subscription',
+                  name: (sub.plan as any)?.name || 'Assinatura',
+                  id: sub.id,
+                  validUntil: endDate.toLocaleDateString('pt-BR'),
+                });
+              }
+            }
+          }
+        }
+
+        // 2. Packages
+        const { data: pkgs } = await supabase
+          .from('customer_packages')
+          .select('id, status, payment_status, package:service_packages(name)')
+          .eq('customer_id', selectedCustomer)
+          .eq('tenant_id', currentTenant.id)
+          .eq('status', 'active')
+          .eq('payment_status', 'confirmed');
+
+        if (pkgs) {
+          for (const pkg of pkgs) {
+            const { data: pkgSvcs } = await supabase
+              .from('customer_package_services')
+              .select('service_id, sessions_used, sessions_total')
+              .eq('customer_package_id', pkg.id);
+
+            for (const ps of (pkgSvcs || [])) {
+              if (ps.sessions_used < ps.sessions_total && !map.has(ps.service_id)) {
+                map.set(ps.service_id, {
+                  type: 'package',
+                  name: (pkg.package as any)?.name || 'Pacote',
+                  id: pkg.id,
+                  remaining: ps.sessions_total - ps.sessions_used,
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error loading service benefits map:', err);
+      }
+      setServiceBenefitsMap(map);
+    };
+    loadAllBenefits();
+  }, [selectedCustomer, currentTenant, services]);
 
   const resetForm = () => {
     setSelectedCustomer("");
@@ -450,11 +538,27 @@ export default function RecurringClients() {
                     <SelectValue placeholder="Selecione o serviço" />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name} ({s.duration_minutes}min — R$ {(s.price_cents / 100).toFixed(2)})
-                      </SelectItem>
-                    ))}
+                    {services.map((s) => {
+                      const benefit = serviceBenefitsMap.get(s.id);
+                      return (
+                        <SelectItem key={s.id} value={s.id}>
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="truncate">
+                              {s.name} ({s.duration_minutes}min)
+                            </span>
+                            {benefit ? (
+                              <span className="ml-auto text-xs font-medium shrink-0 text-amber-400">
+                                {benefit.type === 'subscription' ? '🔓 Assinatura' : `📦 ${benefit.remaining}x`}
+                              </span>
+                            ) : (
+                              <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                                R$ {(s.price_cents / 100).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 {selectedService && (
