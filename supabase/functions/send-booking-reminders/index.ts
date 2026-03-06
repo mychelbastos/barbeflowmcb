@@ -6,15 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Two reminder windows with buffer
-const REMINDER_WINDOWS = [
-  { label: "24h", hoursBefore: 24, bufferMinutes: 15 },
-  { label: "1h", hoursBefore: 1, bufferMinutes: 10 },
-];
-
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function sendWhatsAppNotification(bookingId: string, tenantId: string, reminderLabel: string): Promise<boolean> {
@@ -54,7 +47,7 @@ serve(async (req) => {
 
   try {
     const now = new Date();
-    console.log(`[${now.toISOString()}] Running send-booking-reminders (dual window)`);
+    console.log(`[${now.toISOString()}] Running send-booking-reminders (sweep mode)`);
 
     const results = {
       total: 0,
@@ -63,44 +56,30 @@ serve(async (req) => {
       bookingIds: [] as string[],
     };
 
-    for (const window of REMINDER_WINDOWS) {
-      const windowStart = new Date(now.getTime() + (window.hoursBefore * 60 - window.bufferMinutes) * 60000);
-      const windowEnd = new Date(now.getTime() + (window.hoursBefore * 60 + window.bufferMinutes) * 60000);
+    // ============================
+    // 24h SWEEP: all confirmed bookings starting within next 24h
+    // that haven't had a 24h reminder yet
+    // ============================
+    const now24h = new Date(now.getTime() + 24 * 60 * 60000);
 
-      console.log(`[${window.label}] Looking for confirmed bookings between: ${windowStart.toISOString()} and ${windowEnd.toISOString()}`);
+    console.log(`[24h] Sweeping confirmed bookings between ${now.toISOString()} and ${now24h.toISOString()} with reminder_sent=false`);
 
-      // For 24h reminder: check reminder_sent = false
-      // For 1h reminder: reminder_sent can be true (24h already sent) — use dedup via notification_log
-      const query = supabase
-        .from("bookings")
-        .select("id, tenant_id, starts_at")
-        .eq("status", "confirmed")
-        .gte("starts_at", windowStart.toISOString())
-        .lte("starts_at", windowEnd.toISOString());
+    const { data: bookings24h, error: err24h } = await supabase
+      .from("bookings")
+      .select("id, tenant_id, starts_at")
+      .eq("status", "confirmed")
+      .eq("reminder_sent", false)
+      .gte("starts_at", now.toISOString())
+      .lte("starts_at", now24h.toISOString());
 
-      // For the 24h window, only pick bookings that haven't had any reminder
-      if (window.label === "24h") {
-        query.eq("reminder_sent", false);
-      }
+    if (err24h) {
+      console.error("[24h] Error fetching bookings:", err24h);
+    } else if (bookings24h && bookings24h.length > 0) {
+      console.log(`[24h] Found ${bookings24h.length} bookings to check`);
+      results.total += bookings24h.length;
 
-      const { data: bookings, error } = await query;
-
-      if (error) {
-        console.error(`[${window.label}] Error fetching bookings:`, error);
-        continue;
-      }
-
-      if (!bookings || bookings.length === 0) {
-        console.log(`[${window.label}] No bookings found`);
-        continue;
-      }
-
-      console.log(`[${window.label}] Found ${bookings.length} bookings`);
-      results.total += bookings.length;
-
-      for (const booking of bookings) {
-        // Dedup check: avoid sending same reminder type twice
-        const dedupKey = `reminder_${window.label}_${booking.id}`;
+      for (const booking of bookings24h) {
+        const dedupKey = `reminder_24h_${booking.id}`;
         const { data: existing } = await supabase
           .from("notification_log")
           .select("id")
@@ -108,25 +87,21 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existing) {
-          console.log(`[${window.label}] Skipping duplicate for booking ${booking.id}`);
+          console.log(`[24h] Skipping duplicate for booking ${booking.id}`);
           continue;
         }
 
-        const success = await sendWhatsAppNotification(booking.id, booking.tenant_id, window.label);
+        const success = await sendWhatsAppNotification(booking.id, booking.tenant_id, "24h");
 
         if (success) {
-          // Mark reminder_sent on first reminder (24h)
-          if (window.label === "24h") {
-            await supabase
-              .from("bookings")
-              .update({ reminder_sent: true })
-              .eq("id", booking.id);
-          }
+          await supabase
+            .from("bookings")
+            .update({ reminder_sent: true })
+            .eq("id", booking.id);
 
-          // Log for dedup
           await supabase.from("notification_log").upsert({
             tenant_id: booking.tenant_id,
-            event_type: `booking_reminder_${window.label}`,
+            event_type: "booking_reminder_24h",
             dedup_key: dedupKey,
             booking_id: booking.id,
             sent_at: new Date().toISOString(),
@@ -138,6 +113,63 @@ serve(async (req) => {
           results.failed++;
         }
       }
+    } else {
+      console.log("[24h] No bookings found");
+    }
+
+    // ============================
+    // 1h SWEEP: all confirmed bookings starting within next 1h
+    // (reminder_sent may already be true from 24h reminder)
+    // ============================
+    const now1h = new Date(now.getTime() + 1 * 60 * 60000);
+
+    console.log(`[1h] Sweeping confirmed bookings between ${now.toISOString()} and ${now1h.toISOString()}`);
+
+    const { data: bookings1h, error: err1h } = await supabase
+      .from("bookings")
+      .select("id, tenant_id, starts_at")
+      .eq("status", "confirmed")
+      .gte("starts_at", now.toISOString())
+      .lte("starts_at", now1h.toISOString());
+
+    if (err1h) {
+      console.error("[1h] Error fetching bookings:", err1h);
+    } else if (bookings1h && bookings1h.length > 0) {
+      console.log(`[1h] Found ${bookings1h.length} bookings to check`);
+      results.total += bookings1h.length;
+
+      for (const booking of bookings1h) {
+        const dedupKey = `reminder_1h_${booking.id}`;
+        const { data: existing } = await supabase
+          .from("notification_log")
+          .select("id")
+          .eq("dedup_key", dedupKey)
+          .maybeSingle();
+
+        if (existing) {
+          console.log(`[1h] Skipping duplicate for booking ${booking.id}`);
+          continue;
+        }
+
+        const success = await sendWhatsAppNotification(booking.id, booking.tenant_id, "1h");
+
+        if (success) {
+          await supabase.from("notification_log").upsert({
+            tenant_id: booking.tenant_id,
+            event_type: "booking_reminder_1h",
+            dedup_key: dedupKey,
+            booking_id: booking.id,
+            sent_at: new Date().toISOString(),
+          }, { onConflict: "dedup_key" });
+
+          results.sent++;
+          results.bookingIds.push(booking.id);
+        } else {
+          results.failed++;
+        }
+      }
+    } else {
+      console.log("[1h] No bookings found");
     }
 
     console.log(`Reminders processed: ${results.sent} sent, ${results.failed} failed`);

@@ -1,59 +1,91 @@
 
+# Order Bump — Recomendacoes de Produtos no Agendamento Publico
 
-## Diagnosis: Why Reminders Are Not Being Sent
+## Conceito
+Quando o cliente seleciona um servico e chega na etapa de dados pessoais (step 5), o sistema exibe uma secao de "Adicione ao seu atendimento" com produtos recomendados que o dono configurou para aquele servico. O cliente marca os que deseja e eles sao salvos como `booking_items` do tipo `product` apos a criacao do booking.
 
-### The Problem (with data)
+---
 
-**Adriano Alves**: Only **1 out of 48** bookings got a 24h reminder (2% success rate)
-**WS BARBEARIA**: Only **9 out of 51** bookings got a 24h reminder (18% success rate)
+## Arquitetura
 
-### Root Cause: The 24h Window Is Too Narrow
-
-The current logic searches for bookings in a **30-minute window** around exactly 24 hours from now:
-
-```text
-now + 23h45m  ←→  now + 24h15m
-         (only 30 min wide)
-```
-
-This fails in two critical scenarios:
-
-1. **Admin/recurring bookings created less than 24h before the appointment** -- These never enter the 24h window. Example: Gilson Silva was created at 13:39 UTC for 16:00 UTC same day (only 2.3h before). The 24h window already passed before the booking existed.
-
-2. **Recurring bookings materialized late** -- The `process-recurring-bookings` cron materializes bookings with ~48h lookahead, but if it runs after the narrow 24h window has passed, the reminder is lost. Example: JOTAPEL's recurring booking was materialized at 15:14 UTC for 10:00 UTC same day -- already past the appointment time.
-
-### The Fix
-
-Change from a narrow "time band" approach to a **sweep** approach:
-
-**24h reminder**: Find ALL confirmed bookings where:
-- `starts_at` is between now and now + 24h
-- `reminder_sent = false`
-- No existing `reminder_24h` dedup entry
-
-**1h reminder**: Find ALL confirmed bookings where:
-- `starts_at` is between now and now + 1h
-- No existing `reminder_1h` dedup entry
-
-This guarantees that any booking -- whether created months ago or 2 hours before -- will be caught by the next cron run (every minute).
-
-### Changes Required
-
-**1 file**: `supabase/functions/send-booking-reminders/index.ts`
-
-Replace the narrow window queries with sweep queries:
+### 1. Nova tabela: `service_order_bumps`
+Relaciona servicos a produtos recomendados, com ordem de exibicao.
 
 ```text
-BEFORE (narrow window):
-  windowStart = now + 23h45m
-  windowEnd   = now + 24h15m
-  → Misses bookings created < 24h before
+service_order_bumps
+- id            uuid PK
+- tenant_id     uuid NOT NULL
+- service_id    uuid NOT NULL (FK services)
+- product_id    uuid NOT NULL (FK products)
+- sort_order    integer DEFAULT 0
+- active        boolean DEFAULT true
+- created_at    timestamptz DEFAULT now()
 
-AFTER (sweep):
-  24h: starts_at BETWEEN now AND now+24h, reminder_sent=false, no dedup
-  1h:  starts_at BETWEEN now AND now+1h, no dedup
-  → Catches ALL pending bookings regardless of creation time
+UNIQUE(service_id, product_id)
+RLS: tenant scope (user_belongs_to_tenant)
 ```
 
-No database changes needed. The dedup table already prevents double-sending.
+### 2. Tela de configuracao (Admin)
+No arquivo `src/pages/Services.tsx`, dentro do dialog de editar servico, adicionar uma nova secao "Order Bump" que permite:
+- Buscar e vincular produtos ativos ao servico
+- Reordenar e remover produtos vinculados
+- Toggle ativo/inativo por vinculo
 
+### 3. Fluxo publico (BookingPublic.tsx)
+- Apos o cliente selecionar o servico (step 1), buscar os order bumps ativos: `service_order_bumps` JOIN `products` WHERE `service_id` = selecionado
+- Na step 5 (dados pessoais), exibir uma secao visual **antes** do botao de confirmar:
+  - Titulo: "Aproveite e adicione"
+  - Cards de produto com foto, nome, preco e checkbox
+  - Total atualizado dinamicamente (servico + produtos selecionados)
+- Os produtos selecionados sao enviados no body do `create-booking` como `order_bump_items`
+
+### 4. Backend (create-booking Edge Function)
+- Aceitar campo opcional `order_bump_items: Array<{product_id, quantity}>` no request
+- Apos criar o booking, inserir os itens na tabela `booking_items` com:
+  - `type: 'product'`
+  - `ref_id: product_id`
+  - `paid_status: 'unpaid'` (serao cobrados na comanda ou junto ao pagamento online)
+  - `staff_id: booking.staff_id`
+  - `purchase_price_cents` do produto (para calculo de margem)
+
+---
+
+## Detalhes tecnicos
+
+### Arquivos modificados/criados
+
+| Arquivo | Alteracao |
+|---|---|
+| **Migration SQL** | Criar tabela `service_order_bumps` com RLS |
+| `src/pages/Services.tsx` | Secao de configuracao de order bumps no dialog de edicao |
+| `src/pages/BookingPublic.tsx` | Buscar bumps ao selecionar servico, exibir na step 5, enviar no submit |
+| `supabase/functions/create-booking/index.ts` | Aceitar `order_bump_items`, inserir em `booking_items` apos criacao |
+
+### Fluxo do cliente (visual)
+
+```text
+Step 1: Seleciona servico
+  -> Sistema busca order bumps do servico
+Step 2: Seleciona profissional
+Step 3: Seleciona data/hora
+Step 4: Forma de pagamento (se aplicavel)
+Step 5: Dados pessoais + SECAO ORDER BUMP
+  -> Cards com checkbox, foto, nome, preco
+  -> "Total: R$ X (servico) + R$ Y (produtos)"
+Step 6: Confirmacao
+```
+
+### Secao de Order Bump (UI publica)
+- Estilo consistente com o restante do BookingPublic (zinc-900, border-zinc-800)
+- Cada produto: card horizontal com imagem 48x48, nome, preco e checkbox
+- Animacao de entrada suave
+- Resumo do total atualizado abaixo
+
+### Secao de configuracao (Admin)
+- Dentro do dialog de edicao de servico, nova aba/secao "Order Bumps"
+- Lista de produtos vinculados com botao de remover
+- Combobox para buscar e adicionar novos produtos
+- Reutilizar padrao visual do `ExtraItemsSection` (Command + Popover)
+
+### Integracao com Comanda
+Os itens de order bump aparecerao automaticamente na comanda (`BookingDetailsModal`) pois ja serao `booking_items` do tipo `product`. O fluxo de pagamento local e fechamento funciona sem alteracoes.
