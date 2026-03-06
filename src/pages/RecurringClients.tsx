@@ -22,7 +22,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Loader2, Trash2, Pencil, UserCheck, Clock, CalendarClock, Ban, Scissors
+  Plus, Loader2, Trash2, Pencil, UserCheck, Clock, CalendarClock, Ban, Scissors, Search
 } from "lucide-react";
 
 const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
