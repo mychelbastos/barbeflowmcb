@@ -612,9 +612,16 @@ export default function RecurringClients() {
             </p>
           </CardContent>
         </Card>
+      ) : filteredRecords.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <Search className="h-8 w-8 text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground">Nenhum cliente fixo encontrado com os filtros selecionados.</p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
-          {records.map((r) => (
+          {filteredRecords.map((r) => (
             <Card key={r.id} className={!r.active ? "opacity-60" : ""}>
               <CardContent className="p-3 md:p-4">
                 {/* Mobile: stacked compact layout */}
