@@ -75,6 +75,14 @@ interface Customer {
   phone: string;
 }
 
+interface DetectedBenefit {
+  type: 'subscription' | 'package';
+  name: string;
+  id: string;
+  remaining?: number;
+  validUntil?: string;
+}
+
 function CustomerSearchSelect({ customers, value, onChange }: { customers: Customer[]; value: string; onChange: (id: string) => void }) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
