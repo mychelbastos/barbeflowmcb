@@ -199,12 +199,20 @@ ${booking.tenant.address ? `📌 ${booking.tenant.address}` : ""}
 
 Te esperamos! 🙂`;
 
-    case "booking_reminder_24h":
-      return `📋 *Lembrete — Agendamento Amanhã*
+    case "booking_reminder_24h": {
+      // Determine if the booking is today or tomorrow based on local time
+      const bookingDate = new Date(booking.starts_at);
+      const nowLocal = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Bahia" });
+      const bookingLocal = bookingDate.toLocaleDateString("pt-BR", { timeZone: "America/Bahia" });
+      const isToday = nowLocal === bookingLocal;
+      const dayLabel = isToday ? "Hoje" : "Amanhã";
+      const dayLabelLower = isToday ? "hoje" : "amanhã";
+
+      return `📋 *Lembrete — Agendamento ${dayLabel}*
 
 Olá ${booking.customer.name}!
 
-Passando para lembrar do seu agendamento amanhã:
+Passando para lembrar do seu agendamento ${dayLabelLower}:
 
 📅 *Data:* ${dateTime}
 ${serviceLabel}
@@ -217,6 +225,7 @@ ${booking.tenant.address ? `📌 ${booking.tenant.address}` : ""}
 Caso precise reagendar, entre em contato conosco.
 
 Te esperamos! 😊`;
+    }
 
     case "booking_cancelled":
       return `❌ *Agendamento Cancelado*
