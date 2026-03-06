@@ -538,11 +538,27 @@ export default function RecurringClients() {
                     <SelectValue placeholder="Selecione o serviço" />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name} ({s.duration_minutes}min — R$ {(s.price_cents / 100).toFixed(2)})
-                      </SelectItem>
-                    ))}
+                    {services.map((s) => {
+                      const benefit = serviceBenefitsMap.get(s.id);
+                      return (
+                        <SelectItem key={s.id} value={s.id}>
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="truncate">
+                              {s.name} ({s.duration_minutes}min)
+                            </span>
+                            {benefit ? (
+                              <span className="ml-auto text-xs font-medium shrink-0 text-amber-400">
+                                {benefit.type === 'subscription' ? '🔓 Assinatura' : `📦 ${benefit.remaining}x`}
+                              </span>
+                            ) : (
+                              <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                                R$ {(s.price_cents / 100).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 {selectedService && (
