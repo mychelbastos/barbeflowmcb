@@ -338,6 +338,7 @@ export default function RecurringClients() {
     loadAllBenefits();
   }, [selectedCustomer, currentTenant, services]);
 
+  const resetForm = () => {
     setSelectedCustomer("");
     setCustomerSearch("");
     setSelectedStaff("");
