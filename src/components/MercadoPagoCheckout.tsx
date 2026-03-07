@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2, Lock, Shield } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { TurnstileWidget } from '@/components/TurnstileWidget';
 
 interface PayerInfo {
   email: string;
@@ -75,6 +76,7 @@ export const MercadoPagoCheckout = ({
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [useCheckoutRedirect, setUseCheckoutRedirect] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const brickControllerRef = useRef<any>(null);
   const publicKeyRef = useRef<string | null>(null);
@@ -273,6 +275,12 @@ export const MercadoPagoCheckout = ({
 
   const handleCardPaymentSubmit = async (formData: any) => {
     if (!isMountedRef.current) return;
+
+    if (!turnstileToken) {
+      setErrorMessage('Aguarde a verificação de segurança antes de pagar.');
+      return;
+    }
+
     setStatus('processing');
     setErrorMessage('');
 
@@ -287,6 +295,7 @@ export const MercadoPagoCheckout = ({
                 token: formData.token,
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
+                cf_turnstile_token: turnstileToken,
                 payer: {
                   email: formData.payer?.email || payer.email,
                   identification: formData.payer?.identification,
@@ -298,6 +307,7 @@ export const MercadoPagoCheckout = ({
                 token: formData.token,
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
+                cf_turnstile_token: turnstileToken,
                 payer: {
                   email: formData.payer?.email || payer.email,
                   identification: formData.payer?.identification,
@@ -327,6 +337,7 @@ export const MercadoPagoCheckout = ({
     } catch (error: any) {
       if (!isMountedRef.current) return;
       console.error('Payment error:', error);
+      setTurnstileToken(null);
       setErrorMessage(error.message || 'Erro ao processar pagamento');
       setStatus('error');
       onError(error.message);
@@ -513,6 +524,7 @@ export const MercadoPagoCheckout = ({
     setErrorMessage('');
     setPaymentMethod(null);
     setPixData(null);
+    setTurnstileToken(null);
     if (brickControllerRef.current) {
       try {
         brickControllerRef.current.unmount();
@@ -524,6 +536,7 @@ export const MercadoPagoCheckout = ({
   const goBackToMethodSelect = () => {
     setPaymentMethod(null);
     setPixData(null);
+    setTurnstileToken(null);
     if (brickControllerRef.current) {
       try {
         brickControllerRef.current.unmount();
@@ -811,6 +824,13 @@ export const MercadoPagoCheckout = ({
             <p className="text-sm text-muted-foreground">Carregando formulário...</p>
           </div>
         )}
+
+        {/* Turnstile verification */}
+        <TurnstileWidget
+          onVerify={(token) => setTurnstileToken(token)}
+          onExpire={() => setTurnstileToken(null)}
+          onError={() => setTurnstileToken(null)}
+        />
 
         {/* Card Payment Brick container */}
         <div 
