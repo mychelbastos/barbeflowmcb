@@ -219,22 +219,12 @@ export default function Onboarding() {
             buttonLabel="Começar grátis"
           />
           <PlanCard
-            planKey="profissional"
-            plan={PLANS.profissional}
-            isYearly={isYearly}
-            checkoutLoading={checkoutLoading}
-            onSubscribe={handleSubscribe}
-            recommended
-            icon={<Crown className="h-4 w-4" />}
-            buttonVariant="default"
-            buttonLabel="Começar grátis"
-          />
-          <PlanCard
             planKey="ilimitado"
             plan={PLANS.ilimitado}
             isYearly={isYearly}
             checkoutLoading={checkoutLoading}
             onSubscribe={handleSubscribe}
+            recommended
             icon={<Infinity className="h-4 w-4" />}
             buttonVariant="default"
             buttonLabel="Começar grátis"
