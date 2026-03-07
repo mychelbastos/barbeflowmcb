@@ -492,6 +492,8 @@ export const MercadoPagoCheckout = ({
         if (data.reused) {
           console.log('PIX reutilizado (QR code existente)');
         }
+        // Store the payment_id for polling
+        if (data.payment_id) {
           setPaymentId(data.payment_id);
         }
         setStatus('pix-waiting');
