@@ -168,7 +168,7 @@ export function OwnerWeeklySummarySettings({ currentTenant }: Props) {
         </p>
 
         {!hasPhone ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-muted-foreground">
             Cadastre o telefone da barbearia em{" "}
             <span className="font-medium text-foreground">
               Configurações → Geral
