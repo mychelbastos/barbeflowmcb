@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+
+interface OnlineDiscountValues {
+  online_discount_percent: number;
+  show_cancellation_forfeit: boolean;
+  cancellation_forfeit_hours: number;
+}
 
 interface Props {
   currentTenant: any;
-  loading: boolean;
-  setLoading: (v: boolean) => void;
+  onChange: (values: OnlineDiscountValues) => void;
 }
 
-export function OnlineDiscountSettings({ currentTenant, loading, setLoading }: Props) {
-  const { toast } = useToast();
+export function OnlineDiscountSettings({ currentTenant, onChange }: Props) {
   const settings = currentTenant?.settings || {};
 
   const [discountPercent, setDiscountPercent] = useState<number>(settings.online_discount_percent ?? 0);
@@ -27,39 +28,21 @@ export function OnlineDiscountSettings({ currentTenant, loading, setLoading }: P
     setForfeitHours(s.cancellation_forfeit_hours ?? 24);
   }, [currentTenant]);
 
-  const examplePrice = 4000; // R$ 40,00
+  // Notify parent whenever values change
+  useEffect(() => {
+    onChange({
+      online_discount_percent: Math.max(0, Math.min(50, discountPercent)),
+      show_cancellation_forfeit: showForfeit,
+      cancellation_forfeit_hours: forfeitHours,
+    });
+  }, [discountPercent, showForfeit, forfeitHours]);
+
+  const examplePrice = 4000;
   const exampleDiscount = Math.round(examplePrice * discountPercent / 100);
   const exampleOnline = examplePrice - exampleDiscount;
 
-  const handleSave = async () => {
-    if (!currentTenant) return;
-    setLoading(true);
-    try {
-      const clampedDiscount = Math.max(0, Math.min(50, discountPercent));
-      const { error } = await supabase
-        .from('tenants')
-        .update({
-          settings: {
-            ...currentTenant.settings,
-            online_discount_percent: clampedDiscount,
-            show_cancellation_forfeit: showForfeit,
-            cancellation_forfeit_hours: forfeitHours,
-          },
-        })
-        .eq('id', currentTenant.id);
-
-      if (error) throw error;
-      toast({ title: "Configurações salvas", description: "Desconto e política de cancelamento atualizados." });
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Discount config */}
       <div className="rounded-lg border p-4 space-y-4">
         <div>
           <Label>Percentual de desconto</Label>
@@ -88,7 +71,6 @@ export function OnlineDiscountSettings({ currentTenant, loading, setLoading }: P
         )}
       </div>
 
-      {/* Cancellation forfeit policy */}
       <div className="rounded-lg border p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
@@ -119,12 +101,6 @@ export function OnlineDiscountSettings({ currentTenant, loading, setLoading }: P
             </div>
           </>
         )}
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={loading}>
-          {loading ? "Salvando..." : "Salvar Desconto e Política"}
-        </Button>
       </div>
     </div>
   );
