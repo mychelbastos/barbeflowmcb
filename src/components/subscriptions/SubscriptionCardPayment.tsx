@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, Check, ChevronLeft, Shield, Lock, CreditCard } from 'lucide-react';
+import { TurnstileWidget } from '@/components/TurnstileWidget';
 
 declare global {
   interface Window {
@@ -58,6 +59,7 @@ export function SubscriptionCardPayment({
 }: SubscriptionCardPaymentProps) {
   const [status, setStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const brickControllerRef = useRef<any>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
@@ -193,6 +195,12 @@ export function SubscriptionCardPayment({
 
   const handleCardSubmit = async (formData: any) => {
     if (!isMountedRef.current) return;
+
+    if (!turnstileToken) {
+      setErrorMessage('Aguarde a verificação de segurança antes de assinar.');
+      return;
+    }
+
     setStatus('processing');
     setErrorMessage('');
 
@@ -206,6 +214,7 @@ export function SubscriptionCardPayment({
           customer_email: customerEmail,
           customer_cpf: customerCpf,
           card_token_id: formData.token,
+          cf_turnstile_token: turnstileToken,
         },
       });
 
@@ -227,6 +236,7 @@ export function SubscriptionCardPayment({
     } catch (err: any) {
       if (!isMountedRef.current) return;
       console.error('Subscription payment error:', err);
+      setTurnstileToken(null);
       setErrorMessage(err.message || 'Erro ao processar assinatura');
       setStatus('error');
     }
@@ -234,6 +244,7 @@ export function SubscriptionCardPayment({
 
   const retry = () => {
     setErrorMessage('');
+    setTurnstileToken(null);
     if (brickControllerRef.current) {
       try { brickControllerRef.current.unmount(); } catch {}
     }
@@ -322,6 +333,13 @@ export function SubscriptionCardPayment({
           <span className="text-muted-foreground/60 text-xs mt-1">Não feche esta página</span>
         </div>
       )}
+
+      {/* Turnstile verification */}
+      <TurnstileWidget
+        onVerify={(token) => setTurnstileToken(token)}
+        onExpire={() => setTurnstileToken(null)}
+        onError={() => setTurnstileToken(null)}
+      />
 
       {/* Card form container */}
       <div
