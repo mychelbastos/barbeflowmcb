@@ -8,11 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { BarChart3, Smartphone, Eye, EyeOff, Loader2 } from "lucide-react";
+import { BarChart3, Smartphone, Loader2 } from "lucide-react";
 
 interface Props {
   currentTenant: any;
+}
+
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
 }
 
 function formatPhoneMask(value: string): string {
@@ -27,55 +37,75 @@ export function OwnerWeeklySummarySettings({ currentTenant }: Props) {
   const { toast } = useToast();
   const [isOwner, setIsOwner] = useState(false);
   const [checkingOwner, setCheckingOwner] = useState(true);
-  const [phone, setPhone] = useState("");
-  const [includeStaff, setIncludeStaff] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
 
-  // Check if current user is owner
+  const [enabled, setEnabled] = useState(true);
+  const [altPhone, setAltPhone] = useState("");
+  const [showAltField, setShowAltField] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const barbershopPhone = currentTenant?.phone || "";
+  const hasPhone = barbershopPhone.length >= 10;
+
+  // Check owner
   useEffect(() => {
     if (!user || !currentTenant) {
       setCheckingOwner(false);
       return;
     }
-
-    const checkOwner = async () => {
+    (async () => {
       try {
-        // The app uses is_tenant_admin RPC or checks users_tenant role
-        // Staff table has is_owner field, but no user_id column
-        // Use the admin check as proxy for owner access
         const { data } = await supabase
           .from("users_tenant")
           .select("role")
           .eq("user_id", user.id)
           .eq("tenant_id", currentTenant.id)
           .single();
-
         setIsOwner(data?.role === "admin");
       } catch {
         setIsOwner(false);
       } finally {
         setCheckingOwner(false);
       }
-    };
-
-    checkOwner();
+    })();
   }, [user, currentTenant]);
 
   // Load settings
   useEffect(() => {
     if (!currentTenant) return;
-    const settings = currentTenant.settings || {};
-    const savedPhone = settings.owner_summary_phone || "";
-    setPhone(savedPhone ? formatPhoneMask(savedPhone) : "");
-    setIncludeStaff(settings.owner_summary_include_staff !== false);
+    const s = currentTenant.settings || {};
+    setEnabled(s.owner_summary_enabled !== false);
+    const saved = s.owner_summary_phone || "";
+    setAltPhone(saved ? formatPhoneMask(saved) : "");
+    setShowAltField(!!saved);
   }, [currentTenant]);
 
-  const handleSave = async () => {
-    if (!currentTenant) return;
+  const handleToggle = async (val: boolean) => {
+    setEnabled(val);
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from("tenants")
+        .update({
+          settings: {
+            ...currentTenant.settings,
+            owner_summary_enabled: val,
+          },
+        })
+        .eq("id", currentTenant.id);
+      if (error) throw error;
+      toast({
+        title: val ? "Resumo semanal ativado!" : "Resumo semanal desativado.",
+      });
+    } catch (err: any) {
+      setEnabled(!val);
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const digits = phone.replace(/\D/g, "");
-
+  const handleSaveAlt = async () => {
+    const digits = altPhone.replace(/\D/g, "");
     if (digits && digits.length < 10) {
       toast({
         title: "Telefone inválido",
@@ -84,7 +114,6 @@ export function OwnerWeeklySummarySettings({ currentTenant }: Props) {
       });
       return;
     }
-
     try {
       setSaving(true);
       const { error } = await supabase
@@ -93,27 +122,21 @@ export function OwnerWeeklySummarySettings({ currentTenant }: Props) {
           settings: {
             ...currentTenant.settings,
             owner_summary_phone: digits || null,
-            owner_summary_include_staff: includeStaff,
           },
         })
         .eq("id", currentTenant.id);
-
       if (error) throw error;
-
       toast({
         title: digits
-          ? "Resumo semanal ativado!"
-          : "Resumo semanal desativado.",
-        description: digits
-          ? "Você vai receber todo sábado às 20h."
-          : "O número foi removido.",
+          ? "Resumo será enviado para o número alternativo."
+          : "Resumo será enviado para o WhatsApp da barbearia.",
       });
+      if (!digits) {
+        setShowAltField(false);
+        setAltPhone("");
+      }
     } catch (err: any) {
-      toast({
-        title: "Erro",
-        description: err.message || "Não foi possível salvar.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -121,16 +144,9 @@ export function OwnerWeeklySummarySettings({ currentTenant }: Props) {
 
   if (checkingOwner || !isOwner) return null;
 
-  const digits = phone.replace(/\D/g, "");
-  const isActive = digits.length >= 10;
-  const tenantName = currentTenant?.name || "Meu Negócio";
-
-  // Pre-fill with tenant phone if phone is empty
-  const handlePhoneFocus = () => {
-    if (!phone && currentTenant?.phone) {
-      setPhone(formatPhoneMask(currentTenant.phone));
-    }
-  };
+  const altDigits = altPhone.replace(/\D/g, "");
+  const destinationPhone = altDigits || barbershopPhone;
+  const isAlternative = !!altDigits;
 
   return (
     <Card className="mt-6">
@@ -140,102 +156,103 @@ export function OwnerWeeklySummarySettings({ currentTenant }: Props) {
             <BarChart3 className="h-5 w-5" />
             Resumo Semanal do Negócio
           </div>
-          <Badge
-            variant={isActive ? "success" : "secondary"}
-          >
-            {isActive ? "Ativo" : "Inativo"}
+          <Badge variant={enabled && hasPhone ? "success" : "secondary"}>
+            {enabled && hasPhone ? "Ativo" : "Inativo"}
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Receba toda semana no seu WhatsApp um resumo completo com atendimentos,
-          faturamento, cancelamentos e performance dos profissionais.
+          📊 Todo sábado às 20h, você recebe um resumo da semana no WhatsApp com
+          atendimentos, faturamento e performance dos profissionais.
         </p>
 
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <Smartphone className="h-4 w-4" />
-            Número que vai receber o resumo
-          </Label>
-          <Input
-            placeholder="(75) 98846-0046"
-            value={phone}
-            onFocus={handlePhoneFocus}
-            onChange={(e) => setPhone(formatPhoneMask(e.target.value))}
-            className="max-w-xs"
-          />
-          <p className="text-xs text-muted-foreground">
-            Pode ser qualquer número com WhatsApp
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label className="text-base font-medium">
-              Incluir performance por profissional
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Mostra atendimentos e faturamento de cada barbeiro
-            </p>
+        {!hasPhone ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-muted-foreground">
+            Cadastre o telefone da barbearia em{" "}
+            <span className="font-medium text-foreground">
+              Configurações → Geral
+            </span>{" "}
+            para receber o resumo semanal.
           </div>
-          <Switch checked={includeStaff} onCheckedChange={setIncludeStaff} />
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <Label className="text-base font-medium">
+                Receber resumo semanal
+              </Label>
+              <Switch
+                checked={enabled}
+                onCheckedChange={handleToggle}
+                disabled={saving}
+              />
+            </div>
 
-        <div className="flex items-center gap-3">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              "Salvar"
+            {enabled && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Enviado para:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatPhone(destinationPhone)}
+                  </span>{" "}
+                  <span className="text-xs">
+                    ({isAlternative ? "número personalizado" : "WhatsApp da barbearia"})
+                  </span>
+                </p>
+
+                {!showAltField ? (
+                  <button
+                    type="button"
+                    className="text-sm text-primary hover:underline"
+                    onClick={() => setShowAltField(true)}
+                  >
+                    ↳ Receber em outro número?
+                  </button>
+                ) : (
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <Label className="flex items-center gap-2">
+                      <Smartphone className="h-4 w-4" />
+                      Número alternativo
+                    </Label>
+                    <Input
+                      placeholder="(00) 00000-0000"
+                      value={altPhone}
+                      onChange={(e) => setAltPhone(formatPhoneMask(e.target.value))}
+                      className="max-w-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Deixe vazio para receber no número da barbearia.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button onClick={handleSaveAlt} disabled={saving} size="sm">
+                        {saving ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : null}
+                        Salvar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowAltField(false);
+                          setAltPhone("");
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPreview(!showPreview)}
-          >
-            {showPreview ? (
-              <EyeOff className="h-4 w-4 mr-2" />
-            ) : (
-              <Eye className="h-4 w-4 mr-2" />
+
+            {!enabled && (
+              <p className="text-sm text-muted-foreground">
+                Você não está recebendo o resumo semanal.
+              </p>
             )}
-            {showPreview ? "Fechar exemplo" : "Ver exemplo do resumo"}
-          </Button>
-        </div>
-
-        {showPreview && (
-          <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 p-4 text-sm font-mono whitespace-pre-wrap text-foreground">
-{`📊 *Resumo Semanal — ${tenantName}*
-01/03 a 07/03/2026
-
-✂️ Atendimentos: 124
-👥 Clientes únicos: 83
-❌ Cancelamentos: 38 (23%)
-
-💰 Faturamento: R$ 1.669,00
-💳 Online: R$ 820,00
-💵 No local: R$ 849,00
-${includeStaff ? `
-👤 *Performance por Profissional:*
-• João — 45 atendimentos — R$ 580,00
-• Pedro — 38 atendimentos — R$ 510,00
-• Lucas — 41 atendimentos — R$ 579,00` : ""}
-
-📅 Próximo resumo: sábado, 14/03 às 20h`}
-          </div>
+          </>
         )}
-
-        <Separator />
-
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span>📅 Enviado automaticamente todo sábado às 20h</span>
-          <span>💡 Para desativar, basta limpar o número acima</span>
-        </div>
       </CardContent>
     </Card>
   );
