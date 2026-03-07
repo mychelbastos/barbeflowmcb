@@ -286,6 +286,11 @@ export const MercadoPagoCheckout = ({
       return;
     }
 
+    if (!isBillingAddressComplete(billingAddress)) {
+      setErrorMessage('Preencha o endereço de cobrança completo.');
+      return;
+    }
+
     setStatus('processing');
     setErrorMessage('');
 
@@ -301,6 +306,14 @@ export const MercadoPagoCheckout = ({
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
                 cf_turnstile_token: turnstileToken,
+                billing_address: {
+                  zip_code: billingAddress.zip_code,
+                  street_name: billingAddress.street_name,
+                  street_number: billingAddress.street_number,
+                  neighborhood: billingAddress.neighborhood,
+                  city: billingAddress.city,
+                  federal_unit: billingAddress.federal_unit,
+                },
                 payer: {
                   email: formData.payer?.email || payer.email,
                   identification: formData.payer?.identification,
@@ -313,6 +326,14 @@ export const MercadoPagoCheckout = ({
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
                 cf_turnstile_token: turnstileToken,
+                billing_address: {
+                  zip_code: billingAddress.zip_code,
+                  street_name: billingAddress.street_name,
+                  street_number: billingAddress.street_number,
+                  neighborhood: billingAddress.neighborhood,
+                  city: billingAddress.city,
+                  federal_unit: billingAddress.federal_unit,
+                },
                 payer: {
                   email: formData.payer?.email || payer.email,
                   identification: formData.payer?.identification,
