@@ -1342,6 +1342,9 @@ END:VCALENDAR`;
                   )}
                 </div>
 
+                {/* Loyalty Widget */}
+                {loyaltyData && <LoyaltyWidget loyalty={loyaltyData} variant="dark" />}
+
                 {/* Search bar — show when 3+ services */}
                 {services.length >= 3 && (
                   <div className="relative">
