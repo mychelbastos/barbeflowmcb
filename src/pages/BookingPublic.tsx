@@ -1766,7 +1766,23 @@ END:VCALENDAR`;
         )}
 
         {/* Step 4: Payment Method Selection */}
-        {step === 4 && allowOnlinePayment && (
+        {step === 4 && allowOnlinePayment && (() => {
+          const tenantSettings = (tenant?.settings || {}) as Record<string, any>;
+          const onlineDiscountPercent = tenantSettings.online_discount_percent || 0;
+          const showCancellationForfeit = tenantSettings.show_cancellation_forfeit || false;
+          const cancellationForfeitHours = tenantSettings.cancellation_forfeit_hours || 24;
+          const hasDiscount = onlineDiscountPercent > 0;
+
+          const originalPriceCents = selectedServiceData?.price_cents || 0;
+          let baseForPayment = originalPriceCents;
+          const isPrepayPartial = requirePrepayment && prepaymentPercentage > 0 && prepaymentPercentage < 100;
+          if (isPrepayPartial) {
+            baseForPayment = Math.round(originalPriceCents * prepaymentPercentage / 100);
+          }
+          const discountCents = hasDiscount ? Math.round(baseForPayment * onlineDiscountPercent / 100) : 0;
+          const onlinePriceCents = baseForPayment - discountCents;
+
+          return (
           <div className="animate-in fade-in duration-300">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold mb-2">Como deseja pagar?</h2>
@@ -1774,37 +1790,87 @@ END:VCALENDAR`;
             </div>
             
             <div className="space-y-3">
+              {/* Online payment card — RECOMMENDED */}
+              <button
+                onClick={() => handlePaymentMethodSelect('online')}
+                className="w-full p-5 bg-zinc-900/50 border-2 border-emerald-500/40 hover:border-emerald-500/70 rounded-2xl text-left transition-all duration-200 hover:bg-zinc-900 group relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 bg-emerald-500 text-zinc-900 text-[10px] font-bold px-3 py-0.5 rounded-bl-lg uppercase tracking-wider">
+                  Recomendado
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                    <CreditCard className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white mb-1">💳 Pagar agora e garantir sua vaga</h3>
+                    
+                    {/* Price display */}
+                    <div className="flex items-baseline gap-2 mb-3">
+                      {hasDiscount ? (
+                        <>
+                          <span className="text-zinc-500 line-through text-sm">R$ {(baseForPayment / 100).toFixed(2)}</span>
+                          <span className="text-emerald-400 font-bold text-xl">R$ {(onlinePriceCents / 100).toFixed(2)}</span>
+                        </>
+                      ) : (
+                        <span className="text-white font-bold text-xl">R$ {(baseForPayment / 100).toFixed(2)}</span>
+                      )}
+                    </div>
+
+                    {hasDiscount && (
+                      <div className="flex items-center gap-1.5 mb-3">
+                        <span className="text-emerald-400 text-xs font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                          🏷️ Economize R$ {(discountCents / 100).toFixed(2)} ({onlineDiscountPercent}% de desconto)
+                        </span>
+                      </div>
+                    )}
+
+                    {isPrepayPartial && (
+                      <p className="text-zinc-500 text-xs mb-3">
+                        Sinal de {prepaymentPercentage}%{hasDiscount ? ` com ${onlineDiscountPercent}% de desconto` : ''}
+                      </p>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <p className="text-zinc-400 text-xs flex items-center gap-1.5">✅ Confirmação imediata</p>
+                      <p className="text-zinc-400 text-xs flex items-center gap-1.5">✅ Sua vaga fica garantida</p>
+                      <p className="text-zinc-400 text-xs flex items-center gap-1.5">✅ Sem preocupação na hora</p>
+                    </div>
+
+                    <p className="text-zinc-600 text-[11px] mt-3">Aceitamos PIX e Cartão de Crédito</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Cancellation forfeit warning for online */}
+              {showCancellationForfeit && (
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-200/80">
+                  <strong>⚠️ Política de cancelamento:</strong> Ao confirmar, caso não compareça ou cancele com menos de {cancellationForfeitHours}h de antecedência, o valor pago não será reembolsado.
+                </div>
+              )}
+
+              {/* On-site payment card */}
               {!forcedOnlinePayment && !requirePrepayment && (
                 <button
                   onClick={() => handlePaymentMethodSelect('on_site')}
                   className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center">
-                      <Banknote className="h-5 w-5 text-amber-400" />
+                    <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 rounded-xl flex items-center justify-center shrink-0">
+                      <Banknote className="h-5 w-5 text-zinc-400" />
                     </div>
-                    <div>
-                      <h3 className="font-medium group-hover:text-white transition-colors">Pagar no local</h3>
-                      <p className="text-zinc-500 text-sm">Pague ao chegar no estabelecimento</p>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-zinc-300 group-hover:text-white transition-colors">🏪 Pagar no local</h3>
+                      <p className="text-zinc-500 text-sm">
+                        R$ {(originalPriceCents / 100).toFixed(2)} {hasDiscount ? '(valor cheio)' : ''}
+                      </p>
+                      {hasDiscount && (
+                        <p className="text-zinc-600 text-xs mt-1">⚠️ Sujeito à disponibilidade no momento</p>
+                      )}
                     </div>
                   </div>
                 </button>
               )}
-
-              <button
-                onClick={() => handlePaymentMethodSelect('online')}
-                className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-emerald-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium group-hover:text-white transition-colors">Pagar online</h3>
-                    <p className="text-zinc-500 text-sm">Pague agora via Pix ou cartão</p>
-                  </div>
-                </div>
-              </button>
               
               {(forcedOnlinePayment || requirePrepayment) && (
                 <div className="p-3 bg-zinc-800/50 border border-zinc-700/30 rounded-xl">
@@ -1826,7 +1892,8 @@ END:VCALENDAR`;
               Voltar
             </button>
           </div>
-        )}
+          );
+        })()}
 
         {/* Step 5: Contact Info */}
         {step === 5 && (

@@ -269,6 +269,17 @@ const PaymentReturn = () => {
                   R$ {((payment?.amount_cents || 0) / 100).toFixed(2)}
                 </span>
               </div>
+              {(payment?.discount_cents > 0) && (
+                <>
+                  <div className="h-px bg-zinc-800" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-500 text-sm">Desconto aplicado</span>
+                    <span className="font-medium text-emerald-400">
+                      🏷️ - R$ {(payment.discount_cents / 100).toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
