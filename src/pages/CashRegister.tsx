@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Lock, Unlock,
   Plus, Minus, Receipt, AlertTriangle, Clock, Banknote, CreditCard, Smartphone,
-  Wifi, WifiOff, Package,
+  Wifi, WifiOff, Package, ChevronRight, Pencil,
 } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,11 +31,12 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const PAYMENT_METHODS = [
-  { value: "cash", label: "Dinheiro", icon: Banknote },
-  { value: "pix", label: "PIX", icon: Smartphone },
-  { value: "credit_card", label: "Cartão Crédito", icon: CreditCard },
-  { value: "debit_card", label: "Cartão Débito", icon: CreditCard },
-  { value: "other", label: "Outro", icon: Receipt },
+  { value: "cash", label: "Dinheiro", icon: Banknote, color: "text-emerald-400" },
+  { value: "pix", label: "PIX", icon: Smartphone, color: "text-blue-400" },
+  { value: "credit_card", label: "Cartão Crédito", icon: CreditCard, color: "text-purple-400" },
+  { value: "debit_card", label: "Cartão Débito", icon: CreditCard, color: "text-violet-400" },
+  { value: "online", label: "Online (MP)", icon: Wifi, color: "text-orange-400" },
+  { value: "other", label: "Outro", icon: Receipt, color: "text-muted-foreground" },
 ];
 
 const KIND_LABELS: Record<string, string> = {
