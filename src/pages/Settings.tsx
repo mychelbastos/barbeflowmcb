@@ -1,5 +1,5 @@
 import mpIcon from "@/assets/mercadopago-icon.jpg";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { CustomerImportExport } from "@/components/CustomerImportExport";
@@ -152,6 +152,7 @@ export default function Settings() {
   const [mpLoading, setMpLoading] = useState(true);
   const [mpConnecting, setMpConnecting] = useState(false);
   const [mpDisconnecting, setMpDisconnecting] = useState(false);
+  const discountSettingsRef = useRef<{ online_discount_percent: number; show_cancellation_forfeit: boolean; cancellation_forfeit_hours: number } | null>(null);
 
   const tenantForm = useForm<TenantFormData>({
     resolver: zodResolver(tenantSchema),
@@ -541,6 +542,7 @@ export default function Settings() {
             cycle_reminder_days: cycleReminderDays,
             weekly_summary_enabled,
             recurring_reminder_enabled,
+            ...(discountSettingsRef.current || {}),
           }
         })
         .eq('id', currentTenant.id);
@@ -1402,8 +1404,7 @@ export default function Settings() {
 
                       <OnlineDiscountSettings 
                         currentTenant={currentTenant}
-                        loading={loading}
-                        setLoading={setLoading}
+                        onChange={(vals) => { discountSettingsRef.current = vals; }}
                       />
                     </>
                   )}
