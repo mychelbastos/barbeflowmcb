@@ -526,76 +526,156 @@ export function AvailabilityBlocksManager({ tenantId }: AvailabilityBlocksManage
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {blocks.map((block) => {
-            const { date, time, isFullDay } = formatBlockDateTime(block.starts_at, block.ends_at);
-            
-            return (
-              <Card key={block.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isFullDay ? 'bg-destructive/10' : 'bg-amber-500/10'
-                    }`}>
-                      {isFullDay ? (
-                        <Ban className="h-5 w-5 text-destructive" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-amber-500" />
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium capitalize">{date}</p>
-                        <Badge variant={isFullDay ? "destructive" : "secondary"}>
-                          {time}
-                        </Badge>
+        <BlocksList
+          blocks={blocks}
+          staff={staff}
+          formatBlockDateTime={formatBlockDateTime}
+          getStaffName={getStaffName}
+          onDelete={handleDeleteBlock}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Compact grouped list ── */
+
+const INITIAL_VISIBLE = 5;
+
+function BlocksList({
+  blocks,
+  staff,
+  formatBlockDateTime,
+  getStaffName,
+  onDelete,
+}: {
+  blocks: Block[];
+  staff: Staff[];
+  formatBlockDateTime: (s: string, e: string) => { date: string; time: string; isFullDay: boolean };
+  getStaffName: (id: string | null) => string;
+  onDelete: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Group blocks by month
+  const grouped = blocks.reduce<Record<string, Block[]>>((acc, block) => {
+    const key = formatInTimeZone(parseISO(block.starts_at), TIMEZONE, "yyyy-MM");
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(block);
+    return acc;
+  }, {});
+
+  const monthKeys = Object.keys(grouped).sort();
+  const totalCount = blocks.length;
+
+  // Flatten for limiting
+  const allOrdered = monthKeys.flatMap(k => grouped[k]);
+  const visibleBlocks = expanded ? allOrdered : allOrdered.slice(0, INITIAL_VISIBLE);
+  const hasMore = totalCount > INITIAL_VISIBLE;
+
+  // Rebuild grouped from visible
+  const visibleGrouped = visibleBlocks.reduce<Record<string, Block[]>>((acc, block) => {
+    const key = formatInTimeZone(parseISO(block.starts_at), TIMEZONE, "yyyy-MM");
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(block);
+    return acc;
+  }, {});
+
+  const visibleMonthKeys = Object.keys(visibleGrouped).sort();
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        {totalCount} bloqueio{totalCount !== 1 ? "s" : ""} ativo{totalCount !== 1 ? "s" : ""}
+      </p>
+
+      {visibleMonthKeys.map(monthKey => {
+        const monthLabel = formatInTimeZone(
+          parseISO(`${monthKey}-01T12:00:00Z`),
+          TIMEZONE,
+          "MMMM 'de' yyyy",
+          { locale: ptBR }
+        );
+
+        return (
+          <Card key={monthKey}>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-sm font-semibold capitalize text-muted-foreground">
+                {monthLabel} ({visibleGrouped[monthKey].length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 pt-0">
+              <div className="divide-y divide-border">
+                {visibleGrouped[monthKey].map(block => {
+                  const { date, time, isFullDay: fd } = formatBlockDateTime(block.starts_at, block.ends_at);
+                  return (
+                    <div key={block.id} className="flex items-center justify-between py-2.5 gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-md flex-shrink-0 flex items-center justify-center ${
+                          fd ? "bg-destructive/10" : "bg-amber-500/10"
+                        }`}>
+                          {fd ? (
+                            <Ban className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-amber-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium capitalize truncate">{date}</span>
+                            <Badge variant={fd ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0">
+                              {time}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {getStaffName(block.staff_id)}
+                            {block.reason && ` · ${block.reason}`}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-muted-foreground">
-                          {getStaffName(block.staff_id)}
-                        </p>
-                        {block.reason && (
-                          <>
-                            <span className="text-muted-foreground">•</span>
-                            <p className="text-sm text-muted-foreground">
-                              {block.reason}
-                            </p>
-                          </>
-                        )}
-                      </div>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover bloqueio?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Essa ação não pode ser desfeita. O período ficará disponível novamente para agendamentos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDelete(block.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remover
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
-                  </div>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remover bloqueio?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Essa ação não pode ser desfeita. O período ficará disponível novamente para agendamentos.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteBlock(block.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Remover
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {hasMore && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setExpanded(prev => !prev)}
+        >
+          {expanded ? "Mostrar menos" : `Ver todos os ${totalCount} bloqueios`}
+        </Button>
       )}
     </div>
   );

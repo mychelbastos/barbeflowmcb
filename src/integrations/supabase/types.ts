@@ -964,6 +964,116 @@ export type Database = {
           },
         ]
       }
+      loyalty_cards: {
+        Row: {
+          completed_count: number
+          created_at: string
+          customer_id: string
+          cycle_started_at: string
+          expires_at: string | null
+          id: string
+          reward_pending: boolean
+          stamps: number
+          stamps_required: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_count?: number
+          created_at?: string
+          customer_id: string
+          cycle_started_at?: string
+          expires_at?: string | null
+          id?: string
+          reward_pending?: boolean
+          stamps?: number
+          stamps_required?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_count?: number
+          created_at?: string
+          customer_id?: string
+          cycle_started_at?: string
+          expires_at?: string | null
+          id?: string
+          reward_pending?: boolean
+          stamps?: number
+          stamps_required?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_cards_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_cards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_stamps: {
+        Row: {
+          booking_id: string
+          id: string
+          loyalty_card_id: string
+          stamped_at: string
+          tenant_id: string
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          loyalty_card_id: string
+          stamped_at?: string
+          tenant_id: string
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          loyalty_card_id?: string
+          stamped_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_stamps_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_stamps_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "v_booking_received_amount"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "loyalty_stamps_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_stamps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mercadopago_connections: {
         Row: {
           access_token: string
@@ -3057,6 +3167,17 @@ export type Database = {
           total_spent: number
         }[]
       }
+      get_loyalty_status: {
+        Args: { p_customer_phone: string; p_tenant_id: string }
+        Returns: {
+          completed_count: number
+          expires_at: string
+          has_loyalty: boolean
+          reward_pending: boolean
+          stamps: number
+          stamps_required: number
+        }[]
+      }
       get_payment_status: {
         Args: { p_payment_id: string }
         Returns: {
@@ -3103,6 +3224,14 @@ export type Database = {
           p_payments: Json
           p_receipt_id: string
           p_staff_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      redeem_loyalty_reward: {
+        Args: {
+          p_booking_id?: string
+          p_customer_id: string
           p_tenant_id: string
         }
         Returns: Json
