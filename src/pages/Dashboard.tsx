@@ -202,21 +202,31 @@ const Dashboard = () => {
             }
           }
 
-          const [h, m] = r.start_time.split(':').map(Number);
-          const startsAt = new Date(current.getFullYear(), current.getMonth(), current.getDate(), h, m);
-          const duration = r.service?.duration_minutes || r.duration_minutes;
-          const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
-          result.push({
-            id: `recurring-${r.id}-${current.toISOString()}`,
-            starts_at: startsAt.toISOString(),
-            ends_at: endsAt.toISOString(),
-            status: 'recurring',
-            customer: r.customer || { name: 'Cliente Fixo', phone: '' },
-            service: r.service || { name: 'Horário Fixo', color: '#8B5CF6', price_cents: 0 },
-            staff: r.staff,
-            is_recurring: true,
-            notes: r.notes,
+          // Skip if a real booking already exists for this customer+staff on this day
+          const dayStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+          const alreadyBooked = periodBookings.some(b => {
+            const bDate = new Date(b.starts_at);
+            const bDay = `${bDate.getFullYear()}-${String(bDate.getMonth() + 1).padStart(2, '0')}-${String(bDate.getDate()).padStart(2, '0')}`;
+            return bDay === dayStr && (b as any).customer_id === r.customer_id && (b as any).staff_id === r.staff_id;
           });
+
+          if (!alreadyBooked) {
+            const [h, m] = r.start_time.split(':').map(Number);
+            const startsAt = new Date(current.getFullYear(), current.getMonth(), current.getDate(), h, m);
+            const duration = r.service?.duration_minutes || r.duration_minutes;
+            const endsAt = new Date(startsAt.getTime() + duration * 60 * 1000);
+            result.push({
+              id: `recurring-${r.id}-${current.toISOString()}`,
+              starts_at: startsAt.toISOString(),
+              ends_at: endsAt.toISOString(),
+              status: 'recurring',
+              customer: r.customer || { name: 'Cliente Fixo', phone: '' },
+              service: r.service || { name: 'Horário Fixo', color: '#8B5CF6', price_cents: 0 },
+              staff: r.staff,
+              is_recurring: true,
+              notes: r.notes,
+            });
+          }
         }
         current.setDate(current.getDate() + 1);
       }
