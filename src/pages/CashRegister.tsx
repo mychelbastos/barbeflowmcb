@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Lock, Unlock,
   Plus, Minus, Receipt, AlertTriangle, Clock, Banknote, CreditCard, Smartphone,
-  Wifi, WifiOff, Package,
+  Wifi, WifiOff, Package, ChevronRight, Pencil,
 } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,11 +31,12 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 const PAYMENT_METHODS = [
-  { value: "cash", label: "Dinheiro", icon: Banknote },
-  { value: "pix", label: "PIX", icon: Smartphone },
-  { value: "credit_card", label: "Cartão Crédito", icon: CreditCard },
-  { value: "debit_card", label: "Cartão Débito", icon: CreditCard },
-  { value: "other", label: "Outro", icon: Receipt },
+  { value: "cash", label: "Dinheiro", icon: Banknote, color: "text-emerald-400" },
+  { value: "pix", label: "PIX", icon: Smartphone, color: "text-blue-400" },
+  { value: "credit_card", label: "Cartão Crédito", icon: CreditCard, color: "text-purple-400" },
+  { value: "debit_card", label: "Cartão Débito", icon: CreditCard, color: "text-violet-400" },
+  { value: "online", label: "Online (MP)", icon: Wifi, color: "text-orange-400" },
+  { value: "other", label: "Outro", icon: Receipt, color: "text-muted-foreground" },
 ];
 
 const KIND_LABELS: Record<string, string> = {
@@ -146,6 +150,11 @@ export default function CashRegister() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringDay, setRecurringDay] = useState("");
 
+  // Payment method detail sheet
+  const [selectedMethodDetail, setSelectedMethodDetail] = useState<string | null>(null);
+  const [detailEntries, setDetailEntries] = useState<any[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
   const resetEntryForm = () => {
     setEntryAmount('');
     setEntryNotes('');
@@ -246,6 +255,92 @@ export default function CashRegister() {
   }, [currentTenant]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Load detail entries for a payment method
+  const loadMethodDetail = useCallback(async (method: string) => {
+    if (!session) return;
+    setLoadingDetail(true);
+    setSelectedMethodDetail(method);
+    try {
+      const { data } = await supabase
+        .from('cash_entries')
+        .select(`
+          id,
+          amount_cents,
+          payment_method,
+          source,
+          kind,
+          notes,
+          occurred_at,
+          staff_id,
+          booking_id
+        `)
+        .eq('session_id', session.id)
+        .eq('payment_method', method)
+        .order('occurred_at', { ascending: false });
+
+      if (data && data.length > 0) {
+        // Fetch booking details for entries that have booking_id
+        const bookingIds = data.filter(e => e.booking_id).map(e => e.booking_id!);
+        const staffIds = data.filter(e => e.staff_id).map(e => e.staff_id!);
+        
+        let bookingsMap: Record<string, any> = {};
+        let staffMap: Record<string, string> = {};
+
+        if (bookingIds.length > 0) {
+          const { data: bookings } = await supabase
+            .from('bookings')
+            .select('id, starts_at, customer:customers(name), service:services(name)')
+            .in('id', [...new Set(bookingIds)]);
+          if (bookings) {
+            bookings.forEach((b: any) => { bookingsMap[b.id] = b; });
+          }
+        }
+
+        if (staffIds.length > 0) {
+          const { data: staffData } = await supabase
+            .from('staff')
+            .select('id, name')
+            .in('id', [...new Set(staffIds)]);
+          if (staffData) {
+            staffData.forEach((s: any) => { staffMap[s.id] = s.name; });
+          }
+        }
+
+        const enriched = data.map(e => ({
+          ...e,
+          booking: e.booking_id ? bookingsMap[e.booking_id] : null,
+          staffName: e.staff_id ? staffMap[e.staff_id] || null : null,
+        }));
+        setDetailEntries(enriched);
+      } else {
+        setDetailEntries([]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, [session]);
+
+  const handleChangePaymentMethod = async (entryId: string, newMethod: string) => {
+    try {
+      const { error } = await supabase
+        .from('cash_entries')
+        .update({ payment_method: newMethod, updated_at: new Date().toISOString() })
+        .eq('id', entryId);
+      if (error) throw error;
+      toast.success("Forma de pagamento alterada");
+      // Refresh both the detail list and main data
+      await loadData();
+      if (selectedMethodDetail) {
+        // Update local detail entries
+        setDetailEntries(prev => prev.filter(e => e.id !== entryId));
+      }
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    }
+  };
 
   const handleOpenCash = async () => {
     if (!currentTenant || !user) return;
@@ -594,17 +689,23 @@ export default function CashRegister() {
                   {Object.entries(byMethod).map(([method, vals]) => {
                     const methodInfo = PAYMENT_METHODS.find(m => m.value === method);
                     const Icon = methodInfo?.icon || Receipt;
+                    const colorClass = methodInfo?.color || "text-muted-foreground";
                     return (
-                      <div key={method} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20">
+                      <button
+                        key={method}
+                        onClick={() => loadMethodDetail(method)}
+                        className="w-full flex items-center justify-between py-2.5 px-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer group"
+                      >
                         <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          <Icon className={`h-4 w-4 ${colorClass}`} />
                           <span className="text-sm">{methodInfo?.label || method}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-3 text-sm">
                           {vals.income > 0 && <span className="text-emerald-400">+{fmt(vals.income)}</span>}
                           {vals.expense > 0 && <span className="text-red-400">-{fmt(vals.expense)}</span>}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -1148,6 +1249,86 @@ export default function CashRegister() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Method Detail Sheet */}
+      <Sheet open={!!selectedMethodDetail} onOpenChange={(open) => { if (!open) setSelectedMethodDetail(null); }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              {(() => {
+                const mi = PAYMENT_METHODS.find(m => m.value === selectedMethodDetail);
+                const Icon = mi?.icon || Receipt;
+                const total = detailEntries.reduce((s, e) => s + e.amount_cents, 0);
+                return (
+                  <>
+                    <Icon className={`h-5 w-5 ${mi?.color || 'text-muted-foreground'}`} />
+                    {mi?.label || selectedMethodDetail} — {fmt(total)}
+                  </>
+                );
+              })()}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-4 space-y-3">
+            {loadingDetail ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : detailEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma entrada encontrada.</p>
+            ) : (
+              detailEntries.map((entry) => {
+                const customerName = entry.booking?.customer?.name || null;
+                const serviceName = entry.booking?.service?.name || null;
+                const displayName = customerName || (entry.notes ? entry.notes.substring(0, 40) : SOURCE_LABELS[entry.source || ''] || 'Entrada manual');
+                const displayService = serviceName || SOURCE_LABELS[entry.source || ''] || '—';
+                const isClosed = session?.status === 'closed';
+
+                return (
+                  <div key={entry.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                        <p className="text-xs text-muted-foreground">{displayService}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-sm font-bold text-emerald-400">+{fmt(entry.amount_cents)}</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(entry.occurred_at), "HH:mm")}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {entry.staffName || '—'}
+                      </span>
+                      {isClosed ? (
+                        <Badge variant="outline" className="text-xs">
+                          {PAYMENT_METHODS.find(m => m.value === entry.payment_method)?.label || entry.payment_method}
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={entry.payment_method || 'cash'}
+                          onValueChange={(val) => handleChangePaymentMethod(entry.id, val)}
+                        >
+                          <SelectTrigger className="h-7 w-[160px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PAYMENT_METHODS.filter(m => m.value !== 'other').map(m => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
