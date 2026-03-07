@@ -368,11 +368,8 @@ export const MercadoPagoCheckout = ({
     }
     
     try {
-      const { data: payment, error } = await supabase
-        .from('payments')
-        .select('status')
-        .eq('id', paymentIdToCheck)
-        .maybeSingle();
+      const { data: rpcData, error } = await supabase
+        .rpc('get_payment_status', { p_payment_id: paymentIdToCheck });
       
       if (error) {
         console.error('Error polling payment status:', error);
@@ -380,7 +377,8 @@ export const MercadoPagoCheckout = ({
       }
       
       // Record not yet created, continue polling silently
-      if (!payment) return;
+      if (!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) return;
+      const payment = Array.isArray(rpcData) ? rpcData[0] : rpcData;
       
       if (payment.status === 'paid') {
         if (pollingIntervalRef.current) {

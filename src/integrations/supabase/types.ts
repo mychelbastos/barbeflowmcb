@@ -3036,6 +3036,15 @@ export type Database = {
           total_spent: number
         }[]
       }
+      get_payment_status: {
+        Args: { p_payment_id: string }
+        Returns: {
+          amount_cents: number
+          booking_id: string
+          id: string
+          status: string
+        }[]
+      }
       get_subscription_commission_summary: {
         Args: {
           p_period_end?: string

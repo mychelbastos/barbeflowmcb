@@ -49,26 +49,31 @@ const PaymentReturn = () => {
 
   const loadPaymentStatus = async () => {
     try {
-      // Get payment with booking and service data
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          booking:bookings(
+      // Use secure RPC instead of direct table query
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_payment_status', { p_payment_id: paymentId });
+
+      if (rpcError) throw rpcError;
+      if (!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) return;
+
+      const paymentData = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      setPayment(paymentData);
+
+      // Fetch booking details separately if we have a booking_id
+      if (paymentData.booking_id) {
+        const { data: bookingData } = await supabase
+          .from('bookings')
+          .select(`
             *,
             service:services(*),
             staff:staff(*),
             customer:customers(*)
-          )
-        `)
-        .eq('id', paymentId)
-        .maybeSingle();
+          `)
+          .eq('id', paymentData.booking_id)
+          .maybeSingle();
 
-      if (paymentError) throw paymentError;
-      if (!paymentData) return; // Not found yet, will retry on next poll
-
-      setPayment(paymentData);
-      setBooking(paymentData.booking);
+        setBooking(bookingData);
+      }
 
       // Get tenant
       const { data: tenantData } = await supabase
