@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2, Lock, Shield } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from '@/components/BillingAddressForm';
 
 interface PayerInfo {
   email: string;
@@ -78,6 +79,10 @@ export const MercadoPagoCheckout = ({
   const [useCheckoutRedirect, setUseCheckoutRedirect] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [billingAddress, setBillingAddress] = useState<BillingAddress>({
+    zip_code: '', street_name: '', street_number: '',
+    neighborhood: '', city: '', federal_unit: '',
+  });
   const brickControllerRef = useRef<any>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
