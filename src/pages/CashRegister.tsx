@@ -150,6 +150,11 @@ export default function CashRegister() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringDay, setRecurringDay] = useState("");
 
+  // Payment method detail sheet
+  const [selectedMethodDetail, setSelectedMethodDetail] = useState<string | null>(null);
+  const [detailEntries, setDetailEntries] = useState<any[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
   const resetEntryForm = () => {
     setEntryAmount('');
     setEntryNotes('');
