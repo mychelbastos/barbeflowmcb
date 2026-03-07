@@ -1136,6 +1136,7 @@ export type Database = {
           pix_qr_code_base64: string | null
           pix_ticket_url: string | null
           provider: string
+          retry_count: number
           status: string
           tenant_id: string
           updated_at: string
@@ -1156,6 +1157,7 @@ export type Database = {
           pix_qr_code_base64?: string | null
           pix_ticket_url?: string | null
           provider?: string
+          retry_count?: number
           status: string
           tenant_id: string
           updated_at?: string
@@ -1176,6 +1178,7 @@ export type Database = {
           pix_qr_code_base64?: string | null
           pix_ticket_url?: string | null
           provider?: string
+          retry_count?: number
           status?: string
           tenant_id?: string
           updated_at?: string

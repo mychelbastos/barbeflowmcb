@@ -138,6 +138,72 @@ function MobileScheduleList({ bookings, dateRange, onSelectBooking }: WeeklySche
   );
 }
 
+// --- Overlap detection: group overlapping bookings and assign columns ---
+interface LayoutInfo {
+  column: number;
+  totalColumns: number;
+}
+
+function computeOverlapLayout(dayBookings: Booking[]): Map<string, LayoutInfo> {
+  const result = new Map<string, LayoutInfo>();
+  if (dayBookings.length === 0) return result;
+
+  const sorted = [...dayBookings].sort(
+    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+  );
+
+  // Build overlap groups using a sweep approach
+  const groups: Booking[][] = [];
+  let currentGroup: Booking[] = [sorted[0]];
+  let groupEnd = new Date(sorted[0].ends_at).getTime();
+
+  for (let i = 1; i < sorted.length; i++) {
+    const bStart = new Date(sorted[i].starts_at).getTime();
+    if (bStart < groupEnd) {
+      // Overlaps with current group
+      currentGroup.push(sorted[i]);
+      groupEnd = Math.max(groupEnd, new Date(sorted[i].ends_at).getTime());
+    } else {
+      groups.push(currentGroup);
+      currentGroup = [sorted[i]];
+      groupEnd = new Date(sorted[i].ends_at).getTime();
+    }
+  }
+  groups.push(currentGroup);
+
+  // Assign columns within each group
+  for (const group of groups) {
+    const totalColumns = group.length;
+    // Greedy column assignment
+    const columns: { end: number }[] = [];
+    for (const booking of group) {
+      const bStart = new Date(booking.starts_at).getTime();
+      let placed = false;
+      for (let col = 0; col < columns.length; col++) {
+        if (bStart >= columns[col].end) {
+          columns[col].end = new Date(booking.ends_at).getTime();
+          result.set(booking.id, { column: col, totalColumns });
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        const col = columns.length;
+        columns.push({ end: new Date(booking.ends_at).getTime() });
+        result.set(booking.id, { column: col, totalColumns });
+      }
+    }
+    // Update totalColumns to actual columns used
+    const actualCols = columns.length;
+    for (const booking of group) {
+      const info = result.get(booking.id)!;
+      info.totalColumns = actualCols;
+    }
+  }
+
+  return result;
+}
+
 // --- Desktop: full grid ---
 function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklyScheduleGridProps) {
   const MAX_DAYS = 7;
@@ -155,14 +221,33 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
     return map;
   }, [activeBookings, days]);
 
-  const getBookingStyle = (booking: Booking) => {
+  const layoutByDay = useMemo(() => {
+    const map = new Map<string, Map<string, LayoutInfo>>();
+    for (const [key, dayBookings] of bookingsByDay) {
+      map.set(key, computeOverlapLayout(dayBookings));
+    }
+    return map;
+  }, [bookingsByDay]);
+
+  const getBookingStyle = (booking: Booking, layout?: LayoutInfo) => {
     const start = new Date(booking.starts_at);
     const end = new Date(booking.ends_at);
     const startHour = start.getHours() + start.getMinutes() / 60;
     const endHour = end.getHours() + end.getMinutes() / 60;
     const top = (startHour - 7) * SLOT_HEIGHT;
     const height = Math.max((endHour - startHour) * SLOT_HEIGHT - 2, 18);
-    return { top, height };
+
+    if (layout && layout.totalColumns > 1) {
+      const colWidth = 100 / layout.totalColumns;
+      return {
+        top,
+        height,
+        left: `calc(${layout.column * colWidth}% + 2px)`,
+        width: `calc(${colWidth}% - 4px)`,
+      };
+    }
+
+    return { top, height, left: '4px', width: 'calc(100% - 8px)' };
   };
 
   return (
@@ -209,6 +294,7 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
         {days.map((day) => {
           const dayKey = format(day, "yyyy-MM-dd");
           const dayBookings = bookingsByDay.get(dayKey) || [];
+          const dayLayout = layoutByDay.get(dayKey) || new Map();
           const isToday = checkIsToday(day);
 
           return (
@@ -232,9 +318,11 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
               })()}
 
               {dayBookings.map((booking, idx) => {
-                const { top, height } = getBookingStyle(booking);
+                const layout = dayLayout.get(booking.id);
+                const style = getBookingStyle(booking, layout);
                 const status = booking.is_recurring ? "recurring" : (booking.status || "pending");
                 const colorClass = statusColors[status] || statusColors.pending;
+                const isNarrow = layout && layout.totalColumns > 2;
                 return (
                   <motion.div
                     key={booking.id}
@@ -243,12 +331,12 @@ function DesktopScheduleGrid({ bookings, dateRange, onSelectBooking }: WeeklySch
                     transition={{ duration: 0.3, delay: idx * 0.02 }}
                     whileHover={{ scale: 1.03, zIndex: 30 }}
                     onClick={() => onSelectBooking?.(booking)}
-                    className={`absolute left-1 right-1 rounded-lg bg-gradient-to-b ${colorClass} border backdrop-blur-sm cursor-pointer overflow-hidden px-1.5 py-1 shadow-sm hover:shadow-md transition-shadow duration-200`}
-                    style={{ top, height }}
+                    className={`absolute rounded-lg bg-gradient-to-b ${colorClass} border backdrop-blur-sm cursor-pointer overflow-hidden px-1.5 py-1 shadow-sm hover:shadow-md transition-shadow duration-200`}
+                    style={{ top: style.top, height: style.height, left: style.left, width: style.width }}
                   >
-                    <p className="text-[10px] font-bold text-white truncate leading-tight">{booking.customer?.name || "—"}</p>
-                    {height > 28 && <p className="text-[9px] text-white/70 truncate leading-tight">{booking.service?.name}</p>}
-                    {height > 42 && <p className="text-[9px] text-white/60 font-mono">{format(new Date(booking.starts_at), "HH:mm")}</p>}
+                    <p className={`${isNarrow ? 'text-[8px]' : 'text-[10px]'} font-bold text-white truncate leading-tight`}>{booking.customer?.name || "—"}</p>
+                    {style.height > 28 && <p className={`${isNarrow ? 'text-[7px]' : 'text-[9px]'} text-white/70 truncate leading-tight`}>{booking.service?.name}</p>}
+                    {style.height > 42 && <p className={`${isNarrow ? 'text-[7px]' : 'text-[9px]'} text-white/60 font-mono`}>{format(new Date(booking.starts_at), "HH:mm")}</p>}
                   </motion.div>
                 );
               })}
