@@ -1249,6 +1249,86 @@ export default function CashRegister() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Method Detail Sheet */}
+      <Sheet open={!!selectedMethodDetail} onOpenChange={(open) => { if (!open) setSelectedMethodDetail(null); }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              {(() => {
+                const mi = PAYMENT_METHODS.find(m => m.value === selectedMethodDetail);
+                const Icon = mi?.icon || Receipt;
+                const total = detailEntries.reduce((s, e) => s + e.amount_cents, 0);
+                return (
+                  <>
+                    <Icon className={`h-5 w-5 ${mi?.color || 'text-muted-foreground'}`} />
+                    {mi?.label || selectedMethodDetail} — {fmt(total)}
+                  </>
+                );
+              })()}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-4 space-y-3">
+            {loadingDetail ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : detailEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma entrada encontrada.</p>
+            ) : (
+              detailEntries.map((entry) => {
+                const customerName = entry.booking?.customer?.name || null;
+                const serviceName = entry.booking?.service?.name || null;
+                const displayName = customerName || (entry.notes ? entry.notes.substring(0, 40) : SOURCE_LABELS[entry.source || ''] || 'Entrada manual');
+                const displayService = serviceName || SOURCE_LABELS[entry.source || ''] || '—';
+                const isClosed = session?.status === 'closed';
+
+                return (
+                  <div key={entry.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                        <p className="text-xs text-muted-foreground">{displayService}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-sm font-bold text-emerald-400">+{fmt(entry.amount_cents)}</p>
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(entry.occurred_at), "HH:mm")}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {entry.staffName || '—'}
+                      </span>
+                      {isClosed ? (
+                        <Badge variant="outline" className="text-xs">
+                          {PAYMENT_METHODS.find(m => m.value === entry.payment_method)?.label || entry.payment_method}
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={entry.payment_method || 'cash'}
+                          onValueChange={(val) => handleChangePaymentMethod(entry.id, val)}
+                        >
+                          <SelectTrigger className="h-7 w-[160px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PAYMENT_METHODS.filter(m => m.value !== 'other').map(m => (
+                              <SelectItem key={m.value} value={m.value} className="text-xs">
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
