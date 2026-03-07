@@ -8,6 +8,7 @@ import { CustomerBalanceTab } from "@/components/CustomerBalanceTab";
 import { CustomerPackagesTab } from "@/components/CustomerPackagesTab";
 import { NoTenantState } from "@/components/NoTenantState";
 import { CustomerBalanceAlert } from "@/components/CustomerBalanceAlert";
+import { CustomerLoyaltySection } from "@/components/CustomerLoyaltySection";
 import { CustomerImportModal } from "@/components/CustomerImportModal";
 import { CustomerMergeModal } from "@/components/CustomerMergeModal";
 import { AddressFieldsGroup } from "@/components/AddressFieldsGroup";
