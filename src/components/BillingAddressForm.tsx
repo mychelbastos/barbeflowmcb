@@ -86,7 +86,11 @@ export function BillingAddressForm({ value, onChange }: BillingAddressFormProps)
               value={formatCep(value.zip_code)}
               onChange={(e) => {
                 setCepError(false);
-                update({ zip_code: e.target.value.replace(/\D/g, "").slice(0, 8) });
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                update({ zip_code: digits });
+                if (digits.length === 8) {
+                  fetchCep(digits);
+                }
               }}
               onBlur={() => fetchCep(value.zip_code)}
               inputMode="numeric"
