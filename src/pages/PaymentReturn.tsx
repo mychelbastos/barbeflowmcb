@@ -239,6 +239,14 @@ const PaymentReturn = () => {
               <Loader2 className="h-4 w-4 animate-spin" />
               Atualizando automaticamente...
             </p>
+           )}
+
+          {payment?.status === 'paid' && payment?.discount_cents > 0 && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-4 py-1.5">
+              <span className="text-emerald-400 text-sm font-medium">
+                🏷️ Você economizou R$ {(payment.discount_cents / 100).toFixed(2)} pagando online!
+              </span>
+            </div>
           )}
         </div>
 
