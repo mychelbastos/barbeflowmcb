@@ -1219,6 +1219,8 @@ export default function Settings() {
               </Form>
             </CardContent>
           </Card>
+
+          <OwnerWeeklySummarySettings currentTenant={currentTenant} />
         </TabsContent>
 
         {/* Payments Settings */}
