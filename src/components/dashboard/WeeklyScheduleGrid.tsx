@@ -152,53 +152,46 @@ function computeOverlapLayout(dayBookings: Booking[]): Map<string, LayoutInfo> {
     (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
   );
 
-  // Build overlap groups using a sweep approach
-  const groups: Booking[][] = [];
-  let currentGroup: Booking[] = [sorted[0]];
-  let groupEnd = new Date(sorted[0].ends_at).getTime();
+  // Greedy column assignment: place each booking in the first available column
+  const columns: { id: string; start: number; end: number }[][] = [];
 
-  for (let i = 1; i < sorted.length; i++) {
-    const bStart = new Date(sorted[i].starts_at).getTime();
-    if (bStart < groupEnd) {
-      // Overlaps with current group
-      currentGroup.push(sorted[i]);
-      groupEnd = Math.max(groupEnd, new Date(sorted[i].ends_at).getTime());
-    } else {
-      groups.push(currentGroup);
-      currentGroup = [sorted[i]];
-      groupEnd = new Date(sorted[i].ends_at).getTime();
+  for (const booking of sorted) {
+    const bStart = new Date(booking.starts_at).getTime();
+    const bEnd = new Date(booking.ends_at).getTime();
+    let placed = false;
+
+    for (let col = 0; col < columns.length; col++) {
+      const lastInCol = columns[col][columns[col].length - 1];
+      if (bStart >= lastInCol.end) {
+        columns[col].push({ id: booking.id, start: bStart, end: bEnd });
+        result.set(booking.id, { column: col, totalColumns: 1 });
+        placed = true;
+        break;
+      }
+    }
+
+    if (!placed) {
+      columns.push([{ id: booking.id, start: bStart, end: bEnd }]);
+      result.set(booking.id, { column: columns.length - 1, totalColumns: 1 });
     }
   }
-  groups.push(currentGroup);
 
-  // Assign columns within each group
-  for (const group of groups) {
-    const totalColumns = group.length;
-    // Greedy column assignment
-    const columns: { end: number }[] = [];
-    for (const booking of group) {
-      const bStart = new Date(booking.starts_at).getTime();
-      let placed = false;
-      for (let col = 0; col < columns.length; col++) {
-        if (bStart >= columns[col].end) {
-          columns[col].end = new Date(booking.ends_at).getTime();
-          result.set(booking.id, { column: col, totalColumns });
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        const col = columns.length;
-        columns.push({ end: new Date(booking.ends_at).getTime() });
-        result.set(booking.id, { column: col, totalColumns });
-      }
+  // Now compute per-booking totalColumns: count how many columns have
+  // at least one booking overlapping with this booking's time range
+  for (const booking of sorted) {
+    const bStart = new Date(booking.starts_at).getTime();
+    const bEnd = new Date(booking.ends_at).getTime();
+    let concurrentCols = 0;
+
+    for (const col of columns) {
+      const hasOverlap = col.some(
+        (entry) => entry.start < bEnd && entry.end > bStart
+      );
+      if (hasOverlap) concurrentCols++;
     }
-    // Update totalColumns to actual columns used
-    const actualCols = columns.length;
-    for (const booking of group) {
-      const info = result.get(booking.id)!;
-      info.totalColumns = actualCols;
-    }
+
+    const info = result.get(booking.id)!;
+    info.totalColumns = concurrentCols;
   }
 
   return result;
