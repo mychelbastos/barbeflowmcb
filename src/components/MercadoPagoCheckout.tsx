@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2, Lock, Shield } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from '@/components/BillingAddressForm';
 
 interface PayerInfo {
   email: string;
@@ -78,6 +79,10 @@ export const MercadoPagoCheckout = ({
   const [useCheckoutRedirect, setUseCheckoutRedirect] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [billingAddress, setBillingAddress] = useState<BillingAddress>({
+    zip_code: '', street_name: '', street_number: '',
+    neighborhood: '', city: '', federal_unit: '',
+  });
   const brickControllerRef = useRef<any>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
@@ -281,6 +286,11 @@ export const MercadoPagoCheckout = ({
       return;
     }
 
+    if (!isBillingAddressComplete(billingAddress)) {
+      setErrorMessage('Preencha o endereço de cobrança completo.');
+      return;
+    }
+
     setStatus('processing');
     setErrorMessage('');
 
@@ -296,6 +306,14 @@ export const MercadoPagoCheckout = ({
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
                 cf_turnstile_token: turnstileToken,
+                billing_address: {
+                  zip_code: billingAddress.zip_code,
+                  street_name: billingAddress.street_name,
+                  street_number: billingAddress.street_number,
+                  neighborhood: billingAddress.neighborhood,
+                  city: billingAddress.city,
+                  federal_unit: billingAddress.federal_unit,
+                },
                 payer: {
                   email: formData.payer?.email || payer.email,
                   identification: formData.payer?.identification,
@@ -308,6 +326,14 @@ export const MercadoPagoCheckout = ({
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
                 cf_turnstile_token: turnstileToken,
+                billing_address: {
+                  zip_code: billingAddress.zip_code,
+                  street_name: billingAddress.street_name,
+                  street_number: billingAddress.street_number,
+                  neighborhood: billingAddress.neighborhood,
+                  city: billingAddress.city,
+                  federal_unit: billingAddress.federal_unit,
+                },
                 payer: {
                   email: formData.payer?.email || payer.email,
                   identification: formData.payer?.identification,
@@ -463,6 +489,9 @@ export const MercadoPagoCheckout = ({
 
       if (data.pix) {
         setPixData(data.pix);
+        if (data.reused) {
+          console.log('PIX reutilizado (QR code existente)');
+        }
         // Store the payment_id for polling
         if (data.payment_id) {
           setPaymentId(data.payment_id);
@@ -829,6 +858,9 @@ export const MercadoPagoCheckout = ({
           onExpire={() => setTurnstileToken(null)}
           onError={() => setTurnstileToken(null)}
         />
+
+        {/* Billing Address */}
+        <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
 
         {/* Card Payment Brick container */}
         <div 

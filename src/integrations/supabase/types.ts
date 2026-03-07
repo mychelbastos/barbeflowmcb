@@ -1130,6 +1130,11 @@ export type Database = {
           expires_at: string | null
           external_id: string | null
           id: string
+          payment_method: string | null
+          pix_expires_at: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          pix_ticket_url: string | null
           provider: string
           status: string
           tenant_id: string
@@ -1145,6 +1150,11 @@ export type Database = {
           expires_at?: string | null
           external_id?: string | null
           id?: string
+          payment_method?: string | null
+          pix_expires_at?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          pix_ticket_url?: string | null
           provider?: string
           status: string
           tenant_id: string
@@ -1160,6 +1170,11 @@ export type Database = {
           expires_at?: string | null
           external_id?: string | null
           id?: string
+          payment_method?: string | null
+          pix_expires_at?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          pix_ticket_url?: string | null
           provider?: string
           status?: string
           tenant_id?: string
@@ -3042,6 +3057,11 @@ export type Database = {
           amount_cents: number
           booking_id: string
           id: string
+          payment_method: string
+          pix_expires_at: string
+          pix_qr_code: string
+          pix_qr_code_base64: string
+          pix_ticket_url: string
           status: string
         }[]
       }
