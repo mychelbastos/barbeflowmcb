@@ -689,17 +689,23 @@ export default function CashRegister() {
                   {Object.entries(byMethod).map(([method, vals]) => {
                     const methodInfo = PAYMENT_METHODS.find(m => m.value === method);
                     const Icon = methodInfo?.icon || Receipt;
+                    const colorClass = methodInfo?.color || "text-muted-foreground";
                     return (
-                      <div key={method} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/20">
+                      <button
+                        key={method}
+                        onClick={() => loadMethodDetail(method)}
+                        className="w-full flex items-center justify-between py-2.5 px-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer group"
+                      >
                         <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-muted-foreground" />
+                          <Icon className={`h-4 w-4 ${colorClass}`} />
                           <span className="text-sm">{methodInfo?.label || method}</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-3 text-sm">
                           {vals.income > 0 && <span className="text-emerald-400">+{fmt(vals.income)}</span>}
                           {vals.expense > 0 && <span className="text-red-400">-{fmt(vals.expense)}</span>}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
