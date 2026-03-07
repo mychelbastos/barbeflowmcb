@@ -1856,50 +1856,40 @@ END:VCALENDAR`;
                     <CreditCard className="h-5 w-5 text-emerald-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white mb-1">💳 Pagar agora e garantir sua vaga</h3>
-                    
-                    {/* Price display */}
-                    <div className="flex items-baseline gap-2 mb-3">
-                      {hasDiscount ? (
-                        <>
-                          <span className="text-zinc-500 line-through text-sm">R$ {(baseForPayment / 100).toFixed(2)}</span>
-                          <span className="text-emerald-400 font-bold text-xl">R$ {(onlinePriceCents / 100).toFixed(2)}</span>
-                        </>
-                      ) : (
-                        <span className="text-white font-bold text-xl">R$ {(baseForPayment / 100).toFixed(2)}</span>
-                      )}
-                    </div>
+                    <h3 className="font-semibold text-white mb-1">Pagar agora e garantir sua vaga</h3>
+                     
+                     {/* Price display */}
+                     <div className="flex items-baseline gap-2 mb-2">
+                       {hasDiscount ? (
+                         <>
+                           <span className="text-zinc-500 line-through text-sm">R$ {(baseForPayment / 100).toFixed(2)}</span>
+                           <span className="text-emerald-400 font-bold text-xl">R$ {(onlinePriceCents / 100).toFixed(2)}</span>
+                         </>
+                       ) : (
+                         <span className="text-white font-bold text-xl">R$ {(baseForPayment / 100).toFixed(2)}</span>
+                       )}
+                     </div>
 
-                    {hasDiscount && (
-                      <div className="flex items-center gap-1.5 mb-3">
-                        <span className="text-emerald-400 text-xs font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                          🏷️ Economize R$ {(discountCents / 100).toFixed(2)} ({onlineDiscountPercent}% de desconto)
-                        </span>
-                      </div>
-                    )}
+                     {hasDiscount && (
+                       <p className="text-emerald-400 text-xs">
+                         Economize R$ {(discountCents / 100).toFixed(2)} ({onlineDiscountPercent}% de desconto)
+                       </p>
+                     )}
 
-                    {isPrepayPartial && (
-                      <p className="text-zinc-500 text-xs mb-3">
-                        Sinal de {prepaymentPercentage}%{hasDiscount ? ` com ${onlineDiscountPercent}% de desconto` : ''}
-                      </p>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <p className="text-zinc-400 text-xs flex items-center gap-1.5">✅ Confirmação imediata</p>
-                      <p className="text-zinc-400 text-xs flex items-center gap-1.5">✅ Sua vaga fica garantida</p>
-                      <p className="text-zinc-400 text-xs flex items-center gap-1.5">✅ Sem preocupação na hora</p>
-                    </div>
-
-                    <p className="text-zinc-600 text-[11px] mt-3">Aceitamos PIX e Cartão de Crédito</p>
+                     {isPrepayPartial && (
+                       <p className="text-zinc-500 text-xs mt-1">
+                         Sinal de {prepaymentPercentage}%{hasDiscount ? ` com ${onlineDiscountPercent}% de desconto` : ''}
+                       </p>
+                     )}
                   </div>
                 </div>
               </button>
 
-              {/* Cancellation forfeit warning for online */}
+              {/* Cancellation forfeit disclaimer */}
               {showCancellationForfeit && (
-                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-200/80">
-                  <strong>⚠️ Política de cancelamento:</strong> Ao confirmar, caso não compareça ou cancele com menos de {cancellationForfeitHours}h de antecedência, o valor pago não será reembolsado.
-                </div>
+                <p className="text-xs text-zinc-500 mt-2 px-2">
+                  Ao confirmar, caso não compareça ou cancele com menos de {cancellationForfeitHours}h de antecedência, o valor pago não será reembolsado.
+                </p>
               )}
 
               {/* On-site payment card */}
@@ -1913,13 +1903,11 @@ END:VCALENDAR`;
                       <Banknote className="h-5 w-5 text-zinc-400" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-zinc-300 group-hover:text-white transition-colors">🏪 Pagar no local</h3>
-                      <p className="text-zinc-500 text-sm">
-                        R$ {(originalPriceCents / 100).toFixed(2)} {hasDiscount ? '(valor cheio)' : ''}
-                      </p>
-                      {hasDiscount && (
-                        <p className="text-zinc-600 text-xs mt-1">⚠️ Sujeito à disponibilidade no momento</p>
-                      )}
+                      <h3 className="font-medium text-zinc-300 group-hover:text-white transition-colors">Pagar no local</h3>
+                       <p className="text-zinc-500 text-sm">
+                         R$ {(originalPriceCents / 100).toFixed(2)} {hasDiscount ? '(valor cheio)' : ''}
+                       </p>
+                       <p className="text-zinc-600 text-xs mt-1">Pagamento no momento do atendimento</p>
                     </div>
                   </div>
                 </button>
@@ -2279,12 +2267,21 @@ END:VCALENDAR`;
 
             {/* MercadoPago Checkout */}
             <MercadoPagoCheckout
-              bookingId={createdBooking.id}
-              tenantSlug={slug || ''}
-              amount={selectedPackage 
-                ? (selectedPackage.price_cents / 100) 
-                : ((createdBooking.service?.price_cents || 0) + orderBumpItems.reduce((s: number, p: OrderBumpProduct) => s + p.sale_price_cents, 0)) / 100
-              }
+               bookingId={createdBooking.id}
+               tenantSlug={slug || ''}
+               amount={selectedPackage 
+                 ? (selectedPackage.price_cents / 100) 
+                 : (() => {
+                     const svcCents = (createdBooking.service?.price_cents || 0);
+                     const bumpCents = orderBumpItems.reduce((s: number, p: OrderBumpProduct) => s + p.sale_price_cents, 0);
+                     const tenantSettings = (tenant?.settings || {}) as Record<string, any>;
+                     const discPct = tenantSettings.online_discount_percent || 0;
+                     const discCents = discPct > 0 ? Math.round(svcCents * discPct / 100) : 0;
+                     return (svcCents - discCents + bumpCents) / 100;
+                   })()
+               }
+               onlineDiscountPercent={((tenant?.settings || {}) as Record<string, any>).online_discount_percent || 0}
+               originalAmountCents={selectedPackage ? selectedPackage.price_cents : ((createdBooking.service?.price_cents || 0) + orderBumpItems.reduce((s: number, p: OrderBumpProduct) => s + p.sale_price_cents, 0))}
               serviceName={selectedPackage 
                 ? selectedPackage.name 
                 : orderBumpItems.length > 0
