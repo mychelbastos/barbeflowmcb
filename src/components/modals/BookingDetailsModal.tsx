@@ -65,7 +65,7 @@ export function BookingDetailsModal({
 
     // Load all data in parallel
     // Load all data in parallel
-    const [custRes, balRes, itemsRes, statusRes] = await Promise.all([
+    const [custRes, balRes, itemsRes, statusRes, payRes] = await Promise.all([
       customerId
         ? supabase.from("customers").select("notes").eq("id", customerId).single()
         : Promise.resolve({ data: null }),
@@ -79,6 +79,10 @@ export function BookingDetailsModal({
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: true }),
       supabase.from("bookings").select("comanda_status").eq("id", booking.id).single(),
+      supabase.from("payments")
+        .select("id, amount_cents, status, refund_cents, refund_status, forfeit_percent, external_id")
+        .eq("booking_id", booking.id)
+        .maybeSingle(),
     ]);
 
     setCustomerNotes(custRes.data?.notes || null);
