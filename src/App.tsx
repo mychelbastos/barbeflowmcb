@@ -61,10 +61,7 @@ const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminTenants = lazy(() => import("./pages/admin/AdminTenants"));
 const AdminTenantDetail = lazy(() => import("./pages/admin/AdminTenantDetail"));
-
-
-// Lazy-loaded components
-const AuthWatcher = lazy(() => import("./components/AuthWatcher"));
+ponents/AuthWatcher"));
 import ProtectedRoute from "./components/ProtectedRoute";
 const AppShell = lazy(() => import("./components/layout/AppShell"));
 
@@ -194,10 +191,7 @@ const App = () => {
                   <Route path="tenants" element={<AdminTenants />} />
                   <Route path="tenants/:id" element={<AdminTenantDetail />} />
                   <Route path="tracking" element={<AdminTracking />} />
-                </Route>
-              )}
-
-              {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
+                </rd domain, redirect root to login (handled by AuthWatcher if logged in) */}
               {isDashboardDomain() && (
                 <Route path="/" element={<Login />} />
               )}
