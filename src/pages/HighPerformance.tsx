@@ -322,7 +322,7 @@ export default function HighPerformance() {
         </Card>
 
         {/* Card 2 — Cartão Fidelidade */}
-        <Card className={`transition-all ${loyaltyEnabled ? 'border-emerald-500/30' : ''}`}>
+        <Card className={`transition-all ${loyaltyEnabled && canUseLoyalty ? 'border-emerald-500/30' : ''}`}>
           <CardContent className="p-5 space-y-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
@@ -331,12 +331,36 @@ export default function HighPerformance() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Cartão Fidelidade</h3>
+                  {loyaltyAddonActive && !isIlimitado && loyaltyEnabled && (
+                    <span className="text-[10px] text-muted-foreground">Add-on · R$ 19,90/mês</span>
+                  )}
                 </div>
               </div>
-              <Switch checked={loyaltyEnabled} onCheckedChange={handleLoyaltyToggle} />
+              {canUseLoyalty ? (
+                <Switch checked={loyaltyEnabled} onCheckedChange={handleLoyaltyToggle} />
+              ) : (
+                <Lock className="h-5 w-5 text-muted-foreground" />
+              )}
             </div>
 
-            {loyaltyEnabled ? (
+            {!canUseLoyalty ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Fidelize seus clientes automaticamente! A cada N agendamentos, seu cliente ganha uma recompensa.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Disponível como add-on por R$ 19,90/mês ou incluso no plano Ilimitado.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={() => setLoyaltyAddonDialog(true)}>
+                    Ativar por R$ 19,90/mês
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-primary" onClick={() => window.location.href = "/app/settings?tab=billing"}>
+                    Ver plano Ilimitado
+                  </Button>
+                </div>
+              </>
+            ) : loyaltyEnabled ? (
               <>
                 <p className="text-sm text-muted-foreground">
                   {stampsRequired} selos → {rewardType === "free_service" ? "Serviço grátis" : `${rewardPercent}% de desconto`}
@@ -345,7 +369,6 @@ export default function HighPerformance() {
                 <p className="text-xs text-muted-foreground">
                   {eligibleStaffCount} profissional(is) participante(s) · {loyaltyActiveCards} cartão(ões) ativo(s)
                 </p>
-                {/* Stamp preview */}
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(stampsRequired, 10) }).map((_, i) => (
                     <div
