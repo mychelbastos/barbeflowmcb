@@ -681,11 +681,11 @@ export default function AppShell() {
             {/* Dashboard footer links */}
             <footer className="border-t border-border/30 py-3 px-6">
               <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/50">
-                <a href="/termos" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
+                <a href={getPublicUrl("/termos")} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
                 <span>·</span>
-                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+                <a href={getPublicUrl("/privacidade")} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
                 <span>·</span>
-                <a href="/reembolso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Reembolso</a>
+                <a href={getPublicUrl("/reembolso")} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Reembolso</a>
               </div>
             </footer>
           </div>
@@ -694,6 +694,9 @@ export default function AppShell() {
       
       {/* Global Booking Modal */}
       <BookingModal />
+      
+      {/* Terms Acceptance for existing tenants */}
+      <TermsAcceptanceModal />
       
     </>
   );
