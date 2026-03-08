@@ -1578,6 +1578,30 @@ export type Database = {
           },
         ]
       }
+      rate_limit_log: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          ip_address: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_address: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_address?: string
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
       recurring_clients: {
         Row: {
           active: boolean
@@ -3120,6 +3144,10 @@ export type Database = {
       }
       check_booking_rate_limit: {
         Args: { customer_phone: string; tenant_uuid: string }
+        Returns: boolean
+      }
+      check_ip_rate_limit: {
+        Args: { p_endpoint: string; p_ip: string; p_tenant_id?: string }
         Returns: boolean
       }
       close_comanda_with_commissions: {
