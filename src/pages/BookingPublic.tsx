@@ -2208,11 +2208,11 @@ END:VCALENDAR`;
 
                 <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
                   Ao confirmar, você concorda com os{" "}
-                  <a href="/termos-agendamento" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white underline">
+                  <a href={getPublicUrl("/termos-agendamento")} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white underline">
                     Termos do Agendamento
                   </a>{" "}
                   e a{" "}
-                  <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white underline">
+                  <a href={getPublicUrl("/privacidade")} target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white underline">
                     Política de Privacidade
                   </a>
                 </p>
