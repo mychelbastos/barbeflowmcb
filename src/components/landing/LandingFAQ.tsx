@@ -1,4 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { motion } from "framer-motion";
+import { useRef } from "react";
+import { useInView } from "framer-motion";
 
 const faqs = [
   { q: "Preciso pagar para testar?", a: "Não. Os 14 dias de teste são 100% gratuitos. Você só começa a pagar se decidir continuar após o trial." },
@@ -12,29 +15,48 @@ const faqs = [
 ];
 
 export default function LandingFAQ() {
-  return (
-    <section className="py-20 px-4 sm:px-6 bg-[#0a0a0a]">
-      <div className="max-w-2xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-10">
-          Ficou com dúvida?
-        </h2>
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
 
-        <Accordion type="single" collapsible className="space-y-2">
-          {faqs.map((faq, i) => (
-            <AccordionItem
-              key={i}
-              value={`faq-${i}`}
-              className="bg-[#161616] border border-[#2a2a2a] rounded-xl px-5 data-[state=open]:border-[#d4a843]/20"
-            >
-              <AccordionTrigger className="text-sm font-medium text-white hover:no-underline py-4">
-                {faq.q}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-zinc-400 pb-4 leading-relaxed">
-                {faq.a}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+  return (
+    <section className="py-24 sm:py-32 px-5 sm:px-8" ref={ref}>
+      <div className="max-w-[640px] mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-12"
+        >
+          <span className="text-[#d4a843] text-xs font-semibold tracking-[0.2em] uppercase mb-4 block">
+            FAQ
+          </span>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+            Ficou com dúvida?
+          </h2>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Accordion type="single" collapsible className="space-y-2">
+            {faqs.map((faq, i) => (
+              <AccordionItem
+                key={i}
+                value={`faq-${i}`}
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 data-[state=open]:border-[#d4a843]/15 transition-colors duration-300"
+              >
+                <AccordionTrigger className="text-sm font-medium text-white hover:no-underline py-4 text-left">
+                  {faq.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-zinc-500 pb-4 leading-relaxed">
+                  {faq.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </motion.div>
       </div>
     </section>
   );

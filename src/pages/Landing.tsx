@@ -5,7 +5,6 @@ import { useInView } from "framer-motion";
 
 import LandingNavbar from "@/components/landing/LandingNavbar";
 import LandingHero from "@/components/landing/LandingHero";
-
 import LandingProblems from "@/components/landing/LandingProblems";
 import LandingSolutions from "@/components/landing/LandingSolutions";
 import LandingHowItWorks from "@/components/landing/LandingHowItWorks";
@@ -20,7 +19,6 @@ import LandingFooter from "@/components/landing/LandingFooter";
 const Landing = () => {
   usePageTitle("Sistema de Gestão para Barbearias | Agendamento Online");
 
-  // Track pricing section view
   const pricingRef = useRef<HTMLElement>(null);
   const pricingInView = useInView(pricingRef, { once: true });
 
@@ -36,15 +34,31 @@ const Landing = () => {
   }, [pricingInView]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-100 overflow-x-hidden" style={{ fontFamily: "'Satoshi', sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#050505] text-zinc-100 overflow-x-hidden"
+      style={{ fontFamily: "'Satoshi', sans-serif" }}
+    >
       <LandingNavbar />
       <LandingHero />
+
+      {/* Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
+
       <LandingProblems />
       <LandingSolutions />
+
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
+
       <LandingHowItWorks />
       <LandingDifferentials />
+
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
+
       <LandingTestimonials />
       <LandingComparison />
+
+      <div className="h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
+
       <LandingPricing ref={pricingRef} />
       <LandingFAQ />
       <LandingFinalCTA />
