@@ -16,7 +16,7 @@ function getPlanInfo(priceId: string) {
   const ilimitadoYearly = Deno.env.get("STRIPE_PRICE_ILIMITADO_YEARLY") || "price_1T40QcCxw1gIFu9g5oE9dpPM";
 
   if (priceId === ilimitadoMonthly || priceId === ilimitadoYearly) {
-    return { plan_name: "ilimitado", commission_rate: 0.010 };
+    return { plan_name: "ilimitado", commission_rate: 0.015 };
   }
   if (priceId === proMonthly || priceId === proYearly) {
     return { plan_name: "profissional", commission_rate: 0.015 };

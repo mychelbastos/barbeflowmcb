@@ -27,7 +27,7 @@ const PLANS = {
   ilimitado: {
     product_id: "prod_U24ZNzDkfp2fU5",
     price_id: "price_1T40Q1Cxw1gIFu9gQgXMbjrr",
-    commission_rate: 0.010,
+    commission_rate: 0.015,
   },
 };
 
