@@ -184,12 +184,15 @@ Deno.serve(async (req) => {
         return json({
           invoices: invoices.data.map((inv) => ({
             id: inv.id,
+            number: inv.number,
             amount_due: inv.amount_due,
             amount_paid: inv.amount_paid,
             status: inv.status,
             hosted_invoice_url: inv.hosted_invoice_url,
             invoice_pdf: inv.invoice_pdf,
             created: inv.created,
+            period_start: inv.period_start,
+            period_end: inv.period_end,
           })),
         });
       }
