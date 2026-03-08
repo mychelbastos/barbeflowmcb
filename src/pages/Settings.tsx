@@ -1158,10 +1158,7 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Loyalty Card - Standalone Tab */}
-        <TabsContent value="loyalty">
-          <LoyaltySettingsTab />
-        </TabsContent>
+        {/* Loyalty moved to Alta Performance */}
 
         {/* Notifications Settings */}
         <TabsContent value="notifications">
