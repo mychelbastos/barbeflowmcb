@@ -119,6 +119,9 @@ const App = () => {
                   <Route path="/" element={isCustomDomain() ? <BookingPublic /> : <Landing />} />
                   <Route path="/termos" element={<Terms />} />
                   <Route path="/privacidade" element={<Privacy />} />
+                  <Route path="/reembolso" element={<Reembolso />} />
+                  <Route path="/dpa" element={<DPA />} />
+                  <Route path="/termos-agendamento" element={<TermosAgendamento />} />
                   <Route path="/:slug" element={<BookingPublic />} />
                   <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
                   <Route path="/:slug/pacote/retorno" element={<PackagePaymentReturn />} />

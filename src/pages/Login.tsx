@@ -236,10 +236,32 @@ const Login = () => {
               </div>
             )}
 
+            {isSignUp && (
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                  className="mt-1 border-zinc-600 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                />
+                <label htmlFor="terms" className="text-xs text-zinc-400 leading-relaxed cursor-pointer">
+                  Li e aceito os{" "}
+                  <a href={getPublicUrl("/termos")} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    Termos de Uso
+                  </a>{" "}
+                  e a{" "}
+                  <a href={getPublicUrl("/privacidade")} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    Política de Privacidade
+                  </a>{" "}
+                  do modoGESTOR.
+                </label>
+              </div>
+            )}
+
             <Button
               type="submit"
               size="lg"
-              disabled={isLoading}
+              disabled={isLoading || (isSignUp && !acceptedTerms)}
               className="w-full h-12 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold"
             >
               {isLoading 
