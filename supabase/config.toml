@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.public-tenant-page]
 verify_jwt = false
+
+[functions.meta-capi-event]
+verify_jwt = false
