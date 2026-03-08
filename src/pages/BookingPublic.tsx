@@ -1878,18 +1878,17 @@ END:VCALENDAR`;
                          Sinal de {prepaymentPercentage}%{hasDiscount ? ` com ${onlineDiscountPercent}% de desconto` : ''}
                        </p>
                      )}
-                  </div>
                 </div>
               </button>
 
-              {/* Cancellation forfeit disclaimer */}
+              {/* Cancellation forfeit disclaimer — subtle text */}
               {showCancellationForfeit && (
-                <p className="text-xs text-zinc-500 mt-2 px-2">
+                <p className="text-xs text-zinc-500 px-2">
                   {noShowForfeitPercent >= 100
                     ? `Ao confirmar, caso não compareça ou cancele com menos de ${cancellationForfeitHours}h de antecedência, o valor pago não será reembolsado.`
                     : noShowForfeitPercent <= 0
                     ? `Ao confirmar, caso não compareça ou cancele com menos de ${cancellationForfeitHours}h de antecedência, entre em contato para reagendar.`
-                    : `Ao confirmar, caso não compareça ou cancele com menos de ${cancellationForfeitHours}h de antecedência, ${noShowForfeitPercent}% do valor pago será retido e o restante será reembolsado.`}
+                    : `Ao confirmar, caso não compareça ou cancele com menos de ${cancellationForfeitHours}h de antecedência, ${noShowForfeitPercent}% do valor será retido e o restante reembolsado.`}
                 </p>
               )}
 
@@ -1899,17 +1898,12 @@ END:VCALENDAR`;
                   onClick={() => handlePaymentMethodSelect('on_site')}
                   className="w-full p-4 bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 rounded-xl text-left transition-all duration-200 hover:bg-zinc-900 group"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 rounded-xl flex items-center justify-center shrink-0">
-                      <Banknote className="h-5 w-5 text-zinc-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-zinc-300 group-hover:text-white transition-colors">Pagar no local</h3>
-                       <p className="text-zinc-500 text-sm">
-                         R$ {(originalPriceCents / 100).toFixed(2)} {hasDiscount ? '(valor cheio)' : ''}
-                       </p>
-                       <p className="text-zinc-600 text-xs mt-1">Pagamento no momento do atendimento</p>
-                    </div>
+                  <div className="flex-1 px-1">
+                    <h3 className="font-medium text-zinc-300 group-hover:text-white transition-colors">Pagar no local</h3>
+                    <p className="text-zinc-500 text-sm">
+                      R$ {(originalPriceCents / 100).toFixed(2)} {hasDiscount ? '(valor cheio)' : ''}
+                    </p>
+                    <p className="text-zinc-600 text-xs mt-1">Pagamento no momento do atendimento</p>
                   </div>
                 </button>
               )}
@@ -1918,8 +1912,8 @@ END:VCALENDAR`;
                 <div className="p-3 bg-zinc-800/50 border border-zinc-700/30 rounded-xl">
                   <p className="text-zinc-400 text-xs text-center">
                     {forcedOnlinePayment 
-                      ? '🔒 Para sua segurança, o pagamento antecipado é necessário neste agendamento.'
-                      : `🔒 Este estabelecimento solicita pagamento antecipado${prepaymentPercentage > 0 && prepaymentPercentage < 100 ? ` de ${prepaymentPercentage}%` : ''} para confirmar o agendamento.`
+                      ? 'Para sua segurança, o pagamento antecipado é necessário neste agendamento.'
+                      : `Este estabelecimento solicita pagamento antecipado${prepaymentPercentage > 0 && prepaymentPercentage < 100 ? ` de ${prepaymentPercentage}%` : ''} para confirmar o agendamento.`
                     }
                   </p>
                 </div>
