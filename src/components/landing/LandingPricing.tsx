@@ -158,8 +158,8 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
                       R$ {plan.annual_total.toFixed(2).replace(".", ",")} /ano
                     </p>
                   )}
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Taxa de transação: {plan.tax}
+                  <p className="text-[10px] text-zinc-700 mt-1">
+                    Taxa de {plan.tax} sobre pagamentos online
                   </p>
                 </div>
 
