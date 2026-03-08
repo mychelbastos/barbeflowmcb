@@ -58,7 +58,15 @@ export default function HighPerformance() {
   usePageTitle("Alta Performance");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { user } = useAuth();
+  const { planName } = useSubscription();
   const { toast } = useToast();
+
+  const isIlimitado = planName === "ilimitado";
+  const loyaltyAddonActive = !!(currentTenant?.settings as any)?.loyalty_addon_active;
+  const canUseLoyalty = isIlimitado || loyaltyAddonActive;
+
+  // Loyalty addon dialog
+  const [loyaltyAddonDialog, setLoyaltyAddonDialog] = useState(false);
 
   const [examplePrice, setExamplePrice] = useState(4000);
   const [loyaltyActiveCards, setLoyaltyActiveCards] = useState(0);
