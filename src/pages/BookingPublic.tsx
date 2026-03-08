@@ -1964,14 +1964,29 @@ END:VCALENDAR`;
                   <Clock className="h-4 w-4 text-zinc-500" />
                   <span className="text-zinc-400">{selectedTime}</span>
                 </div>
-                <span className="text-emerald-400 font-semibold">
-                  {(subscriptionCoveredService || packageCoveredService) 
-                    ? 'Incluso no plano' 
-                    : selectedPackage 
-                      ? `R$ ${(selectedPackage.price_cents / 100).toFixed(0)}`
-                      : `R$ ${((selectedServiceData?.price_cents || 0) / 100).toFixed(0)}`
+                {(() => {
+                  if (subscriptionCoveredService || packageCoveredService) {
+                    return <span className="text-emerald-400 font-semibold">Incluso no plano</span>;
                   }
-                </span>
+                  if (selectedPackage) {
+                    return <span className="text-emerald-400 font-semibold">R$ {(selectedPackage.price_cents / 100).toFixed(0)}</span>;
+                  }
+                  const priceCents = selectedServiceData?.price_cents || 0;
+                  const tenantSettings = (tenant?.settings || {}) as Record<string, any>;
+                  const step5DiscPct = paymentMethod === 'online' ? (tenantSettings.online_discount_percent || 0) : 0;
+                  const step5DiscCents = step5DiscPct > 0 ? Math.round(priceCents * step5DiscPct / 100) : 0;
+                  const step5FinalCents = priceCents - step5DiscCents;
+                  if (step5DiscCents > 0) {
+                    return (
+                      <div className="text-right">
+                        <span className="text-sm text-zinc-500 line-through mr-1">R$ {(priceCents / 100).toFixed(2)}</span>
+                        <span className="text-emerald-400 font-semibold">R$ {(step5FinalCents / 100).toFixed(2)}</span>
+                        <p className="text-xs text-emerald-400">{step5DiscPct}% off online</p>
+                      </div>
+                    );
+                  }
+                  return <span className="text-emerald-400 font-semibold">R$ {(priceCents / 100).toFixed(0)}</span>;
+                })()}
               </div>
               {paymentMethod && !subscriptionCoveredService && !packageCoveredService && (
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800 text-sm">
