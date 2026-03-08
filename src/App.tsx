@@ -61,6 +61,9 @@ const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminTenants = lazy(() => import("./pages/admin/AdminTenants"));
 const AdminTenantDetail = lazy(() => import("./pages/admin/AdminTenantDetail"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
+const AdminBilling = lazy(() => import("./pages/admin/AdminBilling"));
 
 // Lazy-loaded components
 const AuthWatcher = lazy(() => import("./components/AuthWatcher"));
@@ -192,6 +195,9 @@ const App = () => {
                   <Route index element={<AdminDashboard />} />
                   <Route path="tenants" element={<AdminTenants />} />
                   <Route path="tenants/:id" element={<AdminTenantDetail />} />
+                  <Route path="analytics" element={<AdminAnalytics />} />
+                  <Route path="onboarding" element={<AdminOnboarding />} />
+                  <Route path="billing" element={<AdminBilling />} />
                 </Route>
               )}
 

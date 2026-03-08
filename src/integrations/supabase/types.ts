@@ -3371,6 +3371,19 @@ export type Database = {
     Functions: {
       admin_get_attribution_report: { Args: never; Returns: Json }
       admin_get_dashboard_stats: { Args: never; Returns: Json }
+      admin_get_onboarding_funnel: { Args: never; Returns: Json }
+      admin_get_platform_analytics: { Args: never; Returns: Json }
+      admin_get_saas_kpis: { Args: never; Returns: Json }
+      admin_get_tenant_detail: { Args: { p_tenant_id: string }; Returns: Json }
+      admin_get_tenant_timeline: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: Json
+      }
+      admin_list_invoices: {
+        Args: { p_limit?: number; p_status?: string }
+        Returns: Json
+      }
+      admin_list_platform_fees: { Args: { p_limit?: number }; Returns: Json }
       admin_list_tenants: {
         Args: {
           p_limit?: number
