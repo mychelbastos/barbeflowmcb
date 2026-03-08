@@ -243,10 +243,7 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
         </div>
 
         {/* Footer notes */}
-        <div className="text-center mt-8 space-y-2">
-          <p className="text-sm text-zinc-500">
-            +R$ 14,90/mês por profissional adicional no plano Profissional
-          </p>
+        <div className="text-center mt-8">
           <p className="text-xs text-zinc-600">
             Após 14 dias, a cobrança é automática. Cancele quando quiser pelo painel.
           </p>
