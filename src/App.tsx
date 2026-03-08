@@ -25,8 +25,11 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PaymentReturn = lazy(() => import("./pages/PaymentReturn"));
 const PackagePaymentReturn = lazy(() => import("./pages/PackagePaymentReturn"));
 const SubscriptionCallback = lazy(() => import("./pages/SubscriptionCallback"));
-const Terms = lazy(() => import("./pages/Terms"));
-const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/legal/TermosDeUso"));
+const Privacy = lazy(() => import("./pages/legal/PoliticaPrivacidade"));
+const Reembolso = lazy(() => import("./pages/legal/PoliticaReembolso"));
+const DPA = lazy(() => import("./pages/legal/AcordoProcessamento"));
+const TermosAgendamento = lazy(() => import("./pages/legal/TermosAgendamento"));
 
 // Admin pages — ALL lazy loaded (never needed by public visitors)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
