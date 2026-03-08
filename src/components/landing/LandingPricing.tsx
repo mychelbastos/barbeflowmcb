@@ -52,7 +52,7 @@ const profissionalExclusiveFeatures: Feature[] = [
 
 const plans = [
   {
-    name: "Essencial",
+    name: "Profissional",
     monthly: 59.9,
     annual_monthly: 47.9,
     annual_total: 574.8,
@@ -62,10 +62,10 @@ const plans = [
     highlight: false,
   },
   {
-    name: "Profissional",
-    monthly: 89.9,
-    annual_monthly: 71.9,
-    annual_total: 862.8,
+    name: "Ilimitado",
+    monthly: 109.9,
+    annual_monthly: 87.9,
+    annual_total: 1054.8,
     tax: "1,5%",
     features: profissionalBaseFeatures,
     exclusiveFeatures: profissionalExclusiveFeatures,
