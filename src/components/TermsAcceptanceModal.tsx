@@ -17,12 +17,10 @@ export function TermsAcceptanceModal() {
   const { currentTenant } = useTenant();
   const [accepted, setAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-
   const settings = currentTenant?.settings as Record<string, any> | null;
   const alreadyAccepted = !!settings?.terms_accepted_at;
 
-  if (!currentTenant || alreadyAccepted || dismissed) return null;
+  if (!currentTenant || alreadyAccepted) return null;
 
   const handleAccept = async () => {
     if (!accepted) return;
