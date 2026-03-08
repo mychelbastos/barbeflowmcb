@@ -279,12 +279,21 @@ export function ScheduleGrid({
 
           if (slotType === "block") {
             const block = getBlockAtSlot(member.id, slotTime);
+            // Check if a booking covers this slot — if so, hide the label
+            const coveredByBooking = staffBookings.some((b) => {
+              const bStart = formatInTimeZone(new Date(b.starts_at), TZ, "HH:mm");
+              const bEnd = formatInTimeZone(new Date(b.ends_at), TZ, "HH:mm");
+              const slotMins = timeToMinutes(slotTime);
+              return slotMins >= timeToMinutes(bStart) && slotMins < timeToMinutes(bEnd);
+            });
             return (
               <div key={slotTime} style={{ height: `${SLOT_HEIGHT}px` }}
                 className="bg-muted/40 border-b border-border/20 flex items-center justify-center px-1">
-                <span className="text-[10px] text-muted-foreground/70 truncate">
-                  {block?.reason || "Bloqueio"}
-                </span>
+                {!coveredByBooking && (
+                  <span className="text-[10px] text-muted-foreground/70 truncate">
+                    {block?.reason || "Bloqueio"}
+                  </span>
+                )}
               </div>
             );
           }
