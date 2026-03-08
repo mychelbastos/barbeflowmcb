@@ -1155,10 +1155,11 @@ export default function Settings() {
               <AvailabilityBlocksManager tenantId={currentTenant.id} />
             </CardContent>
           </Card>
-          {/* Loyalty Card */}
-          <div className="mt-6">
-            <LoyaltySettingsTab />
-          </div>
+        </TabsContent>
+
+        {/* Loyalty Card - Standalone Tab */}
+        <TabsContent value="loyalty">
+          <LoyaltySettingsTab />
         </TabsContent>
 
         {/* Notifications Settings */}
