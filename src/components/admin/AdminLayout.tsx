@@ -1,12 +1,11 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { LayoutDashboard, Store, BarChart3, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Store, ArrowLeft } from "lucide-react";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/admin/tenants", icon: Store, label: "Barbearias" },
-  { to: "/admin/tracking", icon: BarChart3, label: "Tracking" },
 ];
 
 export default function AdminLayout() {

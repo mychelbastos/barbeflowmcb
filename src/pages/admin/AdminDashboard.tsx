@@ -82,14 +82,6 @@ export default function AdminDashboard() {
         <MiniStat label="Bookings 30d" value={stats.engagement.bookings_30d} />
       </div>
 
-      <SectionTitle>Tracking</SectionTitle>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniStat label="Sessões visitante" value={stats.tracking.visitor_sessions} />
-        <MiniStat label="Eventos Meta" value={stats.tracking.meta_events_sent} />
-        <MiniStat label="Com UTM" value={stats.tracking.sessions_with_utm} />
-        <MiniStat label="Com fbclid" value={stats.tracking.sessions_with_fbclid} />
-      </div>
-
       <SectionTitle>Onboarding</SectionTitle>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MiniStat label="Total" value={stats.onboarding.total} />
