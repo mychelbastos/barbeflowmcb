@@ -140,6 +140,7 @@ const baseNavigationItems: NavItem[] = [
     ]
   },
   { title: "Relatórios", url: "/app/reports", icon: BarChart3 },
+  { title: "Alta Performance", url: "/app/alta-performance", icon: Rocket },
   { 
     title: "Configurações", 
     url: "/app/settings", 
