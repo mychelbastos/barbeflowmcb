@@ -8,6 +8,7 @@ interface OnlineDiscountValues {
   online_discount_percent: number;
   show_cancellation_forfeit: boolean;
   cancellation_forfeit_hours: number;
+  no_show_forfeit_percent: number;
 }
 
 interface Props {
@@ -22,6 +23,7 @@ export function OnlineDiscountSettings({ currentTenant, onChange }: Props) {
   const [discountPercent, setDiscountPercent] = useState<number>(settings.online_discount_percent ?? 0);
   const [showForfeit, setShowForfeit] = useState<boolean>(settings.show_cancellation_forfeit ?? false);
   const [forfeitHours, setForfeitHours] = useState<number>(settings.cancellation_forfeit_hours ?? 24);
+  const [noShowPercent, setNoShowPercent] = useState<number>(settings.no_show_forfeit_percent ?? 30);
 
   useEffect(() => {
     const s = currentTenant?.settings || {};
@@ -30,6 +32,7 @@ export function OnlineDiscountSettings({ currentTenant, onChange }: Props) {
     setDiscountPercent(pct);
     setShowForfeit(s.show_cancellation_forfeit ?? false);
     setForfeitHours(s.cancellation_forfeit_hours ?? 24);
+    setNoShowPercent(s.no_show_forfeit_percent ?? 30);
   }, [currentTenant]);
 
   // Notify parent whenever values change
@@ -38,13 +41,17 @@ export function OnlineDiscountSettings({ currentTenant, onChange }: Props) {
       online_discount_percent: enabled ? Math.max(1, Math.min(50, discountPercent)) : 0,
       show_cancellation_forfeit: showForfeit,
       cancellation_forfeit_hours: forfeitHours,
+      no_show_forfeit_percent: Math.max(0, Math.min(100, noShowPercent)),
     });
-  }, [enabled, discountPercent, showForfeit, forfeitHours]);
+  }, [enabled, discountPercent, showForfeit, forfeitHours, noShowPercent]);
 
   const effectivePercent = enabled ? Math.max(1, discountPercent) : 0;
   const examplePrice = 4000;
   const exampleDiscount = Math.round(examplePrice * effectivePercent / 100);
   const exampleOnline = examplePrice - exampleDiscount;
+
+  const retentionCents = Math.round(examplePrice * noShowPercent / 100);
+  const refundCents = examplePrice - retentionCents;
 
   return (
     <div className="space-y-4">
@@ -100,7 +107,7 @@ export function OnlineDiscountSettings({ currentTenant, onChange }: Props) {
         <div className="space-y-0.5">
           <Label className="text-base font-medium">Política de cancelamento no checkout</Label>
           <p className="text-xs text-muted-foreground">
-            Informa ao cliente que cancelamentos tardios não são reembolsados
+            Informa ao cliente sobre retenção em caso de não comparecimento ou cancelamento tardio
           </p>
         </div>
         <Switch checked={showForfeit} onCheckedChange={setShowForfeit} />
@@ -120,8 +127,42 @@ export function OnlineDiscountSettings({ currentTenant, onChange }: Props) {
             />
           </div>
 
-          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-200">
-            <strong>⚠️ Preview:</strong> Ao confirmar, caso não compareça ou cancele com menos de {forfeitHours}h de antecedência, o valor pago não será reembolsado.
+          <Separator />
+
+          <div className="space-y-1">
+            <Label>Percentual de retenção (No-Show)</Label>
+            <p className="text-xs text-muted-foreground">
+              Quando o cliente paga antecipadamente e não comparece, qual percentual será retido?
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={noShowPercent}
+              onChange={(e) => setNoShowPercent(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            0% = reembolso total · 100% = sem reembolso
+          </p>
+
+          <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+            <p className="font-medium">Exemplo: Serviço de R$ 40,00 pago online</p>
+            <p className="text-destructive">→ Retenção: R$ {(retentionCents / 100).toFixed(2)} ({noShowPercent}%)</p>
+            <p className="text-emerald-600">→ Reembolso: R$ {(refundCents / 100).toFixed(2)} ({100 - noShowPercent}%)</p>
+          </div>
+
+          <div className="rounded-lg bg-muted/50 border p-3 text-sm text-muted-foreground">
+            <strong>Preview no checkout:</strong>{' '}
+            {noShowPercent >= 100
+              ? `Ao confirmar, caso não compareça ou cancele com menos de ${forfeitHours}h de antecedência, o valor pago não será reembolsado.`
+              : noShowPercent <= 0
+              ? `Ao confirmar, caso não compareça ou cancele com menos de ${forfeitHours}h de antecedência, entre em contato para reagendar.`
+              : `Ao confirmar, caso não compareça ou cancele com menos de ${forfeitHours}h de antecedência, ${noShowPercent}% do valor será retido e o restante reembolsado.`}
           </div>
         </div>
       )}
