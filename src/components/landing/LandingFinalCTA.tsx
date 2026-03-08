@@ -28,7 +28,7 @@ export default function LandingFinalCTA() {
         </button>
 
         <p className="text-xs text-zinc-500 mt-4">
-          Sem cartão · Sem compromisso · Cancele quando quiser
+          Sem compromisso · Cancele quando quiser
         </p>
       </div>
     </section>

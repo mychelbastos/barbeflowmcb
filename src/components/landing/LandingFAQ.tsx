@@ -1,7 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const faqs = [
-  { q: "Preciso de cartão para testar?", a: "Não. Os 14 dias de teste são 100% gratuitos, sem cartão de crédito." },
+  { q: "Preciso pagar para testar?", a: "Não. Os 14 dias de teste são 100% gratuitos. Você só começa a pagar se decidir continuar após o trial." },
   { q: "Meus clientes precisam baixar algum app?", a: "Não. Eles agendam pelo link no celular, sem instalar nada." },
   { q: "Funciona com Mercado Pago?", a: "Sim. Você conecta sua conta do Mercado Pago e recebe os pagamentos direto nela." },
   { q: "E se o cliente não aparecer?", a: "Com a Proteção Anti-Falta, você retém automaticamente uma parte do valor pago online. O resto é devolvido ao cliente." },

@@ -81,7 +81,7 @@ export default function LandingHero() {
             className="animate-fade-up opacity-0 text-xs text-zinc-600 mb-14"
             style={{ animationDelay: '550ms' }}
           >
-            Sem cartão · Cancele quando quiser
+            Teste grátis por 14 dias · Cancele quando quiser
           </p>
 
           {/* Mockup */}

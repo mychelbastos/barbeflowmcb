@@ -65,7 +65,7 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
           Invista menos do que o preço de <span className="text-[#d4a843]">2 cortes</span> por mês.
         </h2>
         <p className="text-zinc-500 text-center mb-8 text-sm">
-          14 dias grátis · Sem cartão para testar · Cancele quando quiser
+          14 dias grátis · Cancele quando quiser
         </p>
 
         {/* Toggle */}

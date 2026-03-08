@@ -3,7 +3,7 @@ import { motion, useInView } from "framer-motion";
 import { getDashboardUrl } from "@/lib/hostname";
 
 const passos = [
-  { num: "1", title: "Crie sua conta", desc: "Preencha seus dados e escolha seu plano. 14 dias grátis, sem cartão." },
+  { num: "1", title: "Crie sua conta", desc: "Preencha seus dados e escolha seu plano. 14 dias grátis para testar." },
   { num: "2", title: "Configure seus serviços", desc: "Adicione serviços, horários e conecte o Mercado Pago. A gente te guia." },
   { num: "3", title: "Compartilhe seu link", desc: "Mande o link para seus clientes por WhatsApp, Instagram ou onde preferir." },
 ];
