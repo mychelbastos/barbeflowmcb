@@ -147,49 +147,28 @@ export default function LandingHero() {
   );
 }
 
-/* ── Typewriter rotating text ── */
+/* ── Fade rotating text ── */
 function TypewriterText() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [displayText, setDisplayText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-  const tick = useCallback(() => {
-    const currentWord = rotatingTexts[currentIndex];
-
-    if (!isDeleting) {
-      const next = currentWord.substring(0, displayText.length + 1);
-      setDisplayText(next);
-      if (next === currentWord) {
-        timeoutRef.current = setTimeout(() => setIsDeleting(true), 2200);
-        return;
-      }
-      timeoutRef.current = setTimeout(tick, 70);
-    } else {
-      const next = currentWord.substring(0, displayText.length - 1);
-      setDisplayText(next);
-      if (next === "") {
-        setIsDeleting(false);
-        setCurrentIndex((prev) => (prev + 1) % rotatingTexts.length);
-        timeoutRef.current = setTimeout(tick, 200);
-        return;
-      }
-      timeoutRef.current = setTimeout(tick, 35);
-    }
-  }, [displayText, isDeleting, currentIndex]);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    timeoutRef.current = setTimeout(tick, 600);
-    return () => clearTimeout(timeoutRef.current);
-  }, [tick]);
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % rotatingTexts.length);
+        setVisible(true);
+      }, 350);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <span className="bg-gradient-to-r from-[#d4a843] via-[#e8c066] to-[#d4a843] bg-clip-text text-transparent">
-      {displayText}
-      <span
-        className="inline-block w-[3px] h-[0.85em] bg-[#d4a843]/60 ml-1 align-middle rounded-full"
-        style={{ animation: "blink 0.75s ease-in-out infinite" }}
-      />
+    <span
+      className="bg-gradient-to-r from-[#d4a843] via-[#e8c066] to-[#d4a843] bg-clip-text text-transparent transition-opacity duration-300"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
+      {rotatingTexts[currentIndex]}
     </span>
   );
 }
