@@ -1,5 +1,5 @@
 import mpIcon from "@/assets/mercadopago-icon.jpg";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useWhatsAppStatus } from "@/hooks/useWhatsAppStatus";
 import { CustomerImportExport } from "@/components/CustomerImportExport";
