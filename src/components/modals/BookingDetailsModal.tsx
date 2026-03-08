@@ -337,6 +337,51 @@ export function BookingDetailsModal({
             </div>
           )}
 
+          {/* ═══════════════ NO-SHOW REFUND INFO ═══════════════ */}
+          {isNoShow && paymentInfo && paymentInfo.refund_cents > 0 && (
+            <>
+              <Separator />
+              <div className="p-3 rounded-xl border space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <span className="text-sm font-medium">Não compareceu</span>
+                </div>
+                <div className="text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Retenção:</span>
+                    <span className="font-medium text-destructive">
+                      R$ {((paymentInfo.amount_cents - paymentInfo.refund_cents) / 100).toFixed(2)} ({paymentInfo.forfeit_percent}%)
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reembolso:</span>
+                    <span className="font-medium text-emerald-600">
+                      R$ {(paymentInfo.refund_cents / 100).toFixed(2)}
+                      {paymentInfo.refund_status === "approved" && " ✅"}
+                      {paymentInfo.refund_status === "pending" && " ⏳"}
+                      {paymentInfo.refund_status === "failed" && " ⚠️"}
+                    </span>
+                  </div>
+                </div>
+                {paymentInfo.refund_status === "failed" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2"
+                    disabled={retryingRefund}
+                    onClick={() => retryRefund(paymentInfo.id)}
+                  >
+                    {retryingRefund ? (
+                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Processando...</>
+                    ) : (
+                      <><RefreshCw className="h-3 w-3 mr-1" /> Tentar reembolso novamente</>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+
         </motion.div>
 
         {/* ═══════════════ AÇÕES (sticky bottom) ═══════════════ */}
