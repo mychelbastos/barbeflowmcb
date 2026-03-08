@@ -187,6 +187,16 @@ const App = () => {
                 </>
               )}
 
+              {/* Admin routes */}
+              {showDashboard && (
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="tenants" element={<AdminTenants />} />
+                  <Route path="tenants/:id" element={<AdminTenantDetail />} />
+                  <Route path="tracking" element={<AdminTracking />} />
+                </Route>
+              )}
+
               {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
               {isDashboardDomain() && (
                 <Route path="/" element={<Login />} />
