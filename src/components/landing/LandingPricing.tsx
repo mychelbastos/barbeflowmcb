@@ -203,9 +203,6 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
           })}
         </div>
 
-        <p className="text-xs text-zinc-600 text-center mt-6">
-          +R$ 14,90/mês por profissional adicional (plano Profissional)
-        </p>
       </div>
     </section>
   );
