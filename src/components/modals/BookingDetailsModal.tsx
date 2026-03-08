@@ -38,6 +38,7 @@ interface Props {
   onEdit?: () => void;
   onStatusChange?: (bookingId: string, status: string, booking?: any) => void;
   showActions?: boolean;
+  tenantSettings?: any;
 }
 
 export function BookingDetailsModal({
