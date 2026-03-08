@@ -1408,10 +1408,16 @@ export default function Settings() {
                   )}
 
                   {settingsForm.watch("allow_online_payment") && (
-                    <OnlineDiscountSettings 
-                      currentTenant={currentTenant}
-                      onChange={(vals) => { discountSettingsRef.current = vals; }}
-                    />
+                    <>
+                      <OnlineDiscountSettings 
+                        currentTenant={currentTenant}
+                        onChange={(vals) => { discountSettingsRef.current = vals; }}
+                      />
+                      <NoShowForfeitSettings
+                        currentTenant={currentTenant}
+                        onChange={(val) => { noShowForfeitRef.current = val; }}
+                      />
+                    </>
                   )}
 
                   {!mpConnected && (
