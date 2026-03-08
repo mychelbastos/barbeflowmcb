@@ -1,49 +1,74 @@
 import { useState, forwardRef } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Star } from "lucide-react";
 import { getDashboardUrl } from "@/lib/hostname";
 import { trackViewContent } from "@/lib/tracking";
 import { motion, AnimatePresence } from "framer-motion";
 
+interface Feature {
+  text: string;
+  note?: string;
+  exclusive?: boolean;
+}
+
+const essencialFeatures: Feature[] = [
+  { text: "1 profissional incluso", note: "+R$ 14,90/extra" },
+  { text: "Agendamento online 24h" },
+  { text: "Gestão de clientes" },
+  { text: "Financeiro completo" },
+  { text: "Notificações automáticas (WhatsApp e e-mail)" },
+  { text: "Página pública de agendamento" },
+  { text: "Pacotes e assinaturas" },
+  { text: "Pagamentos online (Mercado Pago)" },
+  { text: "Relatórios" },
+  { text: "Vitrine de produtos (venda durante o atendimento)" },
+  { text: "Proteção contra cancelamentos" },
+  { text: "Desconto inteligente" },
+  { text: "Agendamento via WhatsApp (chatbot)" },
+];
+
+const profissionalBaseFeatures: Feature[] = [
+  { text: "Agendamento online 24h" },
+  { text: "Gestão de clientes" },
+  { text: "Financeiro completo" },
+  { text: "Notificações automáticas (WhatsApp e e-mail)" },
+  { text: "Página pública de agendamento" },
+  { text: "Pacotes e assinaturas" },
+  { text: "Pagamentos online (Mercado Pago)" },
+  { text: "Relatórios" },
+  { text: "Vitrine de produtos (venda durante o atendimento)" },
+  { text: "Proteção contra cancelamentos" },
+  { text: "Desconto inteligente" },
+  { text: "Agendamento via WhatsApp (chatbot)" },
+];
+
+const profissionalExclusiveFeatures: Feature[] = [
+  { text: "Profissionais ilimitados", exclusive: true },
+  { text: "IA de imagem (Foto Profissional)", exclusive: true },
+  { text: "IA de texto (Texto que Vende)", exclusive: true },
+  { text: "Sugestão de produtos no agendamento (order bump)", exclusive: true },
+  { text: "Cartão Fidelidade Digital incluso", exclusive: true },
+  { text: "Taxa de transação reduzida: 1,5% (vs 2,5%)", exclusive: true },
+];
+
 const plans = [
   {
-    name: "Profissional",
+    name: "Essencial",
     monthly: 59.9,
     annual_monthly: 47.9,
     annual_total: 574.8,
     tax: "2,5%",
-    professionals: "1 profissional incluso",
-    extra: null,
-    features: [
-      "Agendamento online 24h",
-      "Gestão de clientes",
-      "Financeiro completo",
-      "Notificações via WhatsApp",
-      "Pagamentos online (MP)",
-      "Proteção anti-falta",
-      "Desconto inteligente",
-      "Relatórios",
-      "Comissão automática",
-      "App no celular (PWA)",
-    ],
+    features: essencialFeatures,
+    exclusiveFeatures: [] as Feature[],
     highlight: false,
   },
   {
-    name: "Ilimitado",
-    monthly: 109.9,
-    annual_monthly: 87.9,
-    annual_total: 1054.8,
+    name: "Profissional",
+    monthly: 89.9,
+    annual_monthly: 71.9,
+    annual_total: 862.8,
     tax: "1,5%",
-    professionals: "Profissionais ilimitados",
-    extra: null,
-    includesAll: true,
-    features: [
-      "IA de imagem (Foto Profissional)",
-      "IA de texto (Texto que Vende)",
-      "Vitrine inteligente (order bump)",
-      "Cartão Fidelidade Digital incluso",
-      "Taxa de transação reduzida (1,5%)",
-      "Profissionais ilimitados",
-    ],
+    features: profissionalBaseFeatures,
+    exclusiveFeatures: profissionalExclusiveFeatures,
     highlight: true,
   },
 ];
@@ -58,7 +83,7 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
 
   return (
     <section ref={ref} id="precos" className="py-24 sm:py-32 px-5 sm:px-8">
-      <div className="max-w-[900px] mx-auto">
+      <div className="max-w-[960px] mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
           <span className="text-[#d4a843] text-xs font-semibold tracking-[0.2em] uppercase mb-4 block">
@@ -103,11 +128,11 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
         </div>
 
         {/* Cards */}
-        <div className="grid sm:grid-cols-2 gap-5">
+        <div className="grid sm:grid-cols-2 gap-5 items-start">
           {plans.map((plan) => {
             const price = cycle === "monthly" ? plan.monthly : plan.annual_monthly;
             const oldPrice = cycle === "annual" ? plan.monthly : null;
-            const hasIncludesAll = (plan as any).includesAll;
+
             return (
               <div
                 key={plan.name}
@@ -124,12 +149,12 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
                   </span>
                 )}
 
+                {/* Plan name */}
                 <div className="mb-6">
                   <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
-                  <p className="text-xs text-zinc-500">{plan.professionals}</p>
-                  {plan.extra && <p className="text-xs text-zinc-600">{plan.extra}</p>}
                 </div>
 
+                {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
                     {oldPrice && (
@@ -158,11 +183,9 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
                       R$ {plan.annual_total.toFixed(2).replace(".", ",")} /ano
                     </p>
                   )}
-                  <p className="text-[10px] text-zinc-700 mt-1">
-                    Taxa de {plan.tax} sobre pagamentos online
-                  </p>
                 </div>
 
+                {/* CTA */}
                 <button
                   onClick={handleCTAClick}
                   className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-300 mb-6 ${
@@ -171,38 +194,74 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
                       : "bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/[0.06]"
                   }`}
                 >
-                  Começar grátis
+                  {plan.highlight ? "Começar grátis" : "Escolher"}
                 </button>
 
-                {/* "Tudo do Profissional" highlight for Ilimitado */}
-                {hasIncludesAll && (
-                  <div className="mb-4 py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-[#d4a843] shrink-0" />
-                      <span className="text-sm font-semibold text-white">
-                        Tudo do Profissional, mais:
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <ul className="space-y-2.5">
+                {/* Base features */}
+                <ul className="space-y-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-[13px] text-zinc-400">
-                      <Check
-                        className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${
-                          plan.highlight ? "text-[#d4a843]" : "text-zinc-500"
-                        }`}
-                      />
-                      {f}
+                    <li key={f.text}>
+                      <div className="flex items-start gap-3 py-1.5">
+                        <Check className="w-4 h-4 text-[#d4a843] mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-zinc-300">{f.text}</span>
+                      </div>
+                      {f.note && (
+                        <p className="text-xs text-zinc-600 ml-7">{f.note}</p>
+                      )}
                     </li>
                   ))}
                 </ul>
+
+                {/* Exclusive separator + features */}
+                {plan.exclusiveFeatures.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-3 my-5">
+                      <div className="h-px flex-1 bg-[#d4a843]/20" />
+                      <span className="text-[10px] text-[#d4a843] font-bold tracking-widest uppercase whitespace-nowrap">
+                        Exclusivo do Profissional
+                      </span>
+                      <div className="h-px flex-1 bg-[#d4a843]/20" />
+                    </div>
+                    <ul className="space-y-1">
+                      {plan.exclusiveFeatures.map((f) => (
+                        <li key={f.text} className="flex items-start gap-3 py-1.5">
+                          <Star className="w-4 h-4 text-[#d4a843] mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-white font-medium">{f.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                {/* Tax note */}
+                <p className="text-[10px] text-zinc-700 mt-5">
+                  Taxa de {plan.tax} sobre pagamentos online
+                </p>
               </div>
             );
           })}
         </div>
 
+        {/* Footer notes */}
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-sm text-zinc-500">
+            +R$ 14,90/mês por profissional adicional no plano Essencial
+          </p>
+          <p className="text-xs text-zinc-600">
+            Após 14 dias, a cobrança é automática. Cancele quando quiser pelo painel.
+          </p>
+
+          <div className="mt-6 max-w-xl mx-auto text-left bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              <span className="text-zinc-300 font-medium">Sobre as taxas de transação:</span>{" "}
+              A taxa do modoGESTOR (2,5% ou 1,5%) é cobrada apenas sobre pagamentos online
+              processados pela plataforma e serve para manter o sistema funcionando. As taxas do
+              gateway de pagamento (Mercado Pago) são cobradas separadamente, de acordo com os
+              termos do seu contrato com o Mercado Pago. O modoGESTOR não interfere nas taxas do
+              seu banco ou gateway.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );
