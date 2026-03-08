@@ -547,6 +547,7 @@ export default function Settings() {
             weekly_summary_enabled,
             recurring_reminder_enabled,
             ...(discountSettingsRef.current || {}),
+            ...(noShowForfeitRef.current !== null ? { no_show_forfeit_percent: noShowForfeitRef.current } : {}),
           }
         })
         .eq('id', currentTenant.id);
