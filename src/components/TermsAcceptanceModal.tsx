@@ -46,7 +46,7 @@ export function TermsAcceptanceModal() {
 
   return (
     <Dialog open onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
@@ -99,7 +99,8 @@ export function TermsAcceptanceModal() {
         <Button
           onClick={handleAccept}
           disabled={!accepted || saving}
-          className="w-full mt-2"
+          className="w-full mt-4"
+          size="lg"
         >
           {saving ? "Salvando..." : "Aceitar e continuar"}
         </Button>

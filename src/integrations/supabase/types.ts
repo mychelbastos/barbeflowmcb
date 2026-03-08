@@ -1198,6 +1198,7 @@ export type Database = {
           current_booking_method: string | null
           heard_from: string | null
           id: string
+          monthly_revenue: string | null
           onboarding_completed: boolean
           onboarding_skipped: boolean
           questionnaire_completed: boolean
@@ -1219,6 +1220,7 @@ export type Database = {
           current_booking_method?: string | null
           heard_from?: string | null
           id?: string
+          monthly_revenue?: string | null
           onboarding_completed?: boolean
           onboarding_skipped?: boolean
           questionnaire_completed?: boolean
@@ -1240,6 +1242,7 @@ export type Database = {
           current_booking_method?: string | null
           heard_from?: string | null
           id?: string
+          monthly_revenue?: string | null
           onboarding_completed?: boolean
           onboarding_skipped?: boolean
           questionnaire_completed?: boolean
@@ -3366,6 +3369,7 @@ export type Database = {
           p_biggest_challenge: string
           p_current_booking_method: string
           p_heard_from: string
+          p_monthly_revenue: string
           p_team_size: string
           p_weekly_clients: string
         }
