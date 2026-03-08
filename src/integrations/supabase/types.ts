@@ -1190,6 +1190,80 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          biggest_challenge: string | null
+          completed_at: string | null
+          created_at: string
+          current_booking_method: string | null
+          heard_from: string | null
+          id: string
+          onboarding_completed: boolean
+          onboarding_skipped: boolean
+          questionnaire_completed: boolean
+          step_payment: boolean
+          step_profile: boolean
+          step_schedule: boolean
+          step_services: boolean
+          step_whatsapp: boolean
+          team_size: string | null
+          tenant_id: string
+          updated_at: string
+          user_id: string
+          weekly_clients: string | null
+        }
+        Insert: {
+          biggest_challenge?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_booking_method?: string | null
+          heard_from?: string | null
+          id?: string
+          onboarding_completed?: boolean
+          onboarding_skipped?: boolean
+          questionnaire_completed?: boolean
+          step_payment?: boolean
+          step_profile?: boolean
+          step_schedule?: boolean
+          step_services?: boolean
+          step_whatsapp?: boolean
+          team_size?: string | null
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+          weekly_clients?: string | null
+        }
+        Update: {
+          biggest_challenge?: string | null
+          completed_at?: string | null
+          created_at?: string
+          current_booking_method?: string | null
+          heard_from?: string | null
+          id?: string
+          onboarding_completed?: boolean
+          onboarding_skipped?: boolean
+          questionnaire_completed?: boolean
+          step_payment?: boolean
+          step_profile?: boolean
+          step_schedule?: boolean
+          step_services?: boolean
+          step_whatsapp?: boolean
+          team_size?: string | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+          weekly_clients?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_services: {
         Row: {
           created_at: string
@@ -3287,6 +3361,16 @@ export type Database = {
         Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
       }
+      save_onboarding_questionnaire: {
+        Args: {
+          p_biggest_challenge: string
+          p_current_booking_method: string
+          p_heard_from: string
+          p_team_size: string
+          p_weekly_clients: string
+        }
+        Returns: Json
+      }
       seed_default_expense_categories: {
         Args: { p_tenant_id: string }
         Returns: undefined
@@ -3308,6 +3392,11 @@ export type Database = {
           p_settled_by?: string
           p_tenant_id: string
         }
+        Returns: Json
+      }
+      skip_onboarding: { Args: never; Returns: Json }
+      update_onboarding_step: {
+        Args: { p_step: string; p_value?: boolean }
         Returns: Json
       }
       user_belongs_to_tenant: {
