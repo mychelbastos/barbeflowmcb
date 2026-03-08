@@ -154,6 +154,7 @@ const baseNavigationItems: NavItem[] = [
       { title: "Pagamentos", url: "/app/settings?tab=payments", icon: CreditCard },
       { title: "Assinatura", url: "/app/settings?tab=billing", icon: Crown },
       { title: "WhatsApp", url: "/app/settings?tab=whatsapp", icon: MessageCircle, statusDot: true },
+      { title: "Jurídico", url: "/app/settings?tab=legal", icon: FileText },
     ]
   },
 ];
