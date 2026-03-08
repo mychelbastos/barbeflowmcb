@@ -35,8 +35,8 @@ const plans = [
     tax: "1,5%",
     professionals: "Profissionais ilimitados",
     extra: null,
+    includesAll: true,
     features: [
-      "Tudo do Profissional",
       "IA de imagem (Foto Profissional)",
       "IA de texto (Texto que Vende)",
       "Vitrine inteligente (order bump)",
@@ -75,12 +75,12 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
 
         {/* Toggle */}
         <div className="flex items-center justify-center mb-12">
-          <div className="inline-flex rounded-full bg-white/[0.04] p-1">
+          <div className="inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
             <button
               onClick={() => setCycle("monthly")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
                 cycle === "monthly"
-                  ? "bg-white/[0.1] text-white"
+                  ? "bg-white/[0.1] text-white shadow-sm"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
@@ -88,14 +88,14 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
             </button>
             <button
               onClick={() => setCycle("annual")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 relative ${
+              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 relative ${
                 cycle === "annual"
-                  ? "bg-[#d4a843] text-[#0a0a0a]"
+                  ? "bg-[#d4a843] text-[#0a0a0a] shadow-[0_2px_12px_-2px_rgba(212,168,67,0.4)]"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               Anual
-              <span className="absolute -top-2.5 -right-2 text-[8px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+              <span className="absolute -top-3 -right-3 text-[8px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                 −17%
               </span>
             </button>
@@ -107,6 +107,7 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
           {plans.map((plan) => {
             const price = cycle === "monthly" ? plan.monthly : plan.annual_monthly;
             const oldPrice = cycle === "annual" ? plan.monthly : null;
+            const hasIncludesAll = (plan as any).includesAll;
             return (
               <div
                 key={plan.name}
@@ -172,6 +173,18 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
                 >
                   Começar grátis
                 </button>
+
+                {/* "Tudo do Profissional" highlight for Ilimitado */}
+                {hasIncludesAll && (
+                  <div className="mb-4 py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-[#d4a843] shrink-0" />
+                      <span className="text-sm font-semibold text-white">
+                        Tudo do Profissional, mais:
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <ul className="space-y-2.5">
                   {plan.features.map((f) => (
