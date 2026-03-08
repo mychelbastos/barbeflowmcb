@@ -154,6 +154,7 @@ const baseNavigationItems: NavItem[] = [
       { title: "Pagamentos", url: "/app/settings?tab=payments", icon: CreditCard },
       { title: "Assinatura", url: "/app/settings?tab=billing", icon: Crown },
       { title: "WhatsApp", url: "/app/settings?tab=whatsapp", icon: MessageCircle, statusDot: true },
+      { title: "Jurídico", url: "/app/settings?tab=legal", icon: FileText },
     ]
   },
 ];
@@ -674,6 +675,17 @@ export default function AppShell() {
             <main className="flex-1 p-4 md:p-6 bg-background overflow-x-hidden">
               <Outlet />
             </main>
+
+            {/* Dashboard footer links */}
+            <footer className="border-t border-border/30 py-3 px-6">
+              <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/50">
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
+                <span>·</span>
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+                <span>·</span>
+                <a href="/reembolso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Reembolso</a>
+              </div>
+            </footer>
           </div>
         </div>
       </SidebarProvider>

@@ -14,6 +14,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { NewTenantModal } from "@/components/modals/NewTenantModal";
 import { NoTenantState } from "@/components/NoTenantState";
 import { AvailabilityBlocksManager } from "@/components/AvailabilityBlocksManager";
+import LegalSettingsSection from "@/components/settings/LegalSettingsSection";
 import { supabase } from "@/integrations/supabase/client";
 
 
@@ -600,6 +601,7 @@ export default function Settings() {
             <TabsTrigger value="data">Dados</TabsTrigger>
             <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
             {isSuperAdmin && <TabsTrigger value="multi-tenant">Multi-Empresa</TabsTrigger>}
+            <TabsTrigger value="legal">Jurídico</TabsTrigger>
           </TabsList>
         </div>
 
@@ -1514,6 +1516,11 @@ export default function Settings() {
         {/* Appearance Tab */}
         <TabsContent value="appearance">
           <AppearanceTab />
+        </TabsContent>
+
+        {/* Legal Tab */}
+        <TabsContent value="legal">
+          <LegalSettingsSection termsAcceptedAt={(currentTenant?.settings as any)?.terms_accepted_at} />
         </TabsContent>
 
         {/* WhatsApp Tab */}

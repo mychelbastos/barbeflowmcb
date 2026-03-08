@@ -2205,6 +2205,17 @@ END:VCALENDAR`;
                     </>
                   )}
                 </Button>
+
+                <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
+                  Ao confirmar, você concorda com os{" "}
+                  <a href="/termos-agendamento" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white underline">
+                    Termos do Agendamento
+                  </a>{" "}
+                  e a{" "}
+                  <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white underline">
+                    Política de Privacidade
+                  </a>
+                </p>
                 
                 <button
                   type="button"
@@ -2385,6 +2396,13 @@ END:VCALENDAR`;
         />
       )}
       <InstallPWA />
+
+      {/* Legal footer */}
+      <div className="text-center py-4 text-[10px] text-zinc-700">
+        <a href="/termos-agendamento" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-400 transition-colors">Termos</a>
+        <span className="mx-1">·</span>
+        <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-400 transition-colors">Privacidade</a>
+      </div>
     </div>
   );
 };
