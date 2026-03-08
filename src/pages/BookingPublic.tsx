@@ -1852,11 +1852,7 @@ END:VCALENDAR`;
                 <div className="absolute top-0 right-0 bg-emerald-500 text-zinc-900 text-[10px] font-bold px-3 py-0.5 rounded-bl-lg uppercase tracking-wider">
                   Recomendado
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                    <CreditCard className="h-5 w-5 text-emerald-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 px-1">
                     <h3 className="font-semibold text-white mb-1">Pagar agora e garantir sua vaga</h3>
                      
                      {/* Price display */}
