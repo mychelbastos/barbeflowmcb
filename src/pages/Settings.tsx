@@ -16,6 +16,7 @@ import { NoTenantState } from "@/components/NoTenantState";
 import { AvailabilityBlocksManager } from "@/components/AvailabilityBlocksManager";
 import { supabase } from "@/integrations/supabase/client";
 import { OnlineDiscountSettings } from "@/components/settings/OnlineDiscountSettings";
+import { NoShowForfeitSettings } from "@/components/settings/NoShowForfeitSettings";
 import { OwnerWeeklySummarySettings } from "@/components/settings/OwnerWeeklySummarySettings";
 import { LoyaltySettingsTab } from "@/components/settings/LoyaltySettingsTab";
 import { useToast } from "@/hooks/use-toast";
