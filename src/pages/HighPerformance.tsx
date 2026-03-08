@@ -180,6 +180,10 @@ export default function HighPerformance() {
   };
 
   const handleLoyaltyToggle = async (on: boolean) => {
+    if (!canUseLoyalty) {
+      setLoyaltyAddonDialog(true);
+      return;
+    }
     setLoyaltyEnabled(on);
     await saveSettings({ loyalty_enabled: on });
     if (on) setLoyaltyDrawer(true);
