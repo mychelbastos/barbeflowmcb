@@ -55,6 +55,7 @@ const Login = () => {
             owner_name: ownerName.trim(),
             business_name: businessName.trim(),
             phone: phone.replace(/\D/g, ""),
+            terms_accepted_at: new Date().toISOString(),
           })
         : await signIn(email, password);
 
