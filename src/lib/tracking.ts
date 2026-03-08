@@ -7,7 +7,7 @@ import { hasMarketingConsent } from '@/utils/consent';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const META_PIXEL_ID = '1215198763828492';
-const GA4_MEASUREMENT_ID = 'G-XXXXXXXXXX'; // Replace with your GA4 ID
+const GA4_MEASUREMENT_ID = 'G-THWQ8Y043Z';
 
 // ==================== VISITOR ID ====================
 
