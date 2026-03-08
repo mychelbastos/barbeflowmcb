@@ -266,6 +266,7 @@ function AppSidebar() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const waConnected = useWhatsAppStatus();
+  const { isAdmin } = useAdminAuth({ redirect: false });
 
   return (
     <Sidebar className="border-r border-border/30 bg-background/80 backdrop-blur-xl">
