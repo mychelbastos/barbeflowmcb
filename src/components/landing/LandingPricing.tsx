@@ -245,22 +245,11 @@ const LandingPricing = forwardRef<HTMLElement>((_, ref) => {
         {/* Footer notes */}
         <div className="text-center mt-8 space-y-2">
           <p className="text-sm text-zinc-500">
-            +R$ 14,90/mês por profissional adicional no plano Essencial
+            +R$ 14,90/mês por profissional adicional no plano Profissional
           </p>
           <p className="text-xs text-zinc-600">
             Após 14 dias, a cobrança é automática. Cancele quando quiser pelo painel.
           </p>
-
-          <div className="mt-6 max-w-xl mx-auto text-left bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              <span className="text-zinc-300 font-medium">Sobre as taxas de transação:</span>{" "}
-              A taxa do modoGESTOR (2,5% ou 1,5%) é cobrada apenas sobre pagamentos online
-              processados pela plataforma e serve para manter o sistema funcionando. As taxas do
-              gateway de pagamento (Mercado Pago) são cobradas separadamente, de acordo com os
-              termos do seu contrato com o Mercado Pago. O modoGESTOR não interfere nas taxas do
-              seu banco ou gateway.
-            </p>
-          </div>
         </div>
       </div>
     </section>
