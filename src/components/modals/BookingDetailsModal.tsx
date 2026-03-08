@@ -52,6 +52,9 @@ export function BookingDetailsModal({
   const [comandaStatus, setComandaStatus] = useState<string>("open");
   const [balanceKey, setBalanceKey] = useState(0);
   const [prevStatus, setPrevStatus] = useState<string | null>(null);
+  const [showNoShowDialog, setShowNoShowDialog] = useState(false);
+  const [paymentInfo, setPaymentInfo] = useState<any>(null);
+  const [retryingRefund, setRetryingRefund] = useState(false);
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const closeSectionRef = useRef<HTMLDivElement>(null);
 
