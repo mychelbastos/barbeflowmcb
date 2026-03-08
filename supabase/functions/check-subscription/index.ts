@@ -22,12 +22,12 @@ const PLANS = {
   profissional: {
     product_id: "prod_Ty1KYrBniQmXyi",
     price_id: "price_1T05HvCxw1gIFu9guQDhSvfs",
-    commission_rate: 0.015,
+    commission_rate: 0.025,
   },
   ilimitado: {
     product_id: "prod_U24ZNzDkfp2fU5",
     price_id: "price_1T40Q1Cxw1gIFu9gQgXMbjrr",
-    commission_rate: 0.010,
+    commission_rate: 0.015,
   },
 };
 

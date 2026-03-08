@@ -18,7 +18,7 @@ export const PLAN_FEATURES = {
     unlimited_staff: true,
     whatsapp_chatbot: true,
     max_included_staff: Infinity,
-    commission_rate: 0.01,
+    commission_rate: 0.015,
     extra_staff_price: null,
   },
 } as const;

@@ -109,7 +109,7 @@ function UpgradeDialog({ open, onOpenChange, label, onUpgrade }: {
             <li>✨ Texto que Vende com IA</li>
             <li>✨ Vitrine Inteligente (order bump)</li>
             <li>✨ Profissionais ilimitados sem custo extra</li>
-            <li>✨ Taxa de transação reduzida (1,0%)</li>
+            <li>✨ Taxa de transação reduzida (1,5%)</li>
           </ul>
         </div>
         <DialogFooter>

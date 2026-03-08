@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTenant } from "@/hooks/useTenant";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Rocket, DollarSign, Trophy, Shield, BarChart3, Loader2, Smartphone, ChevronRight, Info } from "lucide-react";
+import { Rocket, DollarSign, Trophy, Shield, BarChart3, Loader2, Smartphone, ChevronRight, Info, Lock, ExternalLink, MessageCircle } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -57,7 +58,15 @@ export default function HighPerformance() {
   usePageTitle("Alta Performance");
   const { currentTenant, loading: tenantLoading } = useTenant();
   const { user } = useAuth();
+  const { planName } = useSubscription();
   const { toast } = useToast();
+
+  const isIlimitado = planName === "ilimitado";
+  const loyaltyAddonActive = !!(currentTenant?.settings as any)?.loyalty_addon_active;
+  const canUseLoyalty = isIlimitado || loyaltyAddonActive;
+
+  // Loyalty addon dialog
+  const [loyaltyAddonDialog, setLoyaltyAddonDialog] = useState(false);
 
   const [examplePrice, setExamplePrice] = useState(4000);
   const [loyaltyActiveCards, setLoyaltyActiveCards] = useState(0);
@@ -171,6 +180,10 @@ export default function HighPerformance() {
   };
 
   const handleLoyaltyToggle = async (on: boolean) => {
+    if (!canUseLoyalty) {
+      setLoyaltyAddonDialog(true);
+      return;
+    }
     setLoyaltyEnabled(on);
     await saveSettings({ loyalty_enabled: on });
     if (on) setLoyaltyDrawer(true);
@@ -309,7 +322,7 @@ export default function HighPerformance() {
         </Card>
 
         {/* Card 2 — Cartão Fidelidade */}
-        <Card className={`transition-all ${loyaltyEnabled ? 'border-emerald-500/30' : ''}`}>
+        <Card className={`transition-all ${loyaltyEnabled && canUseLoyalty ? 'border-emerald-500/30' : ''}`}>
           <CardContent className="p-5 space-y-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
@@ -318,12 +331,36 @@ export default function HighPerformance() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Cartão Fidelidade</h3>
+                  {loyaltyAddonActive && !isIlimitado && loyaltyEnabled && (
+                    <span className="text-[10px] text-muted-foreground">Add-on · R$ 19,90/mês</span>
+                  )}
                 </div>
               </div>
-              <Switch checked={loyaltyEnabled} onCheckedChange={handleLoyaltyToggle} />
+              {canUseLoyalty ? (
+                <Switch checked={loyaltyEnabled} onCheckedChange={handleLoyaltyToggle} />
+              ) : (
+                <Lock className="h-5 w-5 text-muted-foreground" />
+              )}
             </div>
 
-            {loyaltyEnabled ? (
+            {!canUseLoyalty ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Fidelize seus clientes automaticamente! A cada N agendamentos, seu cliente ganha uma recompensa.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Disponível como add-on por R$ 19,90/mês ou incluso no plano Ilimitado.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button size="sm" variant="outline" onClick={() => setLoyaltyAddonDialog(true)}>
+                    Ativar por R$ 19,90/mês
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-primary" onClick={() => window.location.href = "/app/settings?tab=billing"}>
+                    Ver plano Ilimitado
+                  </Button>
+                </div>
+              </>
+            ) : loyaltyEnabled ? (
               <>
                 <p className="text-sm text-muted-foreground">
                   {stampsRequired} selos → {rewardType === "free_service" ? "Serviço grátis" : `${rewardPercent}% de desconto`}
@@ -332,7 +369,6 @@ export default function HighPerformance() {
                 <p className="text-xs text-muted-foreground">
                   {eligibleStaffCount} profissional(is) participante(s) · {loyaltyActiveCards} cartão(ões) ativo(s)
                 </p>
-                {/* Stamp preview */}
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(stampsRequired, 10) }).map((_, i) => (
                     <div
@@ -697,6 +733,60 @@ export default function HighPerformance() {
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Salvar
             </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Loyalty Add-on Dialog */}
+      <Drawer open={loyaltyAddonDialog} onOpenChange={setLoyaltyAddonDialog}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Ativar Cartão Fidelidade</DrawerTitle>
+            <DrawerDescription>
+              O Cartão Fidelidade custa R$ 19,90/mês adicionais ao seu plano atual.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="p-4 space-y-5">
+            <p className="text-sm text-muted-foreground">
+              Para ativar, entre em contato pelo WhatsApp ou e-mail e nós configuramos para você.
+            </p>
+
+            <div className="rounded-xl border p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <MessageCircle className="h-4 w-4 text-emerald-500" />
+                <span className="text-foreground font-medium">WhatsApp:</span>
+                <span className="text-muted-foreground">(75) 99205-0743</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-foreground font-medium ml-6">E-mail:</span>
+                <span className="text-muted-foreground">contato@modogestor.com.br</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Ou faça upgrade para o plano Ilimitado e tenha o Cartão Fidelidade incluso!
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                className="w-full"
+                onClick={() => window.open("https://wa.me/5575992050743?text=Olá! Gostaria de ativar o Cartão Fidelidade no meu plano.", "_blank")}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Falar no WhatsApp
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setLoyaltyAddonDialog(false);
+                  window.location.href = "/app/settings?tab=billing";
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Ver plano Ilimitado
+              </Button>
+            </div>
           </div>
         </DrawerContent>
       </Drawer>

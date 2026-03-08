@@ -45,7 +45,7 @@ export default function Terms() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground">5. Taxa sobre Transações</h2>
-            <p>O modoGESTOR cobra uma taxa percentual sobre transações processadas pela plataforma (pagamentos de clientes finais via Mercado Pago). A taxa varia conforme o plano: 2,5% no Essencial e 1,0% no Profissional. O valor integral é repassado ao estabelecimento; a taxa é cobrada na fatura mensal.</p>
+            <p>O modoGESTOR cobra uma taxa percentual sobre transações processadas pela plataforma (pagamentos de clientes finais via Mercado Pago). A taxa varia conforme o plano: 2,5% no Profissional e 1,5% no Ilimitado. O valor integral é repassado ao estabelecimento; a taxa é cobrada na fatura mensal.</p>
           </section>
 
           <section>

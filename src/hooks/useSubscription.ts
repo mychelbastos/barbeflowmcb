@@ -52,7 +52,7 @@ export const PLANS = {
   ilimitado: {
     product_id: "prod_U24ZNzDkfp2fU5",
     name: "Ilimitado",
-    commission: "1,0%",
+    commission: "1,5%",
     commissionNote: "Cobrada apenas sobre pagamentos online processados pela plataforma + taxa do gateway de pagamento.",
     staffLabel: "Profissionais ilimitados inclusos",
     month: {
@@ -71,7 +71,7 @@ export const PLANS = {
       "Texto que Vende (IA de texto)",
       "Vitrine Inteligente (order bump)",
       "Profissionais ilimitados sem custo adicional",
-      "Taxa de transação reduzida (1,0%)",
+      "Taxa de transação reduzida (1,5%)",
     ],
   },
 };

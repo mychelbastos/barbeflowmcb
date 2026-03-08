@@ -1027,7 +1027,7 @@ const Landing = () => {
               },
               {
                 q: "Como funciona a taxa sobre transações?",
-                a: "Quando seus clientes pagam pelo sistema (assinaturas, pacotes, pagamentos online), cobramos uma pequena taxa sobre o valor processado: 2,5% no Essencial ou 1,0% no Profissional. Você recebe o valor integral do cliente — a taxa é cobrada na sua fatura mensal."
+                a: "Quando seus clientes pagam pelo sistema (assinaturas, pacotes, pagamentos online), cobramos uma pequena taxa sobre o valor processado: 2,5% no Profissional ou 1,5% no Ilimitado. Você recebe o valor integral do cliente — a taxa é cobrada na sua fatura mensal."
               },
               {
                 q: "Funciona para outros tipos de negócio?",
