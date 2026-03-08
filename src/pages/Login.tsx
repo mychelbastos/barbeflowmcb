@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Mail, Lock, User, Building2, Phone } from "lucide-react";
 import { getPublicUrl, isDashboardDomain } from "@/lib/hostname";
 import { useState } from "react";
