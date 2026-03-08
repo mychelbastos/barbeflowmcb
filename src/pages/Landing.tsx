@@ -1092,9 +1092,12 @@ const Landing = () => {
           <div className="flex items-center gap-2.5">
             <img src={logoBranca} alt="modoGESTOR" className="h-6" />
           </div>
-          <div className="flex items-center gap-6 text-xs text-zinc-500">
+          <div className="flex items-center gap-4 flex-wrap justify-center text-xs text-zinc-500">
             <a href={getPublicUrl('/termos')} className="hover:text-zinc-300 transition-colors">Termos de Uso</a>
-            <a href={getPublicUrl('/privacidade')} className="hover:text-zinc-300 transition-colors">Política de Privacidade</a>
+            <a href={getPublicUrl('/privacidade')} className="hover:text-zinc-300 transition-colors">Privacidade</a>
+            <a href={getPublicUrl('/dpa')} className="hover:text-zinc-300 transition-colors">DPA</a>
+            <a href={getPublicUrl('/reembolso')} className="hover:text-zinc-300 transition-colors">Reembolso</a>
+            <a href={getPublicUrl('/termos-agendamento')} className="hover:text-zinc-300 transition-colors">Agendamento</a>
             <a href="mailto:contato@modogestor.com.br" className="hover:text-zinc-300 transition-colors">Contato</a>
           </div>
           <p className="text-zinc-600 text-xs">

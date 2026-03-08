@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blocks: {
         Row: {
           created_at: string
@@ -3342,6 +3369,21 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_attribution_report: { Args: never; Returns: Json }
+      admin_get_dashboard_stats: { Args: never; Returns: Json }
+      admin_list_tenants: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      admin_update_tenant: {
+        Args: { p_tenant_id: string; p_updates: Json }
+        Returns: Json
+      }
       cancel_booking_with_refund: {
         Args: {
           p_booking_id: string
@@ -3456,6 +3498,7 @@ export type Database = {
         Args: { p_customers: Json; p_tenant_id: string }
         Returns: Json
       }
+      is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }
       link_visitor_attribution: {
         Args: { p_tenant_id: string; p_visitor_id: string }
