@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { getDashboardUrl } from "@/lib/hostname";
 import mobileMockup from "@/assets/mobile-mockup.png";
 import { Play } from "lucide-react";
@@ -90,7 +91,7 @@ export default function LandingHero() {
           >
             {/* Glow behind mockup */}
             <div
-              className="absolute inset-0 -inset-x-20 -inset-y-10 pointer-events-none"
+              className="absolute -inset-x-20 -inset-y-10 pointer-events-none"
               style={{
                 background: 'radial-gradient(ellipse at center, rgba(212,168,67,0.08) 0%, transparent 70%)',
               }}
@@ -166,5 +167,3 @@ function CountUp({ target }: { target: number }) {
 
   return <span ref={ref}>{value.toLocaleString("pt-BR")}</span>;
 }
-
-import { useEffect, useRef, useState } from "react";
