@@ -9,12 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trophy, Info } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trophy, Info, Loader2 } from "lucide-react";
+
+interface StaffMember {
+  id: string;
+  name: string;
+}
 
 export function LoyaltySettingsTab() {
   const { currentTenant } = useTenant();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
 
   const settings = (currentTenant?.settings || {}) as Record<string, any>;
 
@@ -25,6 +33,9 @@ export function LoyaltySettingsTab() {
   );
   const [rewardType, setRewardType] = useState<string>(settings.loyalty_reward_type || "free_service");
   const [rewardPercent, setRewardPercent] = useState<number>(settings.loyalty_reward_percent || 50);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(settings.loyalty_eligible_staff || []);
+
+  const allSelected = selectedStaffIds.length === 0;
 
   useEffect(() => {
     const s = (currentTenant?.settings || {}) as Record<string, any>;
@@ -33,7 +44,62 @@ export function LoyaltySettingsTab() {
     setDurationMonths(s.loyalty_duration_months ? String(s.loyalty_duration_months) : "none");
     setRewardType(s.loyalty_reward_type || "free_service");
     setRewardPercent(s.loyalty_reward_percent || 50);
+    setSelectedStaffIds(s.loyalty_eligible_staff || []);
   }, [currentTenant]);
+
+  useEffect(() => {
+    if (currentTenant && enabled) {
+      loadStaff();
+    }
+  }, [currentTenant, enabled]);
+
+  const loadStaff = async () => {
+    if (!currentTenant) return;
+    setStaffLoading(true);
+    try {
+      const { data } = await supabase
+        .from("staff")
+        .select("id, name")
+        .eq("tenant_id", currentTenant.id)
+        .eq("active", true)
+        .order("name");
+      setStaffList(data || []);
+    } catch (err) {
+      console.error("Error loading staff:", err);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
+
+  const handleToggleAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStaffIds([]);
+    } else {
+      setSelectedStaffIds(staffList.map((s) => s.id));
+    }
+  };
+
+  const handleToggleStaff = (staffId: string, checked: boolean) => {
+    if (allSelected) {
+      // Switching from "all" to individual: start with all selected, then remove this one
+      const allIds = staffList.map((s) => s.id);
+      if (!checked) {
+        setSelectedStaffIds(allIds.filter((id) => id !== staffId));
+      }
+    } else {
+      if (checked) {
+        const newIds = [...selectedStaffIds, staffId];
+        // If all are now selected, switch back to empty array (= all)
+        if (newIds.length === staffList.length) {
+          setSelectedStaffIds([]);
+        } else {
+          setSelectedStaffIds(newIds);
+        }
+      } else {
+        setSelectedStaffIds(selectedStaffIds.filter((id) => id !== staffId));
+      }
+    }
+  };
 
   const handleSave = async () => {
     if (!currentTenant) return;
@@ -52,6 +118,7 @@ export function LoyaltySettingsTab() {
             loyalty_duration_months: duration,
             loyalty_reward_type: rewardType,
             loyalty_reward_percent: rewardType === "free_service" ? 100 : Math.max(1, Math.min(100, rewardPercent)),
+            loyalty_eligible_staff: allSelected ? [] : selectedStaffIds,
           },
         })
         .eq("id", currentTenant.id);
@@ -165,6 +232,52 @@ export function LoyaltySettingsTab() {
               )}
             </div>
 
+            {/* Eligible staff */}
+            <div className="space-y-3">
+              <Label>Profissionais participantes</Label>
+              {staffLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando profissionais...
+                </div>
+              ) : (
+                <div className="space-y-2 rounded-lg border p-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="staff-all"
+                      checked={allSelected}
+                      onCheckedChange={(checked) => handleToggleAll(!!checked)}
+                    />
+                    <Label htmlFor="staff-all" className="cursor-pointer text-sm font-medium">
+                      Todos os profissionais
+                    </Label>
+                  </div>
+
+                  {staffList.length > 0 && (
+                    <>
+                      <div className="border-t my-2" />
+                      <p className="text-xs text-muted-foreground mb-1">ou selecione individualmente</p>
+                      {staffList.map((staff) => {
+                        const isChecked = allSelected || selectedStaffIds.includes(staff.id);
+                        return (
+                          <div key={staff.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`staff-${staff.id}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => handleToggleStaff(staff.id, !!checked)}
+                            />
+                            <Label htmlFor={`staff-${staff.id}`} className="cursor-pointer text-sm">
+                              {staff.name}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Info box */}
             <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-1.5">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
@@ -174,6 +287,7 @@ export function LoyaltySettingsTab() {
               <p className="text-xs text-muted-foreground">• Só conta agendamentos feitos pelo cliente (site/link)</p>
               <p className="text-xs text-muted-foreground">• Clientes com assinatura ou pacote ativo não participam</p>
               <p className="text-xs text-muted-foreground">• Agendamentos feitos pelo admin (balcão) não contam</p>
+              <p className="text-xs text-muted-foreground">• Só conta atendimentos com profissionais selecionados acima</p>
               <p className="text-xs text-muted-foreground">• O selo é adicionado automaticamente ao concluir atendimento</p>
               <p className="text-xs text-muted-foreground">• Se o cartão expirar, os selos são zerados e o ciclo recomeça</p>
             </div>
