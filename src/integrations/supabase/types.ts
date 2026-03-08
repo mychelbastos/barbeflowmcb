@@ -1118,6 +1118,66 @@ export type Database = {
           },
         ]
       }
+      meta_events_log: {
+        Row: {
+          action_source: string
+          client_ip: string | null
+          client_user_agent: string | null
+          created_at: string
+          custom_data: Json | null
+          event_id: string
+          event_name: string
+          event_source: string
+          event_source_url: string | null
+          external_id: string | null
+          fbc: string | null
+          fbp: string | null
+          id: string
+          meta_response_body: string | null
+          meta_response_status: number | null
+          user_email_hash: string | null
+          user_phone_hash: string | null
+        }
+        Insert: {
+          action_source?: string
+          client_ip?: string | null
+          client_user_agent?: string | null
+          created_at?: string
+          custom_data?: Json | null
+          event_id: string
+          event_name: string
+          event_source?: string
+          event_source_url?: string | null
+          external_id?: string | null
+          fbc?: string | null
+          fbp?: string | null
+          id?: string
+          meta_response_body?: string | null
+          meta_response_status?: number | null
+          user_email_hash?: string | null
+          user_phone_hash?: string | null
+        }
+        Update: {
+          action_source?: string
+          client_ip?: string | null
+          client_user_agent?: string | null
+          created_at?: string
+          custom_data?: Json | null
+          event_id?: string
+          event_name?: string
+          event_source?: string
+          event_source_url?: string | null
+          external_id?: string | null
+          fbc?: string | null
+          fbp?: string | null
+          id?: string
+          meta_response_body?: string | null
+          meta_response_status?: number | null
+          user_email_hash?: string | null
+          user_phone_hash?: string | null
+        }
+        Relationships: []
+      }
       notification_log: {
         Row: {
           booking_id: string | null
