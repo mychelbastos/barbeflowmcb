@@ -21,6 +21,7 @@ const Login = () => {
   const [phone, setPhone] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
