@@ -64,8 +64,9 @@ const AppShell = lazy(() => import("./components/layout/AppShell"));
 import { ScrollToTop } from "./components/ScrollToTop";
 import { CookieBanner } from "./components/CookieBanner";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { checkConsentOnLoad } from "@/utils/consent";
-import { persistFbclid } from "@/utils/metaTracking";
+import { initTracking, trackPageView } from "@/lib/tracking";
 
 const queryClient = new QueryClient();
 
