@@ -2913,6 +2913,7 @@ export type Database = {
       tenants: {
         Row: {
           address: string | null
+          attribution: Json | null
           cloudflare_hostname_id: string | null
           cloudflare_status: string | null
           cover_url: string | null
@@ -2932,6 +2933,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          attribution?: Json | null
           cloudflare_hostname_id?: string | null
           cloudflare_status?: string | null
           cover_url?: string | null
@@ -2951,6 +2953,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          attribution?: Json | null
           cloudflare_hostname_id?: string | null
           cloudflare_status?: string | null
           cover_url?: string | null
@@ -2995,6 +2998,74 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "users_tenant_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visitor_sessions: {
+        Row: {
+          created_at: string
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          gclid: string | null
+          id: string
+          ip_address: string | null
+          landing_page: string | null
+          referrer: string | null
+          tenant_id: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gclid?: string | null
+          id?: string
+          ip_address?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gclid?: string | null
+          id?: string
+          ip_address?: string | null
+          landing_page?: string | null
+          referrer?: string | null
+          tenant_id?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitor_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3386,6 +3457,10 @@ export type Database = {
         Returns: Json
       }
       is_tenant_admin: { Args: { tenant_uuid: string }; Returns: boolean }
+      link_visitor_attribution: {
+        Args: { p_tenant_id: string; p_visitor_id: string }
+        Returns: Json
+      }
       mark_booking_no_show: {
         Args: {
           p_booking_id: string
@@ -3411,6 +3486,25 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: Json
+      }
+      record_visitor_session: {
+        Args: {
+          p_fbc?: string
+          p_fbclid?: string
+          p_fbp?: string
+          p_gclid?: string
+          p_ip_address?: string
+          p_landing_page?: string
+          p_referrer?: string
+          p_user_agent?: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
+          p_visitor_id: string
+        }
+        Returns: string
       }
       redeem_loyalty_reward: {
         Args: {
