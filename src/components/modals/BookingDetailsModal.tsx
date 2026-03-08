@@ -111,6 +111,7 @@ export function BookingDetailsModal({
     setBookingItems(mappedItems);
 
     setComandaStatus(statusRes.data?.comanda_status || "open");
+    setPaymentInfo(payRes.data || null);
   }, [booking?.id, open, tenantId]);
 
   useEffect(() => {
