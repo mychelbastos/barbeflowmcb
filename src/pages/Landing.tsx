@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { getDashboardUrl, getPublicUrl } from "@/lib/hostname";
 import { useRef, useState, useEffect } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { trackEvent } from "@/utils/metaTracking";
+import { trackViewContent } from "@/lib/tracking";
 import { useAuth } from "@/hooks/useAuth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import dashboardMockup from "@/assets/dashboard-mockup.png";
