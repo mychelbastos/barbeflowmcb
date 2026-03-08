@@ -423,7 +423,7 @@ export function BillingTab() {
                       <p>Seu plano será atualizado imediatamente. A diferença de valor será cobrada proporcionalmente ao período restante.</p>
                       <ul className="space-y-1">
                         <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Profissionais ilimitados (sem custo extra)</li>
-                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Taxa reduzida de 1,0% (era {PLANS[planName]?.commission})</li>
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Taxa reduzida de 1,5% (era {PLANS[planName]?.commission})</li>
                         <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> Chatbot WhatsApp incluso</li>
                       </ul>
                     </>
