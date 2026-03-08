@@ -29,7 +29,7 @@ export function initializePixel(): void {
   if (!fbq) return;
   fbq('consent', 'grant');
   fbq('init', PIXEL_ID);
-  fbq('track', 'PageView');
+  // PageView is controlled by trackPageView() in SPA routing
 }
 
 export function checkConsentOnLoad(): void {

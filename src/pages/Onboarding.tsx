@@ -62,12 +62,7 @@ export default function Onboarding() {
       });
       if (error) throw error;
       if (data?.url) {
-        await trackEvent('AddPaymentInfo', {
-          content_category: 'subscription',
-          content_name: selectedPlan,
-          value: 50.00,
-          currency: 'BRL',
-        }, { email: user?.email || undefined });
+        trackInitiateCheckout(selectedPlan, totalMonthly / 100, { email: user?.email || undefined });
         window.location.href = data.url;
       }
     } catch (err: any) {

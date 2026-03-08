@@ -96,10 +96,19 @@ const ProtectedAppShell = () => (
   </ProtectedRoute>
 );
 
+// SPA route tracker component — must be inside BrowserRouter
+const RouteTracker = () => {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+  return null;
+};
+
 const App = () => {
   useEffect(() => {
     checkConsentOnLoad();
-    persistFbclid();
+    initTracking();
   }, []);
 
   return (
@@ -110,6 +119,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
+          <RouteTracker />
           <Suspense fallback={null}>
             <AuthWatcher />
           </Suspense>

@@ -40,12 +40,7 @@ export const ContactForm = ({ onSubmit, isLoading = false }: ContactFormProps) =
     });
 
     // Track Lead event
-    trackEvent('Lead', {
-      content_name: 'Formulário de interesse',
-      content_category: 'lead_form',
-      value: 15.00,
-      currency: 'BRL',
-    }, {
+    trackLead({
       email: data.email || undefined,
       phone: data.phone || undefined,
       first_name: data.name?.split(' ')[0] || undefined,

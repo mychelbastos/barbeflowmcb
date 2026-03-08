@@ -34,12 +34,7 @@ const Landing = () => {
   const pricingInView = useInView(pricingRef, { once: true });
   useEffect(() => {
     if (pricingInView) {
-      trackEvent('ViewContent', {
-        content_name: 'Planos modoGESTOR',
-        content_category: 'pricing',
-        content_ids: ['essencial', 'profissional'],
-        content_type: 'product',
-      }, {}, { pixelOnly: true });
+      trackViewContent('Planos modoGESTOR');
     }
   }, [pricingInView]);
 
