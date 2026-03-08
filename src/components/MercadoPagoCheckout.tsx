@@ -887,13 +887,33 @@ export const MercadoPagoCheckout = ({
           </div>
         )}
 
-        {/* Billing Address */}
+        {/* Step 1: Billing Address */}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Etapa 1 — Endereço de cobrança
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Informe o endereço vinculado ao seu cartão de crédito.
+          </p>
+        </div>
         <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
 
-        {/* Card Payment Brick container */}
+        {/* Step 2: Card data — only show when address is complete */}
+        <div className="space-y-1 pt-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Etapa 2 — Dados do cartão
+          </p>
+          {!isBillingAddressComplete(billingAddress) && (
+            <p className="text-xs text-amber-500">
+              Preencha o endereço acima para liberar o formulário do cartão.
+            </p>
+          )}
+        </div>
+
+        {/* Card Payment Brick container — dimmed until address is filled */}
         <div 
           id="cardPaymentBrick_container" 
-          className="mp-checkout-container"
+          className={`mp-checkout-container transition-opacity ${!isBillingAddressComplete(billingAddress) ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
         />
 
         {/* Turnstile verification — immediately above pay button */}
