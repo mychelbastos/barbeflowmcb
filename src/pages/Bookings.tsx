@@ -760,6 +760,7 @@ export default function Bookings() {
           open={showDetails && !editMode}
           onOpenChange={(open) => { setShowDetails(open); if (!open) { setEditMode(false); setSelectedBooking(null); } }}
           showActions
+          tenantSettings={currentTenant.settings}
           onEdit={startEditMode}
           onStatusChange={updateBookingStatus}
         />
