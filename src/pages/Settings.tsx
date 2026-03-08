@@ -155,8 +155,7 @@ export default function Settings() {
   const [mpLoading, setMpLoading] = useState(true);
   const [mpConnecting, setMpConnecting] = useState(false);
   const [mpDisconnecting, setMpDisconnecting] = useState(false);
-  const discountSettingsRef = useRef<{ online_discount_percent: number; show_cancellation_forfeit: boolean; cancellation_forfeit_hours: number } | null>(null);
-  const noShowForfeitRef = useRef<number | null>(null);
+  const discountSettingsRef = useRef<{ online_discount_percent: number; show_cancellation_forfeit: boolean; cancellation_forfeit_hours: number; no_show_forfeit_percent: number } | null>(null);
 
   const tenantForm = useForm<TenantFormData>({
     resolver: zodResolver(tenantSchema),
