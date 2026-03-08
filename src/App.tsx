@@ -192,8 +192,10 @@ const App = () => {
                   <Route index element={<AdminDashboard />} />
                   <Route path="tenants" element={<AdminTenants />} />
                   <Route path="tenants/:id" element={<AdminTenantDetail />} />
-                  <Route path="tracking" element={<AdminTracking />} />
-                </rd domain, redirect root to login (handled by AuthWatcher if logged in) */}
+                </Route>
+              )}
+
+              {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
               {isDashboardDomain() && (
                 <Route path="/" element={<Login />} />
               )}
