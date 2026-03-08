@@ -387,7 +387,7 @@ export function BookingDetailsModal({
         {/* ═══════════════ AÇÕES (sticky bottom) ═══════════════ */}
         {showActions && !isRecurring && (
           <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border flex-shrink-0">
-            {!isCancelled && !isCompleted && onEdit && (
+            {!isCancelled && !isCompleted && !isNoShow && onEdit && (
               <Button size="sm" variant="outline" onClick={onEdit}>
                 <Edit className="h-4 w-4 mr-1" /> Editar
               </Button>
@@ -397,7 +397,12 @@ export function BookingDetailsModal({
                 <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
               </Button>
             )}
-            {!isCancelled && onStatusChange && (
+            {(booking.status === "confirmed" || booking.status === "completed") && !isNoShow && (
+              <Button size="sm" variant="outline" onClick={() => setShowNoShowDialog(true)}>
+                <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" /> Faltou
+              </Button>
+            )}
+            {!isCancelled && !isNoShow && onStatusChange && (
               <Button size="sm" variant="destructive" onClick={() => { onStatusChange(booking.id, "cancelled", booking); onOpenChange(false); }}>
                 <XCircle className="h-4 w-4 mr-1" /> Cancelar
               </Button>
@@ -417,6 +422,19 @@ export function BookingDetailsModal({
             )}
           </div>
         )}
+
+        {/* No-Show Dialog */}
+        <NoShowDialog
+          open={showNoShowDialog}
+          onOpenChange={setShowNoShowDialog}
+          bookingId={booking.id}
+          tenantId={tenantId}
+          tenantSettings={tenantSettings}
+          onComplete={() => {
+            handleRefresh();
+            if (onStatusChange) onStatusChange(booking.id, "no_show", booking);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
