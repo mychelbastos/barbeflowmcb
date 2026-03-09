@@ -478,13 +478,15 @@ export function BookingModal() {
     searchTimeoutRef.current = setTimeout(async () => {
       setSearchingCustomers(true);
       try {
+        // Strip accents so "Vânia" matches "VANIA" etc.
+        const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const { data, error } = await supabase
           .from('customers')
           .select('id, name, phone, email')
           .eq('tenant_id', currentTenant.id)
-          .ilike('name', `%${name}%`)
+          .or(`name.ilike.%${normalized}%,name.ilike.%${name}%,phone.ilike.%${normalized}%`)
           .order('name')
-          .limit(8);
+          .limit(10);
         if (error) throw error;
         
         const customers: CustomerSuggestion[] = data || [];
