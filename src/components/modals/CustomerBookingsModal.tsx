@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { LoyaltyWidget } from "@/components/public/LoyaltyWidget";
+import { WhatsAppContactButton } from "@/components/public/WhatsAppContactButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
