@@ -1778,6 +1778,16 @@ END:VCALENDAR`;
                     </button>
                   ))}
                 </div>
+                {tenant?.phone && (
+                  <div className="mt-6 pt-4 border-t border-zinc-800 text-center space-y-2">
+                    <p className="text-zinc-600 text-xs">Não encontrou um horário?</p>
+                    <WhatsAppContactButton
+                      tenantPhone={tenant.phone}
+                      tenantName={tenant.name}
+                      message={`Olá! Estou tentando agendar na ${tenant.name} mas não encontrei o horário ideal. Podem me ajudar?`}
+                    />
+                  </div>
+                )}
               )}
             </div>
             
