@@ -536,7 +536,7 @@ export default function RecurringClients() {
 
             <div className="space-y-4 py-2">
               <CustomerSearchSelect
-                customers={customers}
+                tenantId={currentTenant!.id}
                 value={selectedCustomer}
                 onChange={setSelectedCustomer}
               />
