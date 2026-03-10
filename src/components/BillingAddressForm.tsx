@@ -71,11 +71,7 @@ export function BillingAddressForm({ value, onChange }: BillingAddressFormProps)
   };
 
   return (
-    <div className="space-y-3 pt-2">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        <MapPin className="h-3.5 w-3.5" />
-        Endereço de cobrança
-      </div>
+    <div className="space-y-3">
 
       {/* CEP + Número */}
       <div className="grid grid-cols-2 gap-3">
