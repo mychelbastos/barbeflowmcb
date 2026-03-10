@@ -1,11 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone, MapPin } from "lucide-react";
+import { Package, Check, Loader2, ChevronLeft, Calendar, User } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
-import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from "@/components/BillingAddressForm";
 
 interface PackagePurchaseFlowProps {
   tenant: any;
@@ -54,22 +53,17 @@ const isValidCpf = (value: string): boolean => {
 
 export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onScheduleNow }: PackagePurchaseFlowProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<'phone' | 'data' | 'address' | 'success'>('phone');
+  const [step, setStep] = useState<'phone' | 'data' | 'checkout' | 'success'>('phone');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [customerFound, setCustomerFound] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [customerPackageId, setCustomerPackageId] = useState<string | null>(null);
   const [paymentRecordId, setPaymentRecordId] = useState<string | null>(null);
-  const [billingAddress, setBillingAddress] = useState<BillingAddress>({
-    zip_code: '', street_name: '', street_number: '',
-    neighborhood: '', city: '', federal_unit: '',
-  });
+  const [submitting, setSubmitting] = useState(false);
 
   const handlePhoneLookup = async () => {
     const digits = phoneInput.replace(/\D/g, '');
@@ -81,11 +75,9 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
     try {
       const canonical = canonicalPhone(phoneInput);
       setPhone(formatPhoneInput(phoneInput));
-
       const { data, error } = await supabase.functions.invoke('public-customer-bookings', {
         body: { action: 'lookup', phone: canonical, tenant_id: tenant.id },
       });
-
       if (!error && data?.found && data?.customer) {
         setName(data.customer.name || '');
         setEmail(data.customer.email || '');
@@ -103,17 +95,11 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   };
 
   const handleResetPhone = () => {
-    setPhoneInput('');
-    setPhone('');
-    setName('');
-    setEmail('');
-    setCpf('');
-    setCustomerFound(false);
-    setBillingAddress({ zip_code: '', street_name: '', street_number: '', neighborhood: '', city: '', federal_unit: '' });
-    setStep('phone');
+    setPhoneInput(''); setPhone(''); setName(''); setEmail(''); setCpf('');
+    setCustomerFound(false); setStep('phone');
   };
 
-  const handleDataContinue = () => {
+  const handleDataContinue = async () => {
     if (!name || !email || !cpf) {
       toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
@@ -127,15 +113,8 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
       toast({ title: "CPF inválido", description: "Verifique o CPF digitado.", variant: "destructive" });
       return;
     }
-    setStep('address');
-  };
 
-  const handlePurchase = async () => {
-    if (submitting) return;
-    if (!isBillingAddressComplete(billingAddress)) {
-      toast({ title: "Preencha o endereço completo", variant: "destructive" });
-      return;
-    }
+    // Create customer_package + payment record upfront
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke('mp-create-package-checkout', {
@@ -146,24 +125,15 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           customer_phone: phone,
           customer_email: email.trim(),
           customer_cpf: cpf.replace(/\D/g, ''),
-          address_cep: billingAddress.zip_code,
-          address_street: billingAddress.street_name,
-          address_number: billingAddress.street_number,
-          address_neighborhood: billingAddress.neighborhood,
-          address_city: billingAddress.city,
-          address_state: billingAddress.federal_unit,
         },
       });
-
       if (error) throw new Error(data?.error || error.message);
       if (data?.error) throw new Error(data.error);
-
-      // Save IDs and show inline checkout (works for both new and reused checkouts)
       setCustomerPackageId(data.customer_package_id);
       setPaymentRecordId(data.payment_id);
-      setShowPayment(true);
+      setStep('checkout');
     } catch (err: any) {
-      console.error('Package purchase error:', err);
+      console.error('Package creation error:', err);
       toast({ title: "Erro ao processar", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
@@ -177,7 +147,7 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           <Check className="h-8 w-8 text-primary" />
         </div>
         <h3 className="text-lg font-semibold">Pacote adquirido!</h3>
-        <p className="text-sm text-zinc-400">Você tem {pkg.total_sessions || 0} sessões disponíveis.</p>
+        <p className="text-sm text-muted-foreground">Você tem {pkg.total_sessions || 0} sessões disponíveis.</p>
         <div className="space-y-2 pt-2">
           <Button onClick={() => onScheduleNow(customerPackageId ?? undefined)} className="w-full bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl">
             <Calendar className="h-4 w-4 mr-2" /> Agendar agora
@@ -190,13 +160,13 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
     );
   }
 
-  // Inline payment view
-  if (showPayment && customerPackageId && paymentRecordId) {
+  // Unified checkout — address + card + Turnstile + security badges all in MercadoPagoCheckout
+  if (step === 'checkout' && customerPackageId && paymentRecordId) {
     return (
       <div className="space-y-4">
         {/* Package summary */}
         <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-emerald-400" />
               <span className="font-medium">{pkg.name}</span>
@@ -204,6 +174,28 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
             <span className="text-lg font-semibold text-emerald-400">
               R$ {(pkg.price_cents / 100).toFixed(2)}
             </span>
+          </div>
+          {(pkg.package_services || []).length > 0 && (
+            <p className="text-xs text-zinc-500">
+              {(pkg.package_services || []).map((ps: any) => `${ps.service?.name || 'Serviço'} · ${ps.sessions_count} ${ps.sessions_count === 1 ? 'sessão' : 'sessões'}`).join(' | ')}
+            </p>
+          )}
+        </div>
+
+        {/* Customer identification */}
+        <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Check className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Olá, {name}!</p>
+                <p className="text-xs text-zinc-500">Seus dados foram encontrados.</p>
+              </div>
+            </div>
+            <button onClick={() => { setStep('phone'); setCustomerPackageId(null); setPaymentRecordId(null); handleResetPhone(); }}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Trocar</button>
           </div>
         </div>
 
@@ -225,19 +217,25 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           onSuccess={() => setStep('success')}
           onError={(err) => {
             toast({ title: "Erro no pagamento", description: err, variant: "destructive" });
-            setShowPayment(false);
           }}
           onPending={() => {
             toast({ title: "Pagamento em processamento" });
           }}
         />
 
+        {/* Back + Terms */}
         <button
-          onClick={() => setShowPayment(false)}
+          onClick={() => { setStep('data'); setCustomerPackageId(null); setPaymentRecordId(null); }}
           className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm"
         >
           <ChevronLeft className="h-4 w-4" /> Voltar
         </button>
+
+        <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground/50">
+          <a href="/legal/termos-de-uso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
+          <span>·</span>
+          <a href="/legal/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+        </div>
       </div>
     );
   }
@@ -259,7 +257,6 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
         </div>
       )}
 
-      {/* Fallback sem imagem */}
       {!pkg.photo_url && (
         <div className="text-center py-4">
           <Package className="h-6 w-6 text-emerald-400 mx-auto mb-2" />
@@ -268,7 +265,6 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
         </div>
       )}
 
-      {/* Serviços incluídos */}
       {(pkg.package_services || []).length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-zinc-300">O que está incluído</h3>
@@ -290,22 +286,19 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
         </div>
       )}
 
-      {/* Total de sessões */}
       <div className="flex items-center gap-2 text-zinc-400 text-xs">
         <Package className="h-3.5 w-3.5 text-emerald-400" />
         <span>{(pkg.package_services || []).reduce((sum: number, ps: any) => sum + (ps.sessions_count || 0), 0)} sessões no total</span>
       </div>
 
-      {/* Separador */}
       <div className="border-t border-zinc-800" />
 
-      {/* Título do formulário */}
       <div className="text-center">
         <h3 className="text-lg font-semibold">Dados para aquisição</h3>
         <p className="text-zinc-500 text-xs mt-1">Preencha seus dados para adquirir o pacote</p>
       </div>
 
-      {/* Etapa 1: Identificação por telefone */}
+      {/* Step: Phone */}
       {step === 'phone' && (
         <div className="space-y-3">
           <div>
@@ -316,24 +309,19 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
               onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
               onKeyDown={(e) => { if (e.key === 'Enter') handlePhoneLookup(); }}
               className="h-11 bg-zinc-900/50 border-zinc-800 rounded-xl"
-              maxLength={15}
-              inputMode="tel"
+              maxLength={15} inputMode="tel"
             />
           </div>
-          <Button
-            onClick={handlePhoneLookup}
-            disabled={phoneLoading || phoneInput.replace(/\D/g, '').length < 10}
-            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium"
-          >
+          <Button onClick={handlePhoneLookup} disabled={phoneLoading || phoneInput.replace(/\D/g, '').length < 10}
+            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
             {phoneLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando...</> : <><Package className="h-4 w-4 mr-2" /> Continuar para pagamento</>}
           </Button>
         </div>
       )}
 
-      {/* Etapa 2: Formulário de dados */}
+      {/* Step: Personal Data */}
       {step === 'data' && (
         <div className="space-y-4">
-          {/* Identificação */}
           <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -359,13 +347,10 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
                   </>
                 )}
               </div>
-              <button onClick={handleResetPhone} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-                Trocar
-              </button>
+              <button onClick={handleResetPhone} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Trocar</button>
             </div>
           </div>
 
-          {/* Campos */}
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-zinc-400 mb-1.5">Nome *</label>
@@ -385,26 +370,11 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
             </div>
           </div>
 
-          <Button onClick={handleDataContinue} disabled={!name || !email || !cpf}
+          <Button onClick={handleDataContinue} disabled={!name || !email || !cpf || submitting}
             className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
-            Continuar →
+            {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <>Continuar para pagamento →</>}
           </Button>
           <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
-            <ChevronLeft className="h-4 w-4" /> Voltar
-          </button>
-        </div>
-      )}
-
-      {/* Etapa 3: Endereço de cobrança */}
-      {step === 'address' && (
-        <div className="space-y-4">
-          <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
-
-          <Button onClick={handlePurchase} disabled={submitting || !isBillingAddressComplete(billingAddress)}
-            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
-            {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><Package className="h-4 w-4 mr-2" /> Comprar pacote</>}
-          </Button>
-          <button onClick={() => setStep('data')} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
             <ChevronLeft className="h-4 w-4" /> Voltar
           </button>
         </div>
