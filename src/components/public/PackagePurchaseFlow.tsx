@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone } from "lucide-react";
+import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone, MapPin } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
+import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from "@/components/BillingAddressForm";
 
 interface PackagePurchaseFlowProps {
   tenant: any;
@@ -53,7 +54,7 @@ const isValidCpf = (value: string): boolean => {
 
 export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onScheduleNow }: PackagePurchaseFlowProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<'phone' | 'data' | 'success'>('phone');
+  const [step, setStep] = useState<'phone' | 'data' | 'address' | 'success'>('phone');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
@@ -65,6 +66,10 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
   const [showPayment, setShowPayment] = useState(false);
   const [customerPackageId, setCustomerPackageId] = useState<string | null>(null);
   const [paymentRecordId, setPaymentRecordId] = useState<string | null>(null);
+  const [billingAddress, setBillingAddress] = useState<BillingAddress>({
+    zip_code: '', street_name: '', street_number: '',
+    neighborhood: '', city: '', federal_unit: '',
+  });
 
   const handlePhoneLookup = async () => {
     const digits = phoneInput.replace(/\D/g, '');
@@ -104,12 +109,12 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
     setEmail('');
     setCpf('');
     setCustomerFound(false);
+    setBillingAddress({ zip_code: '', street_name: '', street_number: '', neighborhood: '', city: '', federal_unit: '' });
     setStep('phone');
   };
 
-  const handlePurchase = async () => {
-    if (submitting) return;
-    if (!name || !phone || !email || !cpf) {
+  const handleDataContinue = () => {
+    if (!name || !email || !cpf) {
       toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
@@ -122,6 +127,15 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
       toast({ title: "CPF inválido", description: "Verifique o CPF digitado.", variant: "destructive" });
       return;
     }
+    setStep('address');
+  };
+
+  const handlePurchase = async () => {
+    if (submitting) return;
+    if (!isBillingAddressComplete(billingAddress)) {
+      toast({ title: "Preencha o endereço completo", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke('mp-create-package-checkout', {
@@ -132,6 +146,12 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           customer_phone: phone,
           customer_email: email.trim(),
           customer_cpf: cpf.replace(/\D/g, ''),
+          address_cep: billingAddress.zip_code,
+          address_street: billingAddress.street_name,
+          address_number: billingAddress.street_number,
+          address_neighborhood: billingAddress.neighborhood,
+          address_city: billingAddress.city,
+          address_state: billingAddress.federal_unit,
         },
       });
 
@@ -365,11 +385,26 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
             </div>
           </div>
 
-          <Button onClick={handlePurchase} disabled={submitting || !name || !phone || !email || !cpf}
+          <Button onClick={handleDataContinue} disabled={!name || !email || !cpf}
+            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
+            Continuar →
+          </Button>
+          <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
+            <ChevronLeft className="h-4 w-4" /> Voltar
+          </button>
+        </div>
+      )}
+
+      {/* Etapa 3: Endereço de cobrança */}
+      {step === 'address' && (
+        <div className="space-y-4">
+          <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
+
+          <Button onClick={handlePurchase} disabled={submitting || !isBillingAddressComplete(billingAddress)}
             className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
             {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><Package className="h-4 w-4 mr-2" /> Comprar pacote</>}
           </Button>
-          <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
+          <button onClick={() => setStep('data')} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
             <ChevronLeft className="h-4 w-4" /> Voltar
           </button>
         </div>

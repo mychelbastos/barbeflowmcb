@@ -179,6 +179,19 @@ serve(async (req) => {
           number: booking.customer.phone.replace(/\D/g, ''),
         } : undefined,
         email: booking.customer?.email || undefined,
+        ...(booking.customer?.cpf ? {
+          identification: {
+            type: 'CPF',
+            number: booking.customer.cpf.replace(/\D/g, ''),
+          },
+        } : {}),
+        ...(booking.customer?.address_cep ? {
+          address: {
+            zip_code: booking.customer.address_cep.replace(/\D/g, ''),
+            street_name: booking.customer.address_street || '',
+            street_number: parseInt(booking.customer.address_number) || 0,
+          },
+        } : {}),
       },
       ...(marketplaceFee > 0 ? { marketplace_fee: marketplaceFee } : {}),
       back_urls: {
