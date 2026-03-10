@@ -6,6 +6,7 @@ import { formatCep } from '@/components/BillingAddressForm';
 import { toast } from '@/hooks/use-toast';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
 import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from '@/components/BillingAddressForm';
+import { PaymentErrorAlert, parsePaymentResult, type PaymentError, type PaymentPending } from '@/components/PaymentErrorAlert';
 
 interface PayerInfo {
   email: string;
@@ -77,6 +78,8 @@ export const MercadoPagoCheckout = ({
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
   const [checkoutStep, setCheckoutStep] = useState<'address' | 'card'>('address');
+  const [paymentError, setPaymentError] = useState<PaymentError | null>(null);
+  const [paymentPending, setPaymentPending] = useState<PaymentPending | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -248,7 +251,12 @@ export const MercadoPagoCheckout = ({
           onError: (error: any) => {
             if (!isMountedRef.current) return;
             console.error('CardPayment Brick error:', error);
-            setErrorMessage('Erro no formulário de pagamento');
+            const msg = error?.message || error?.cause?.[0]?.description || 'Erro ao processar cartão.';
+            setPaymentError({
+              message: msg,
+              action: 'Verifique os dados do cartão e tente novamente.',
+              severity: 'retry',
+            });
           },
         },
       });
@@ -264,6 +272,8 @@ export const MercadoPagoCheckout = ({
     if (!isMountedRef.current) return;
     setStatus('processing');
     setErrorMessage('');
+    setPaymentError(null);
+    setPaymentPending(null);
     try {
       const { data, error } = await supabase.functions.invoke(
         isPackagePayment ? 'mp-process-package-payment' : 'mp-process-payment',
@@ -317,12 +327,22 @@ export const MercadoPagoCheckout = ({
       if (!isMountedRef.current) return;
       if (error) throw new Error(getFunctionErrorMessage(error));
       console.log('Payment result:', data);
+
+      // Parse structured error/pending from backend
+      const parsed = parsePaymentResult(data);
+
       if (data.status === 'approved') {
         setStatus('success');
         onSuccess(data);
-      } else if (data.status === 'pending' || data.status === 'in_process') {
+      } else if (parsed.pending) {
+        setPaymentPending(parsed.pending);
         setStatus('pending');
         onPending?.(data);
+      } else if (parsed.error) {
+        setPaymentError(parsed.error);
+        setTurnstileToken(null);
+        setTurnstileKey(k => k + 1);
+        setStatus('ready');
       } else {
         throw new Error(getStatusMessage(data.status, data.status_detail));
       }
@@ -331,9 +351,12 @@ export const MercadoPagoCheckout = ({
       console.error('Payment error:', error);
       setTurnstileToken(null);
       setTurnstileKey(k => k + 1);
-      setErrorMessage(error.message || 'Erro ao processar pagamento');
-      setStatus('error');
-      onError(error.message);
+      setPaymentError({
+        message: error.message || 'Erro ao processar pagamento.',
+        action: 'Verifique os dados e tente novamente.',
+        severity: 'retry',
+      });
+      setStatus('ready');
     }
   };
 
@@ -463,6 +486,8 @@ export const MercadoPagoCheckout = ({
 
   const retryPayment = () => {
     setErrorMessage('');
+    setPaymentError(null);
+    setPaymentPending(null);
     setPaymentMethod(null);
     setPixData(null);
     setTurnstileToken(null);
@@ -475,6 +500,8 @@ export const MercadoPagoCheckout = ({
   const goBackToMethodSelect = () => {
     setPaymentMethod(null);
     setPixData(null);
+    setPaymentError(null);
+    setPaymentPending(null);
     setTurnstileToken(null);
     setTurnstileKey(k => k + 1);
     setCheckoutStep('address');
@@ -704,10 +731,13 @@ export const MercadoPagoCheckout = ({
           </div>
         </div>
 
-        {/* Error message */}
-        {errorMessage && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <p className="text-sm text-red-400 flex items-center gap-2">
+        {/* Payment error/pending alerts */}
+        <PaymentErrorAlert error={paymentError} pending={paymentPending} />
+
+        {/* Legacy error message (for non-payment errors like turnstile) */}
+        {errorMessage && !paymentError && (
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
+            <p className="text-sm text-destructive flex items-center gap-2">
               <AlertCircle className="h-4 w-4" /> {errorMessage}
             </p>
           </div>

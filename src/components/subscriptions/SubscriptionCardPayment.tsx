@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, Check, ChevronLeft, Shield, Lock, CreditCard } from 'lucide-react';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { PaymentErrorAlert, parsePaymentResult, type PaymentError } from '@/components/PaymentErrorAlert';
 
 declare global {
   interface Window {
@@ -76,6 +77,7 @@ export function SubscriptionCardPayment({
 }: SubscriptionCardPaymentProps) {
   const [status, setStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [paymentError, setPaymentError] = useState<PaymentError | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileKey, setTurnstileKey] = useState(0);
   const brickControllerRef = useRef<any>(null);
@@ -200,7 +202,12 @@ export function SubscriptionCardPayment({
           onError: (error: any) => {
             if (!isMountedRef.current) return;
             console.error('CardPayment Brick error:', error);
-            setErrorMessage('Erro no formulário de pagamento');
+            const msg = error?.message || error?.cause?.[0]?.description || 'Erro ao processar cartão.';
+            setPaymentError({
+              message: msg,
+              action: 'Verifique os dados do cartão e tente novamente.',
+              severity: 'retry',
+            });
           },
         },
       });
@@ -215,6 +222,7 @@ export function SubscriptionCardPayment({
     if (!isMountedRef.current) return;
     setStatus('processing');
     setErrorMessage('');
+    setPaymentError(null);
     try {
       const { data, error } = await supabase.functions.invoke('mp-create-subscription', {
         body: {
@@ -226,7 +234,6 @@ export function SubscriptionCardPayment({
           customer_cpf: customerCpf,
           card_token_id: formData.token,
           cf_turnstile_token: token,
-          // Address fields
           address_cep: addressCep,
           address_street: addressStreet,
           address_number: addressNumber,
@@ -238,30 +245,45 @@ export function SubscriptionCardPayment({
       });
       if (!isMountedRef.current) return;
       if (error) throw new Error(getFunctionErrorMessage(error));
-      if (data?.error) throw new Error(data.error);
-      if (data?.activated) {
+
+      // Check structured error from backend
+      const parsed = parsePaymentResult(data);
+      if (parsed.error) {
+        setPaymentError(parsed.error);
+        setTurnstileToken(null);
+        setTurnstileKey(k => k + 1);
+        setStatus('ready');
+        return;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.activated || !data?.checkout_url) {
         const subId = data?.subscription_id || data?.customer_subscription_id;
         setStatus('success');
         setTimeout(() => onSuccess(subId), 2000);
       } else if (data?.checkout_url) {
         window.location.href = data.checkout_url;
-      } else {
-        const subId = data?.subscription_id || data?.customer_subscription_id;
-        setStatus('success');
-        setTimeout(() => onSuccess(subId), 2000);
       }
     } catch (err: any) {
       if (!isMountedRef.current) return;
       console.error('Subscription payment error:', err);
       setTurnstileToken(null);
       setTurnstileKey(k => k + 1);
-      setErrorMessage(err.message || 'Erro ao processar assinatura');
-      setStatus('error');
+      setPaymentError({
+        message: err.message || 'Erro ao processar assinatura.',
+        action: 'Verifique os dados e tente novamente.',
+        severity: 'retry',
+      });
+      setStatus('ready');
     }
   };
 
   const retry = () => {
     setErrorMessage('');
+    setPaymentError(null);
     setTurnstileToken(null);
     setTurnstileKey(k => k + 1);
     if (brickControllerRef.current) {
@@ -351,10 +373,13 @@ export function SubscriptionCardPayment({
         </div>
       )}
 
-      {/* Error message inline */}
-      {errorMessage && status !== 'processing' && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-          <p className="text-sm text-red-400 flex items-center gap-2">
+      {/* Payment error alert */}
+      <PaymentErrorAlert error={paymentError} pending={null} />
+
+      {/* Legacy error message (for non-payment errors like turnstile) */}
+      {errorMessage && !paymentError && status !== 'processing' && (
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
+          <p className="text-sm text-destructive flex items-center gap-2">
             <AlertCircle className="h-4 w-4" /> {errorMessage}
           </p>
         </div>
