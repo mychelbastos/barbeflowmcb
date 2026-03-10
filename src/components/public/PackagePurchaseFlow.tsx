@@ -385,11 +385,26 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
             </div>
           </div>
 
-          <Button onClick={handlePurchase} disabled={submitting || !name || !phone || !email || !cpf}
+          <Button onClick={handleDataContinue} disabled={!name || !email || !cpf}
+            className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
+            Continuar →
+          </Button>
+          <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
+            <ChevronLeft className="h-4 w-4" /> Voltar
+          </button>
+        </div>
+      )}
+
+      {/* Etapa 3: Endereço de cobrança */}
+      {step === 'address' && (
+        <div className="space-y-4">
+          <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
+
+          <Button onClick={handlePurchase} disabled={submitting || !isBillingAddressComplete(billingAddress)}
             className="w-full h-12 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl font-medium">
             {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</> : <><Package className="h-4 w-4 mr-2" /> Comprar pacote</>}
           </Button>
-          <button onClick={onCancel} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
+          <button onClick={() => setStep('data')} className="flex items-center gap-2 text-zinc-500 hover:text-white mx-auto transition-colors text-sm">
             <ChevronLeft className="h-4 w-4" /> Voltar
           </button>
         </div>
