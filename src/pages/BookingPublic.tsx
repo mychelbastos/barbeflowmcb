@@ -1749,7 +1749,17 @@ END:VCALENDAR`;
               ) : allTimeSlots.length === 0 ? (
                 <div className="text-center py-8 text-zinc-500">
                   <Clock className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">{selectedDate ? "Nenhum horário disponível" : "Selecione uma data"}</p>
+                  <p className="text-sm">{selectedDate ? "Nenhum horário disponível neste dia" : "Selecione uma data"}</p>
+                  {selectedDate && tenant?.phone && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-zinc-600 text-xs">Tente outro dia ou fale diretamente com a barbearia</p>
+                      <WhatsAppContactButton
+                        tenantPhone={tenant.phone}
+                        tenantName={tenant.name}
+                        message={`Olá! Gostaria de agendar um horário na ${tenant.name} mas não encontrei disponibilidade. Podem me ajudar?`}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
