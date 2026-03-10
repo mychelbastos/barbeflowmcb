@@ -193,8 +193,8 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId, 
             <span className="text-xs font-medium">Endereço</span>
           </div>
           <div className={`flex-1 h-px ${checkoutSubStep === 'card' ? 'bg-emerald-500' : 'bg-border'}`} />
-          <div className={`flex items-center gap-1.5 ${checkoutSubStep === 'card' ? 'text-primary' : 'text-muted-foreground'}`}>
-            <div className={`w-2 h-2 rounded-full ${checkoutSubStep === 'card' ? 'bg-primary' : 'bg-muted'}`} />
+          <div className={`flex items-center gap-1.5 ${checkoutSubStep === 'card' ? 'text-primary' : 'text-muted-foreground/50'}`}>
+            <div className={`w-2 h-2 rounded-full ${checkoutSubStep === 'card' ? 'bg-primary' : 'bg-border'}`} />
             <span className="text-xs font-medium">Pagamento</span>
           </div>
         </div>
