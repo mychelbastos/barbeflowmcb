@@ -93,8 +93,19 @@ Deno.serve(async (req) => {
 
     if (existingCustomer) {
       customerId = existingCustomer.id;
-      if (customer_email && !existingCustomer.email) {
-        await supabase.from('customers').update({ email: customer_email }).eq('id', customerId);
+      // Update customer with CPF, email and address
+      const updatePayload: Record<string, any> = {};
+      if (customer_email && !existingCustomer.email) updatePayload.email = customer_email.trim();
+      if (customer_cpf) updatePayload.cpf = customer_cpf.replace(/\D/g, '');
+      if (address_cep) updatePayload.address_cep = address_cep;
+      if (address_street) updatePayload.address_street = address_street;
+      if (address_number) updatePayload.address_number = address_number;
+      if (address_complement) updatePayload.address_complement = address_complement;
+      if (address_neighborhood) updatePayload.address_neighborhood = address_neighborhood;
+      if (address_city) updatePayload.address_city = address_city;
+      if (address_state) updatePayload.address_state = address_state;
+      if (Object.keys(updatePayload).length > 0) {
+        await supabase.from('customers').update(updatePayload).eq('id', customerId);
       }
     } else {
       const { data: newCust, error: custErr } = await supabase
@@ -104,6 +115,14 @@ Deno.serve(async (req) => {
           name: customer_name.trim(),
           phone: canonical,
           email: customer_email.trim(),
+          cpf: customer_cpf?.replace(/\D/g, '') || null,
+          address_cep: address_cep || null,
+          address_street: address_street || null,
+          address_number: address_number || null,
+          address_complement: address_complement || null,
+          address_neighborhood: address_neighborhood || null,
+          address_city: address_city || null,
+          address_state: address_state || null,
         })
         .select('id')
         .single();
