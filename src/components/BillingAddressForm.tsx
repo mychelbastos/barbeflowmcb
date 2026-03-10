@@ -109,6 +109,7 @@ export function BillingAddressForm({ value, onChange }: BillingAddressFormProps)
         <div className="space-y-1.5">
           <Label className="text-xs">Número *</Label>
           <Input
+            ref={numberInputRef}
             placeholder="123"
             value={value.street_number}
             onChange={(e) => update({ street_number: e.target.value })}
