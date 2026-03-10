@@ -227,7 +227,7 @@ export function PublicSubscriptionPlans({ tenant, plans, onBack, initialPlanId, 
               </div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Endereço de Cobrança</h3>
             </div>
-            <div className="bg-muted/30 border border-border rounded-lg p-3 flex justify-between items-center">
+            <div className="bg-secondary/50 border border-border rounded-lg p-3 flex justify-between items-center">
               <div className="text-sm">
                 <p className="text-foreground">{billingAddress.street_name}, {billingAddress.street_number}</p>
                 <p className="text-muted-foreground text-xs">{billingAddress.neighborhood} · {billingAddress.city}/{billingAddress.federal_unit} · {formatCep(billingAddress.zip_code)}</p>
