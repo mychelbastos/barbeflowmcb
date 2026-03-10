@@ -10,12 +10,13 @@ import { ComandaItemsSection, type BookingItem } from "@/components/modals/Coman
 import { ComandaPaymentSection } from "@/components/modals/ComandaPaymentSection";
 import { ComandaCloseSection } from "@/components/modals/ComandaCloseSection";
 import { NoShowDialog } from "@/components/modals/NoShowDialog";
+import { UnifiedComandaModal } from "@/components/modals/UnifiedComandaModal";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   User, Phone, Scissors, Clock, Users, Edit,
-  CheckCircle, XCircle, MessageCircle, AlertTriangle, RefreshCw, Loader2,
+  CheckCircle, XCircle, MessageCircle, AlertTriangle, RefreshCw, Loader2, ClipboardList,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
