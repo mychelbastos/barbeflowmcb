@@ -57,12 +57,14 @@ export function useTenantBranding(tenant: { name?: string; logo_url?: string } |
     // Also remove any lingering static manifests (safety net)
     document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
 
+    // Use absolute URLs so blob-manifest resolves correctly (avoids "URL is invalid" warnings)
+    const origin = window.location.origin;
     const manifestData = {
       name: appName,
       short_name: appName.substring(0, 12),
       description: `Agende online com ${appName}`,
-      start_url: window.location.pathname,
-      scope: '/',
+      start_url: `${origin}${window.location.pathname}`,
+      scope: `${origin}/`,
       display: 'standalone',
       background_color: '#0f0f11',
       theme_color: '#FFC300',
@@ -74,8 +76,8 @@ export function useTenantBranding(tenant: { name?: string; logo_url?: string } |
             { src: tenant.logo_url, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ]
         : [
-            { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-            { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+            { src: `${origin}/icons/icon-192x192.png`, sizes: '192x192', type: 'image/png' },
+            { src: `${origin}/icons/icon-512x512.png`, sizes: '512x512', type: 'image/png' },
           ],
     };
 
