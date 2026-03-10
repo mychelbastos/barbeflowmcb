@@ -1,7 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -10,16 +14,17 @@ import { ComandaItemsSection, type BookingItem } from "@/components/modals/Coman
 import { ComandaPaymentSection } from "@/components/modals/ComandaPaymentSection";
 import { ComandaCloseSection } from "@/components/modals/ComandaCloseSection";
 import { NoShowDialog } from "@/components/modals/NoShowDialog";
-import { UnifiedComandaModal } from "@/components/modals/UnifiedComandaModal";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   User, Phone, Scissors, Clock, Users, Edit,
-  CheckCircle, XCircle, MessageCircle, AlertTriangle, RefreshCw, Loader2, ClipboardList,
+  CheckCircle, XCircle, MessageCircle, AlertTriangle, RefreshCw, Loader2,
+  ClipboardList, ChevronLeft, RotateCcw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { formatBRL } from "@/utils/formatBRL";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -57,7 +62,9 @@ export function BookingDetailsModal({
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
   const [retryingRefund, setRetryingRefund] = useState(false);
   const [relatedBookings, setRelatedBookings] = useState<any[]>([]);
-  const [showUnifiedModal, setShowUnifiedModal] = useState(false);
+  const [unifiedMode, setUnifiedMode] = useState(false);
+  const [showPaymentStep, setShowPaymentStep] = useState(true);
+  const [reopening, setReopening] = useState(false);
   const paymentSectionRef = useRef<HTMLDivElement>(null);
   const closeSectionRef = useRef<HTMLDivElement>(null);
 
@@ -66,8 +73,6 @@ export function BookingDetailsModal({
 
     const customerId = booking.customer_id;
 
-    // Load all data in parallel
-    // Load all data in parallel
     const [custRes, balRes, itemsRes, statusRes, payRes] = await Promise.all([
       customerId
         ? supabase.from("customers").select("notes").eq("id", customerId).single()
@@ -121,6 +126,7 @@ export function BookingDetailsModal({
   useEffect(() => {
     if (!booking || !open) {
       setRelatedBookings([]);
+      setUnifiedMode(false);
       return;
     }
     const checkRelated = async () => {
@@ -142,6 +148,8 @@ export function BookingDetailsModal({
       setCustomerBalance(0);
       setBookingItems([]);
       setComandaStatus("open");
+      setShowPaymentStep(true);
+      setUnifiedMode(false);
       return;
     }
     loadData();
@@ -157,7 +165,7 @@ export function BookingDetailsModal({
     setPrevStatus(booking.status);
 
     if (justCompleted) {
-      // Wait for DOM to update with completed sections
+      setShowPaymentStep(true);
       const timer = setTimeout(() => {
         const hasUnpaid = bookingItems.some(i => i.paid_status === "unpaid");
         const isBenefit = !!booking.customer_package_id || !!booking.customer_subscription_id;
@@ -167,6 +175,43 @@ export function BookingDetailsModal({
       return () => clearTimeout(timer);
     }
   }, [booking?.status, open]);
+
+  // Unified mode: compute total from all related bookings
+  const unifiedTotal = useMemo(() => {
+    if (!unifiedMode || relatedBookings.length === 0) return 0;
+    return relatedBookings
+      .filter(b => b.status === "confirmed")
+      .reduce((sum: number, b: any) => {
+        if (b.items && b.items.length > 0) {
+          return sum + b.items.reduce((s: number, item: any) => {
+            const isCovered = item.paid_status === "covered" || item.paid_status === "courtesy";
+            if (isCovered) return s;
+            return s + ((item.total_price_cents || 0) - (item.discount_cents || 0));
+          }, 0);
+        }
+        return sum + (b.service_price_cents || 0);
+      }, 0);
+  }, [unifiedMode, relatedBookings]);
+
+  const handleReopen = async () => {
+    if (!booking) return;
+    setReopening(true);
+    try {
+      const { data, error } = await supabase.rpc("reopen_booking", {
+        p_booking_id: booking.id,
+      });
+      if (error) throw error;
+      const result = data as any;
+      if (result && !result.success) throw new Error(result.error || "Erro ao reabrir");
+      toast({ title: "Agendamento reaberto com sucesso" });
+      handleRefresh();
+      if (onStatusChange) onStatusChange(booking.id, "confirmed", booking);
+    } catch (err: any) {
+      toast({ title: "Erro ao reabrir", description: err.message, variant: "destructive" });
+    } finally {
+      setReopening(false);
+    }
+  };
 
   if (!booking) return null;
 
@@ -215,12 +260,15 @@ export function BookingDetailsModal({
     }
   };
 
+  // Actionable related bookings (confirmed status)
+  const actionableRelated = relatedBookings.filter(b => b.status === "confirmed");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center justify-between">
-            Comanda
+            {unifiedMode ? "Comanda Unificada" : "Comanda"}
             {comandaClosed && (
               <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20 ml-2">
                 Fechada
@@ -280,6 +328,23 @@ export function BookingDetailsModal({
               )}
             </div>
 
+            {/* Unified mode info */}
+            {unifiedMode && (
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-xs text-muted-foreground">
+                  📅 {actionableRelated.length} serviço{actionableRelated.length !== 1 ? "s" : ""} hoje
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-muted-foreground hover:text-foreground h-6 px-2"
+                  onClick={() => setUnifiedMode(false)}
+                >
+                  Desfazer unificação
+                </Button>
+              </div>
+            )}
+
             {/* Customer notes */}
             {customerNotes && (
               <div className="p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
@@ -299,7 +364,7 @@ export function BookingDetailsModal({
           <CustomerBalanceAlert key={balanceKey} customerId={booking.customer_id} tenantId={tenantId} />
 
           {/* ═══════════════ BANNER COMANDA UNIFICADA ═══════════════ */}
-          {relatedBookings.length > 1 && !isCompleted && !isCancelled && !isNoShow && (
+          {relatedBookings.length > 1 && !unifiedMode && !isCompleted && !isCancelled && !isNoShow && (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -312,9 +377,9 @@ export function BookingDetailsModal({
                   size="sm"
                   variant="ghost"
                   className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-500 h-7"
-                  onClick={() => setShowUnifiedModal(true)}
+                  onClick={() => setUnifiedMode(true)}
                 >
-                  Ver comanda unificada →
+                  Unificar comandas →
                 </Button>
               </div>
             </div>
@@ -324,20 +389,143 @@ export function BookingDetailsModal({
           {!isRecurring && !isCancelled && !isNoShow && (
             <>
               <Separator />
-              <ComandaItemsSection
-                bookingId={booking.id}
-                tenantId={tenantId}
-                items={bookingItems}
-                onItemsChange={handleRefresh}
-                comandaClosed={comandaClosed}
-                bookingStartsAt={booking.starts_at}
-              />
+
+              {/* Unified mode: show items from ALL related bookings grouped */}
+              {unifiedMode && relatedBookings.length > 1 ? (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4" /> Itens da Comanda
+                  </h4>
+                  {relatedBookings.map((rb: any) => {
+                    const rbCompleted = rb.status === "completed";
+                    const rbCancelled = rb.status === "cancelled";
+                    const rbNoShow = rb.status === "no_show";
+                    const rbInactive = rbCompleted || rbCancelled || rbNoShow;
+                    const time = format(new Date(rb.starts_at), "HH:mm");
+
+                    return (
+                      <div key={rb.id} className={rbInactive ? "opacity-50" : ""}>
+                        {/* Divider with time & staff */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                          <div className="h-px flex-1 bg-border" />
+                          <Clock className="h-3 w-3" />
+                          <span className="font-medium">{time}</span>
+                          {rb.staff_name && (
+                            <>
+                              <span>·</span>
+                              <span>{rb.staff_name}</span>
+                            </>
+                          )}
+                          {rbCompleted && <Badge variant="secondary" className="text-[9px]">Concluído</Badge>}
+                          {rbCancelled && <Badge variant="destructive" className="text-[9px]">Cancelado</Badge>}
+                          {rbNoShow && <Badge variant="destructive" className="text-[9px]">Faltou</Badge>}
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+
+                        {/* Items */}
+                        {rb.items && rb.items.length > 0 ? (
+                          rb.items.map((item: any, i: number) => {
+                            const isCovered = item.paid_status === "covered" || item.paid_status === "courtesy";
+                            const effective = (item.total_price_cents || 0) - (item.discount_cents || 0);
+                            return (
+                              <div key={i} className="flex items-center justify-between text-sm py-1 px-1">
+                                <div className="flex items-center gap-2">
+                                  <Scissors className="h-3 w-3 text-muted-foreground" />
+                                  <span className={isCovered ? "line-through text-muted-foreground" : "text-foreground"}>
+                                    {item.title}
+                                  </span>
+                                  {isCovered && (
+                                    <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-500 border-amber-500/20">
+                                      coberto
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className={`font-medium tabular-nums text-sm ${isCovered ? "text-muted-foreground line-through" : ""}`}>
+                                  {formatBRL(effective)}
+                                </span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="flex items-center justify-between text-sm py-1 px-1">
+                            <div className="flex items-center gap-2">
+                              <Scissors className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-foreground">{rb.service_name}</span>
+                            </div>
+                            <span className="font-medium tabular-nums">{formatBRL(rb.service_price_cents)}</span>
+                          </div>
+                        )}
+
+                        {/* Individual actions for active bookings */}
+                        {!rbInactive && onStatusChange && rb.id !== booking.id && (
+                          <div className="flex gap-2 px-1 pt-1">
+                            <Button
+                              size="sm" variant="ghost"
+                              className="h-6 text-[10px] text-amber-500 hover:text-amber-400 px-2"
+                              onClick={() => onStatusChange(rb.id, "no_show")}
+                            >
+                              <AlertTriangle className="h-3 w-3 mr-1" /> Faltou
+                            </Button>
+                            <Button
+                              size="sm" variant="ghost"
+                              className="h-6 text-[10px] text-destructive hover:text-destructive/80 px-2"
+                              onClick={() => onStatusChange(rb.id, "cancelled")}
+                            >
+                              <XCircle className="h-3 w-3 mr-1" /> Cancelar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Unified total */}
+                  <Separator />
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-sm font-medium text-muted-foreground">Total efetivo</span>
+                    <span className="text-base font-bold tabular-nums">{formatBRL(unifiedTotal)}</span>
+                  </div>
+                </div>
+              ) : (
+                /* Standard single-booking items */
+                <ComandaItemsSection
+                  bookingId={booking.id}
+                  tenantId={tenantId}
+                  items={bookingItems}
+                  onItemsChange={handleRefresh}
+                  comandaClosed={comandaClosed}
+                  bookingStartsAt={booking.starts_at}
+                />
+              )}
             </>
           )}
 
           {/* ═══════════════ SEÇÃO 3: PAGAMENTO ═══════════════ */}
+          {/* Back button when payment step is visible */}
+          {isCompleted && showPaymentStep && !isRecurring && !isCancelled && (
+            <button
+              onClick={() => setShowPaymentStep(false)}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Voltar para comanda
+            </button>
+          )}
+
+          {/* Show payment button when step is hidden */}
+          {isCompleted && !showPaymentStep && !isRecurring && !isCancelled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => setShowPaymentStep(true)}
+            >
+              💳 Ir para pagamento
+            </Button>
+          )}
+
           {/* Benefit banner */}
-          {!isRecurring && isCompleted && isBenefitBooking && !comandaClosed && (
+          {!isRecurring && isCompleted && showPaymentStep && isBenefitBooking && !comandaClosed && (
             <>
               <Separator />
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
@@ -348,8 +536,8 @@ export function BookingDetailsModal({
             </>
           )}
 
-          {/* Payment section: show for non-benefit OR benefit with unpaid extras */}
-          {!isRecurring && isCompleted && !isCancelled && booking.customer_id &&
+          {/* Payment section */}
+          {!isRecurring && isCompleted && !isCancelled && showPaymentStep && booking.customer_id &&
             (!isBenefitBooking || bookingItems.some(i => i.paid_status === "unpaid")) && (
             <div ref={paymentSectionRef}>
               <Separator />
@@ -367,7 +555,7 @@ export function BookingDetailsModal({
           )}
 
           {/* ═══════════════ SEÇÃO 4: FECHAR COMANDA ═══════════════ */}
-          {!isRecurring && isCompleted && !isCancelled && (
+          {!isRecurring && isCompleted && !isCancelled && showPaymentStep && (
             <div ref={closeSectionRef}>
               <Separator />
               <ComandaCloseSection
@@ -436,21 +624,64 @@ export function BookingDetailsModal({
                 <Edit className="h-4 w-4 mr-1" /> Editar
               </Button>
             )}
-            {booking.status === "confirmed" && onStatusChange && (
+
+            {/* Concluir — unified or single */}
+            {booking.status === "confirmed" && onStatusChange && !unifiedMode && (
               <Button size="sm" variant="outline" onClick={() => { onStatusChange(booking.id, "completed", booking); }}>
                 <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir
               </Button>
             )}
+            {booking.status === "confirmed" && unifiedMode && actionableRelated.length > 0 && onStatusChange && (
+              <Button size="sm" variant="outline" onClick={() => {
+                // Conclude all related confirmed bookings
+                actionableRelated.forEach(rb => {
+                  onStatusChange(rb.id, "completed", rb);
+                });
+              }}>
+                <CheckCircle className="h-4 w-4 mr-1 text-emerald-500" /> Concluir tudo ({actionableRelated.length})
+              </Button>
+            )}
+
             {(booking.status === "confirmed" || booking.status === "completed") && !isNoShow && (
               <Button size="sm" variant="outline" onClick={() => setShowNoShowDialog(true)}>
                 <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" /> Faltou
               </Button>
             )}
-            {!isCancelled && !isNoShow && onStatusChange && (
+            {!isCancelled && !isNoShow && !isCompleted && onStatusChange && (
               <Button size="sm" variant="destructive" onClick={() => { onStatusChange(booking.id, "cancelled", booking); onOpenChange(false); }}>
                 <XCircle className="h-4 w-4 mr-1" /> Cancelar
               </Button>
             )}
+
+            {/* Reabrir — for completed or no_show bookings */}
+            {(isCompleted || isNoShow) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={reopening}>
+                    {reopening ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1" />}
+                    Reabrir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reabrir agendamento?</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-1">
+                      <span>Isso irá:</span>
+                      <ul className="list-disc list-inside text-xs mt-2 space-y-1">
+                        <li>Voltar o status para "Confirmado"</li>
+                        <li>Reverter o pagamento registrado no caixa</li>
+                        <li>Os itens voltarão para "Em aberto"</li>
+                      </ul>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleReopen}>Confirmar reabertura</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+
             {booking.customer?.phone && (
               <Button
                 size="sm"
@@ -478,20 +709,6 @@ export function BookingDetailsModal({
             handleRefresh();
             if (onStatusChange) onStatusChange(booking.id, "no_show", booking);
           }}
-        />
-
-        {/* Unified Comanda Modal */}
-        <UnifiedComandaModal
-          open={showUnifiedModal}
-          onOpenChange={setShowUnifiedModal}
-          customerName={booking.customer?.name || ""}
-          bookings={relatedBookings}
-          onConcluded={() => {
-            handleRefresh();
-            onOpenChange(false);
-            if (onStatusChange) onStatusChange(booking.id, "completed", booking);
-          }}
-          onStatusChange={onStatusChange}
         />
       </DialogContent>
     </Dialog>
