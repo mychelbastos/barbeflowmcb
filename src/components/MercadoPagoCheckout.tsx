@@ -337,7 +337,7 @@ export const MercadoPagoCheckout = ({
 
   // State for payment polling
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingAttemptsRef = useRef(0);
   const MAX_POLLING_ATTEMPTS = 60;
 
