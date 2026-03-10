@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { PackagePurchaseFlow } from "@/components/public/PackagePurchaseFlow";
 import { BenefitBadge } from "@/components/public/BenefitBadge";
 import { OrderBumpSection, type OrderBumpProduct } from "@/components/public/OrderBumpSection";
+import { WhatsAppContactButton } from "@/components/public/WhatsAppContactButton";
 import InstallPWA from "@/components/InstallPWA";
 import { LoyaltyWidget } from "@/components/public/LoyaltyWidget";
 
@@ -1748,9 +1749,20 @@ END:VCALENDAR`;
               ) : allTimeSlots.length === 0 ? (
                 <div className="text-center py-8 text-zinc-500">
                   <Clock className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">{selectedDate ? "Nenhum horário disponível" : "Selecione uma data"}</p>
+                  <p className="text-sm">{selectedDate ? "Nenhum horário disponível neste dia" : "Selecione uma data"}</p>
+                  {selectedDate && tenant?.phone && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-zinc-600 text-xs">Tente outro dia ou fale diretamente com a barbearia</p>
+                      <WhatsAppContactButton
+                        tenantPhone={tenant.phone}
+                        tenantName={tenant.name}
+                        message={`Olá! Gostaria de agendar um horário na ${tenant.name} mas não encontrei disponibilidade. Podem me ajudar?`}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
+                <>
                 <div className="grid grid-cols-4 gap-2">
                   {allTimeSlots.map((slot) => (
                     <button
@@ -1767,6 +1779,17 @@ END:VCALENDAR`;
                     </button>
                   ))}
                 </div>
+                {tenant?.phone && (
+                  <div className="mt-6 pt-4 border-t border-zinc-800 text-center space-y-2">
+                    <p className="text-zinc-600 text-xs">Não encontrou um horário?</p>
+                    <WhatsAppContactButton
+                      tenantPhone={tenant.phone}
+                      tenantName={tenant.name}
+                      message={`Olá! Estou tentando agendar na ${tenant.name} mas não encontrei o horário ideal. Podem me ajudar?`}
+                    />
+                  </div>
+                )}
+                </>
               )}
             </div>
             
@@ -2383,6 +2406,7 @@ END:VCALENDAR`;
           onOpenChange={setShowCustomerBookings}
           tenantId={tenant.id}
           tenantName={tenant.name}
+          tenantPhone={tenant.phone || undefined}
         />
       )}
 
