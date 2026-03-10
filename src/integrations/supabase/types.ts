@@ -3470,6 +3470,7 @@ export type Database = {
         Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
       }
+      get_booking_total: { Args: { p_booking_id: string }; Returns: Json }
       get_customer_stats: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -3593,6 +3594,7 @@ export type Database = {
         }
         Returns: Json
       }
+      reopen_booking: { Args: { p_booking_id: string }; Returns: Json }
       reopen_comanda: {
         Args: { p_booking_id: string; p_tenant_id: string }
         Returns: Json
