@@ -98,10 +98,11 @@ export function UnifiedComandaModal({
 
       if (error) throw error;
 
-      if (data?.success) {
+      const result = data as any;
+      if (result?.success) {
         toast({
-          title: `${data.bookings_concluded} serviço${data.bookings_concluded > 1 ? "s" : ""} concluído${data.bookings_concluded > 1 ? "s" : ""}`,
-          description: formatBRL(data.final_cents),
+          title: `${result.bookings_concluded} serviço${result.bookings_concluded > 1 ? "s" : ""} concluído${result.bookings_concluded > 1 ? "s" : ""}`,
+          description: formatBRL(result.final_cents),
         });
         onConcluded();
         onOpenChange(false);
