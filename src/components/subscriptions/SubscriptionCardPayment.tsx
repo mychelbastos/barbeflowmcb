@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, Check, ChevronLeft, Shield, Lock, CreditCard } from 'lucide-react';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { PaymentErrorAlert, parsePaymentResult, type PaymentError } from '@/components/PaymentErrorAlert';
 
 declare global {
   interface Window {

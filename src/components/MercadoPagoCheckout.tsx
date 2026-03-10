@@ -731,10 +731,13 @@ export const MercadoPagoCheckout = ({
           </div>
         </div>
 
-        {/* Error message */}
-        {errorMessage && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-            <p className="text-sm text-red-400 flex items-center gap-2">
+        {/* Payment error/pending alerts */}
+        <PaymentErrorAlert error={paymentError} pending={paymentPending} />
+
+        {/* Legacy error message (for non-payment errors like turnstile) */}
+        {errorMessage && !paymentError && (
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
+            <p className="text-sm text-destructive flex items-center gap-2">
               <AlertCircle className="h-4 w-4" /> {errorMessage}
             </p>
           </div>
