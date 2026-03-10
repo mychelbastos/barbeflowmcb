@@ -32,6 +32,7 @@ const UF_LIST = [
 export function BillingAddressForm({ value, onChange }: BillingAddressFormProps) {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState(false);
+  const numberInputRef = useRef<HTMLInputElement>(null);
 
   const formatCep = (raw: string): string => {
     const digits = raw.replace(/\D/g, "").slice(0, 8);
