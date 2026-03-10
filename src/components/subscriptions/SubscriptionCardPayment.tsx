@@ -395,6 +395,13 @@ export function SubscriptionCardPayment({
         </div>
       </div>
 
+      {/* Terms & Privacy */}
+      <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground/50">
+        <a href="/legal/termos-de-uso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
+        <span>·</span>
+        <a href="/legal/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+      </div>
+
       {/* Back button */}
       {!hideBack && (
         <button
