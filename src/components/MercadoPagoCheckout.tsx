@@ -486,6 +486,8 @@ export const MercadoPagoCheckout = ({
 
   const retryPayment = () => {
     setErrorMessage('');
+    setPaymentError(null);
+    setPaymentPending(null);
     setPaymentMethod(null);
     setPixData(null);
     setTurnstileToken(null);
@@ -498,6 +500,8 @@ export const MercadoPagoCheckout = ({
   const goBackToMethodSelect = () => {
     setPaymentMethod(null);
     setPixData(null);
+    setPaymentError(null);
+    setPaymentPending(null);
     setTurnstileToken(null);
     setTurnstileKey(k => k + 1);
     setCheckoutStep('address');
