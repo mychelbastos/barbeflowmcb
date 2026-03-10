@@ -467,6 +467,7 @@ export const MercadoPagoCheckout = ({
     setPixData(null);
     setTurnstileToken(null);
     setTurnstileKey(k => k + 1);
+    setCheckoutStep('address');
     if (brickControllerRef.current) { try { brickControllerRef.current.unmount(); } catch (e) {} }
     setStatus('method-select');
   };
