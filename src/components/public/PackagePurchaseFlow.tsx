@@ -132,17 +132,8 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
 
   const handlePurchase = async () => {
     if (submitting) return;
-    if (!name || !phone || !email || !cpf) {
-      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      toast({ title: "E-mail inválido", description: "Verifique o e-mail digitado.", variant: "destructive" });
-      return;
-    }
-    if (!isValidCpf(cpf)) {
-      toast({ title: "CPF inválido", description: "Verifique o CPF digitado.", variant: "destructive" });
+    if (!isBillingAddressComplete(billingAddress)) {
+      toast({ title: "Preencha o endereço completo", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -155,6 +146,12 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
           customer_phone: phone,
           customer_email: email.trim(),
           customer_cpf: cpf.replace(/\D/g, ''),
+          address_cep: billingAddress.zip_code,
+          address_street: billingAddress.street_name,
+          address_number: billingAddress.street_number,
+          address_neighborhood: billingAddress.neighborhood,
+          address_city: billingAddress.city,
+          address_state: billingAddress.federal_unit,
         },
       });
 
