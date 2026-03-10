@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone } from "lucide-react";
+import { Package, Check, Loader2, ChevronLeft, Calendar, User, Search, Phone, MapPin } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
+import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from "@/components/BillingAddressForm";
 
 interface PackagePurchaseFlowProps {
   tenant: any;
