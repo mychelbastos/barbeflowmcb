@@ -479,6 +479,20 @@ export function BookingDetailsModal({
             if (onStatusChange) onStatusChange(booking.id, "no_show", booking);
           }}
         />
+
+        {/* Unified Comanda Modal */}
+        <UnifiedComandaModal
+          open={showUnifiedModal}
+          onOpenChange={setShowUnifiedModal}
+          customerName={booking.customer?.name || ""}
+          bookings={relatedBookings}
+          onConcluded={() => {
+            handleRefresh();
+            onOpenChange(false);
+            if (onStatusChange) onStatusChange(booking.id, "completed", booking);
+          }}
+          onStatusChange={onStatusChange}
+        />
       </DialogContent>
     </Dialog>
   );
