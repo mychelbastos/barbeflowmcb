@@ -69,6 +69,8 @@ export function SubscriptionCardPayment({
   addressNeighborhood,
   addressCity,
   addressState,
+  hideSummary = false,
+  hideBack = false,
   onSuccess,
   onBack,
 }: SubscriptionCardPaymentProps) {
