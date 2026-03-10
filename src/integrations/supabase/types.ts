@@ -3585,6 +3585,35 @@ export type Database = {
         }
         Returns: Json
       }
+      search_customers: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_query?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          birthday: string
+          booking_count: number
+          cpf: string
+          created_at: string
+          email: string
+          gender: string
+          id: string
+          last_booking: string
+          name: string
+          notes: string
+          phone: string
+        }[]
+      }
+      search_customers_quick: {
+        Args: { p_limit?: number; p_query: string; p_tenant_id: string }
+        Returns: {
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       seed_default_expense_categories: {
         Args: { p_tenant_id: string }
         Returns: undefined
@@ -3608,6 +3637,8 @@ export type Database = {
         }
         Returns: Json
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       skip_onboarding: { Args: never; Returns: Json }
       update_onboarding_step: {
         Args: { p_step: string; p_value?: boolean }
