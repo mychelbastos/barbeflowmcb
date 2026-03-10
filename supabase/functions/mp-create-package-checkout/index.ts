@@ -245,6 +245,13 @@ Deno.serve(async (req) => {
           type: 'CPF',
           number: customer_cpf.replace(/\D/g, ''),
         },
+        ...(address_cep ? {
+          address: {
+            zip_code: address_cep.replace(/\D/g, ''),
+            street_name: address_street || '',
+            street_number: parseInt(address_number) || 0,
+          },
+        } : {}),
       },
       back_urls: {
         success: backUrl,
