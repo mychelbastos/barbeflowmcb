@@ -6,6 +6,7 @@ import { formatCep } from '@/components/BillingAddressForm';
 import { toast } from '@/hooks/use-toast';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
 import { BillingAddressForm, isBillingAddressComplete, type BillingAddress } from '@/components/BillingAddressForm';
+import { PaymentErrorAlert, parsePaymentResult, type PaymentError, type PaymentPending } from '@/components/PaymentErrorAlert';
 
 interface PayerInfo {
   email: string;
