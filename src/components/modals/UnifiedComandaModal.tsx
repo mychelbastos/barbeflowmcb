@@ -242,7 +242,7 @@ export function UnifiedComandaModal({
                   <div className="w-32">
                     <CurrencyInput
                       value={discountInput}
-                      onValueChange={setDiscountInput}
+                      onChange={setDiscountInput}
                       placeholder="R$ 0,00"
                       className="h-8 text-right text-sm"
                     />
