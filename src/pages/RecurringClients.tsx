@@ -200,7 +200,7 @@ export default function RecurringClients() {
     if (!currentTenant) return;
     try {
       setLoading(true);
-      const [recRes, staffRes, svcRes, custRes, pkgRes, subRes] = await Promise.all([
+      const [recRes, staffRes, svcRes, pkgRes, subRes] = await Promise.all([
         supabase
           .from("recurring_clients")
           .select("*, customer:customers(name, phone)")
@@ -219,29 +219,6 @@ export default function RecurringClients() {
           .eq("tenant_id", currentTenant.id)
           .eq("active", true)
           .order("name"),
-        (async () => {
-          const all: Customer[] = [];
-          let offset = 0;
-          const batchSize = 1000;
-          let hasMore = true;
-          while (hasMore) {
-            const { data, error } = await supabase
-              .from("customers")
-              .select("id, name, phone")
-              .eq("tenant_id", currentTenant.id)
-              .order("name")
-              .range(offset, offset + batchSize - 1);
-            if (error) throw error;
-            if (data && data.length > 0) {
-              all.push(...data);
-              offset += batchSize;
-              hasMore = data.length === batchSize;
-            } else {
-              hasMore = false;
-            }
-          }
-          return { data: all, error: null };
-        })(),
         supabase
           .from("customer_packages")
           .select("customer_id")
@@ -256,7 +233,6 @@ export default function RecurringClients() {
       if (recRes.error) throw recRes.error;
       if (staffRes.error) throw staffRes.error;
       if (svcRes.error) throw svcRes.error;
-      if (custRes.error) throw custRes.error;
 
       const packageCustomerIds = new Set((pkgRes.data || []).map((r: any) => r.customer_id));
       const subscriptionCustomerIds = new Set((subRes.data || []).map((r: any) => r.customer_id));
