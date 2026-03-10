@@ -27,6 +27,13 @@ Deno.serve(async (req) => {
       customer_phone,
       customer_email,
       customer_cpf,
+      address_cep,
+      address_street,
+      address_number,
+      address_complement,
+      address_neighborhood,
+      address_city,
+      address_state,
     } = await req.json();
 
     if (!tenant_id || !package_id || !customer_name || !customer_phone || !customer_email || !customer_cpf) {
