@@ -3421,6 +3421,15 @@ export type Database = {
         }
         Returns: Json
       }
+      conclude_unified_bookings: {
+        Args: {
+          p_booking_ids: string[]
+          p_discount_cents?: number
+          p_notes?: string
+          p_payment_method: string
+        }
+        Returns: Json
+      }
       create_booking_if_available:
         | {
             Args: {
@@ -3496,6 +3505,20 @@ export type Database = {
           pix_ticket_url: string
           refund_cents: number
           refund_status: string
+          status: string
+        }[]
+      }
+      get_related_bookings: {
+        Args: { p_booking_id: string }
+        Returns: {
+          ends_at: string
+          id: string
+          items: Json
+          service_name: string
+          service_price_cents: number
+          staff_id: string
+          staff_name: string
+          starts_at: string
           status: string
         }[]
       }
