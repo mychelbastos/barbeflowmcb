@@ -202,7 +202,12 @@ export function SubscriptionCardPayment({
           onError: (error: any) => {
             if (!isMountedRef.current) return;
             console.error('CardPayment Brick error:', error);
-            setErrorMessage('Erro no formulário de pagamento');
+            const msg = error?.message || error?.cause?.[0]?.description || 'Erro ao processar cartão.';
+            setPaymentError({
+              message: msg,
+              action: 'Verifique os dados do cartão e tente novamente.',
+              severity: 'retry',
+            });
           },
         },
       });
