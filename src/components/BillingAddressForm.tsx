@@ -62,6 +62,7 @@ export function BillingAddressForm({ value, onChange }: BillingAddressFormProps)
           city: data.localidade || "",
           federal_unit: data.uf || "",
         });
+        setTimeout(() => numberInputRef.current?.focus(), 100);
       }
     } catch {
       setCepError(true);
