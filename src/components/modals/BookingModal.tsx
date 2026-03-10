@@ -467,7 +467,7 @@ export function BookingModal() {
   };
 
   // Customer search with debounce
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const searchCustomers = useCallback((name: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (!name || name.length < 2 || !currentTenant) {

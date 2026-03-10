@@ -20,9 +20,15 @@ serve(async (req) => {
   }
 
   try {
-    const { tenant_id, plan_id, customer_name, customer_phone, customer_email, card_token_id, customer_cpf } = await req.json();
+    const {
+      tenant_id, plan_id, customer_name, customer_phone, customer_email,
+      card_token_id, customer_cpf, cf_turnstile_token,
+      // Address fields
+      address_cep, address_street, address_number,
+      address_complement, address_neighborhood, address_city, address_state,
+    } = await req.json();
 
-    // Validação campo a campo
+    // Validate required fields
     const missingFields = [];
     if (!tenant_id) missingFields.push('tenant_id');
     if (!plan_id) missingFields.push('plan_id');
@@ -43,12 +49,28 @@ serve(async (req) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(customer_email)) {
-      console.error('Invalid email format:', customer_email);
-      return new Response(JSON.stringify({ 
-        error: 'E-mail inválido. Verifique e tente novamente.' 
-      }), {
+      return new Response(JSON.stringify({ error: 'E-mail inválido.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Validate Turnstile if card payment
+    if (card_token_id && cf_turnstile_token) {
+      const turnstileSecret = Deno.env.get('CLOUDFLARE_TURNSTILE_SECRET');
+      if (turnstileSecret) {
+        const tsRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `secret=${turnstileSecret}&response=${cf_turnstile_token}`,
+        });
+        const tsData = await tsRes.json();
+        if (!tsData.success) {
+          console.error('Turnstile verification failed:', tsData);
+          return new Response(JSON.stringify({ error: 'Verificação de segurança falhou. Tente novamente.' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -57,7 +79,6 @@ serve(async (req) => {
 
     // --- Find or create customer ---
     const canonical = canonicalPhone(customer_phone);
-
     const { data: existingCustomers } = await supabase
       .from('customers')
       .select('id, phone')
@@ -66,17 +87,31 @@ serve(async (req) => {
     let customerId: string;
     const matched = (existingCustomers || []).find((c: any) => canonicalPhone(c.phone) === canonical);
 
+    // Build customer update/insert data with CPF and address
+    const customerData: any = {
+      name: customer_name.trim(),
+      email: customer_email,
+    };
+    if (customer_cpf) {
+      const cpfDigits = customer_cpf.replace(/\D/g, '');
+      if (cpfDigits.length === 11) customerData.cpf = cpfDigits;
+    }
+    if (address_cep) customerData.address_cep = address_cep.replace(/\D/g, '');
+    if (address_street) customerData.address_street = address_street;
+    if (address_number) customerData.address_number = address_number;
+    if (address_complement !== undefined) customerData.address_complement = address_complement || null;
+    if (address_neighborhood) customerData.address_neighborhood = address_neighborhood;
+    if (address_city) customerData.address_city = address_city;
+    if (address_state) customerData.address_state = address_state;
+
     if (matched) {
       customerId = matched.id;
-      await supabase.from('customers').update({
-        name: customer_name.trim(),
-        email: customer_email,
-      }).eq('id', customerId);
+      await supabase.from('customers').update(customerData).eq('id', customerId);
       console.log('Matched existing customer:', customerId);
     } else {
       const { data: newCust, error: custErr } = await supabase
         .from('customers')
-        .insert({ tenant_id, name: customer_name.trim(), phone: canonical, email: customer_email })
+        .insert({ tenant_id, phone: canonical, ...customerData })
         .select('id')
         .single();
       if (custErr) {
@@ -89,7 +124,7 @@ serve(async (req) => {
       console.log('Created new customer:', customerId);
     }
 
-    // --- Fetch plan with services and tenant ---
+    // --- Fetch plan with tenant ---
     const { data: plan, error: planErr } = await supabase
       .from('subscription_plans')
       .select('*, tenant:tenants(name, slug)')
@@ -98,7 +133,6 @@ serve(async (req) => {
       .single();
 
     if (planErr || !plan) {
-      console.error('Plan not found:', planErr);
       return new Response(JSON.stringify({ error: 'Plan not found' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -107,12 +141,7 @@ serve(async (req) => {
     // --- Create pending subscription ---
     const { data: subscription, error: subErr } = await supabase
       .from('customer_subscriptions')
-      .insert({
-        customer_id: customerId,
-        plan_id,
-        tenant_id,
-        status: 'pending',
-      })
+      .insert({ customer_id: customerId, plan_id, tenant_id, status: 'pending' })
       .select()
       .single();
 
@@ -125,27 +154,18 @@ serve(async (req) => {
 
     console.log('Created pending subscription:', subscription.id);
 
-    // --- Get valid MP token (auto-refreshes if needed) ---
-    console.log('Getting valid MP token for tenant:', tenant_id);
+    // --- Get valid MP token ---
     const mpToken = await getValidMpToken(supabase, tenant_id);
-
     if (!mpToken) {
-      console.error('MP connection not found or token invalid for tenant:', tenant_id);
-      return new Response(JSON.stringify({ 
-        error: 'Mercado Pago não está conectado ou token expirado. Reconecte nas configurações.' 
-      }), {
+      return new Response(JSON.stringify({ error: 'Mercado Pago não está conectado ou token expirado.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     let frontBaseUrl = Deno.env.get('FRONT_BASE_URL') || 'https://www.modogestor.com.br';
-    if (!frontBaseUrl.startsWith('http')) {
-      frontBaseUrl = `https://${frontBaseUrl}`;
-    }
+    if (!frontBaseUrl.startsWith('http')) frontBaseUrl = `https://${frontBaseUrl}`;
     const tenantSlug = plan.tenant?.slug || '';
-
     const backUrl = `${frontBaseUrl.replace(/\/+$/, '')}/${tenantSlug}/subscription/callback`;
-
     const webhookUrl = Deno.env.get('MP_WEBHOOK_URL');
 
     const customerFirstName = customer_name.trim().split(' ')[0] || 'Cliente';
@@ -168,11 +188,11 @@ serve(async (req) => {
       notification_url: webhookUrl || undefined,
     };
 
-    // Add payer identification (CPF) if provided
+    // Build payer object with CPF and address
     if (customer_cpf) {
       const cpfDigits = customer_cpf.replace(/\D/g, '');
       if (cpfDigits.length === 11) {
-        mpBody.payer = {
+        const payerObj: any = {
           email: customer_email,
           first_name: customerFirstName,
           last_name: customerLastName,
@@ -180,15 +200,21 @@ serve(async (req) => {
             area_code: payerPhone.slice(2, 4),
             number: payerPhone.slice(4),
           },
-          identification: {
-            type: "CPF",
-            number: cpfDigits,
-          },
+          identification: { type: "CPF", number: cpfDigits },
         };
+        // Include address for AVS
+        if (address_cep) {
+          payerObj.address = {
+            zip_code: address_cep.replace(/\D/g, ''),
+            street_name: address_street || '',
+            street_number: parseInt(address_number) || 0,
+          };
+        }
+        mpBody.payer = payerObj;
       }
     }
 
-    // If card_token_id is provided, authorize immediately (in-site payment)
+    // Card token for in-site payment
     if (card_token_id) {
       mpBody.card_token_id = card_token_id;
       mpBody.status = "authorized";
@@ -197,7 +223,7 @@ serve(async (req) => {
       mpBody.status = "pending";
     }
 
-    console.log('Creating MP preapproval:', JSON.stringify(mpBody));
+    console.log('Creating MP preapproval');
 
     const createPreapproval = async (attempt = 1): Promise<Response> => {
       try {
@@ -213,12 +239,10 @@ serve(async (req) => {
           body: JSON.stringify(mpBody),
           signal: AbortSignal.timeout(90000),
         });
-
         if (response.status >= 500 && attempt < 3) {
           await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
           return createPreapproval(attempt + 1);
         }
-
         return response;
       } catch (fetchError) {
         if (attempt < 3) {
@@ -230,36 +254,27 @@ serve(async (req) => {
     };
 
     const mpResponse = await createPreapproval();
-
     const contentType = mpResponse.headers.get('content-type') || '';
     let mpData: any = null;
 
     if (contentType.includes('application/json')) {
-      try {
-        mpData = await mpResponse.json();
-      } catch (parseErr) {
+      try { mpData = await mpResponse.json(); } catch (parseErr) {
         console.error('MP returned malformed JSON:', parseErr);
-        return new Response(JSON.stringify({
-          error: 'Resposta inválida do Mercado Pago. Tente novamente.'
-        }), {
+        return new Response(JSON.stringify({ error: 'Resposta inválida do Mercado Pago.' }), {
           status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     } else {
       const rawText = await mpResponse.text();
-      console.error('MP returned non-JSON response:', rawText?.slice(0, 500));
-      return new Response(JSON.stringify({
-        error: 'Mercado Pago indisponível no momento. Tente novamente em instantes.'
-      }), {
+      console.error('MP returned non-JSON:', rawText?.slice(0, 500));
+      return new Response(JSON.stringify({ error: 'Mercado Pago indisponível.' }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (mpResponse.status === 401) {
-      console.error('MP returned 401 - token expired or invalid:', JSON.stringify(mpData));
-      return new Response(JSON.stringify({ 
-        error: 'Token do Mercado Pago expirado. Reconecte nas configurações.' 
-      }), {
+      console.error('MP 401:', JSON.stringify(mpData));
+      return new Response(JSON.stringify({ error: 'Token do Mercado Pago expirado.' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -267,32 +282,22 @@ serve(async (req) => {
     if (!mpResponse.ok) {
       console.error('MP preapproval error:', JSON.stringify(mpData));
       const causeMessage = Array.isArray(mpData?.cause) && mpData.cause[0]?.description
-        ? String(mpData.cause[0].description)
-        : undefined;
+        ? String(mpData.cause[0].description) : undefined;
       const fallbackMessage = mpData?.message || mpData?.error || 'Falha ao criar assinatura no Mercado Pago';
-
-      return new Response(JSON.stringify({
-        error: causeMessage || fallbackMessage,
-        details: mpData,
-      }), {
+      return new Response(JSON.stringify({ error: causeMessage || fallbackMessage, details: mpData }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     console.log('MP preapproval created:', mpData.id, 'status:', mpData.status);
 
-    // Update subscription with MP data
-    const updateData: any = {
-      mp_preapproval_id: mpData.id,
-      updated_at: new Date().toISOString(),
-    };
+    // Update subscription
+    const updateData: any = { mp_preapproval_id: mpData.id, updated_at: new Date().toISOString() };
 
-    // If authorized via card token, mark as active immediately
     if (card_token_id && mpData.status === 'authorized') {
       const now = new Date();
       const periodEnd = new Date(now);
       periodEnd.setMonth(periodEnd.getMonth() + 1);
-
       updateData.status = 'active';
       updateData.started_at = now.toISOString();
       updateData.current_period_start = now.toISOString();
@@ -303,26 +308,21 @@ serve(async (req) => {
       updateData.checkout_url = mpData.init_point;
     }
 
-    await supabase
-      .from('customer_subscriptions')
-      .update(updateData)
-      .eq('id', subscription.id);
+    await supabase.from('customer_subscriptions').update(updateData).eq('id', subscription.id);
 
-    // Initialize usage for inline card activation (Etapa 3)
+    // Initialize usage for inline card activation
     if (card_token_id && mpData.status === 'authorized') {
       try {
         const { data: planServices } = await supabase
           .from('subscription_plan_services')
           .select('service_id, sessions_per_cycle')
           .eq('plan_id', plan_id);
-
         if (planServices?.length) {
           const now = new Date();
           const periodEnd = new Date(now);
           periodEnd.setMonth(periodEnd.getMonth() + 1);
           const periodStartStr = now.toISOString().split('T')[0];
           const periodEndStr = periodEnd.toISOString().split('T')[0];
-
           for (const ps of planServices) {
             await supabase.from('subscription_usage').upsert({
               subscription_id: subscription.id,
@@ -332,18 +332,15 @@ serve(async (req) => {
               sessions_used: 0,
               sessions_limit: ps.sessions_per_cycle,
               booking_ids: [],
-            }, {
-              onConflict: 'subscription_id,service_id,period_start',
-            });
+            }, { onConflict: 'subscription_id,service_id,period_start' });
           }
-          console.log('Usage records initialized for inline card activation');
         }
       } catch (usageErr) {
-        console.error('Error initializing usage for card activation:', usageErr);
+        console.error('Error initializing usage:', usageErr);
       }
     }
 
-    // Send WhatsApp notification if subscription was activated
+    // WhatsApp notification for activated subscription
     if (card_token_id && mpData.status === 'authorized') {
       try {
         const { data: whatsappConn } = await supabase
@@ -357,46 +354,30 @@ serve(async (req) => {
           const validityEnd = new Date();
           validityEnd.setDate(validityEnd.getDate() + 30);
           const formattedEnd = validityEnd.toLocaleDateString('pt-BR', {
-            timeZone: 'America/Sao_Paulo',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
+            timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric',
           });
           const formattedPrice = `R$ ${(plan.price_cents / 100).toFixed(2)}`;
-
           const message = `✅ *Assinatura Ativada!*\n\nOlá ${customer_name}!\n\nSua assinatura foi ativada com sucesso.\n\n📋 *Plano:* ${plan.name}\n💰 *Valor:* ${formattedPrice}/mês\n📅 *Válida até:* ${formattedEnd}\n\nSua assinatura será renovada automaticamente a cada 30 dias.\n\n${plan.tenant?.name || 'modoGESTOR'} agradece! 🙏`;
-
           let phone = canonical;
           if (!phone.startsWith('55')) phone = '55' + phone;
-
           const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL');
           if (n8nWebhookUrl) {
-            const n8nPayload = {
-              type: 'subscription_activated',
-              phone,
-              message,
-              evolution_instance: whatsappConn.evolution_instance_name,
-              tenant_id,
-              tenant_slug: tenantSlug,
-              customer: { name: customer_name, phone: customer_phone },
-              tenant: { name: plan.tenant?.name || 'modoGESTOR', slug: tenantSlug },
-            };
-
             const n8nResp = await fetch(n8nWebhookUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(n8nPayload),
+              body: JSON.stringify({
+                type: 'subscription_activated', phone, message,
+                evolution_instance: whatsappConn.evolution_instance_name,
+                tenant_id, tenant_slug: tenantSlug,
+                customer: { name: customer_name, phone: customer_phone },
+                tenant: { name: plan.tenant?.name || 'modoGESTOR', slug: tenantSlug },
+              }),
             });
-            console.log('WhatsApp subscription notification sent, status:', n8nResp.status);
-          } else {
-            console.log('N8N_WEBHOOK_URL not configured, skipping WhatsApp notification');
+            console.log('WhatsApp notification sent, status:', n8nResp.status);
           }
-        } else {
-          console.log('No WhatsApp connection for tenant, skipping notification');
         }
       } catch (notifErr) {
-        console.error('Error sending subscription WhatsApp notification:', notifErr);
-        // Don't fail the subscription creation if notification fails
+        console.error('Error sending WhatsApp notification:', notifErr);
       }
     }
 
@@ -406,6 +387,7 @@ serve(async (req) => {
       mp_preapproval_id: mpData.id,
       status: mpData.status,
       activated: card_token_id && mpData.status === 'authorized',
+      customer_subscription_id: subscription.id,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

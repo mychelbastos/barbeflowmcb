@@ -34,7 +34,6 @@ interface MercadoPagoCheckoutProps {
 
 const getFunctionErrorMessage = (error: any): string => {
   if (!error) return 'Erro ao processar pagamento';
-
   const context = error.context;
   if (typeof context === 'string' && context.trim()) {
     try {
@@ -46,7 +45,6 @@ const getFunctionErrorMessage = (error: any): string => {
       return context;
     }
   }
-
   return error.message || 'Erro ao processar pagamento';
 };
 
@@ -82,6 +80,7 @@ export const MercadoPagoCheckout = ({
   const [copied, setCopied] = useState(false);
   const [useCheckoutRedirect, setUseCheckoutRedirect] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [billingAddress, setBillingAddress] = useState<BillingAddress>({
     zip_code: '', street_name: '', street_number: '',
@@ -91,19 +90,20 @@ export const MercadoPagoCheckout = ({
   const publicKeyRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Ref to always have latest turnstile token in Brick callback
+  const turnstileTokenRef = useRef<string | null>(null);
+  turnstileTokenRef.current = turnstileToken;
+  // Ref for billing address in Brick callback
+  const billingAddressRef = useRef<BillingAddress>(billingAddress);
+  billingAddressRef.current = billingAddress;
 
   useEffect(() => {
     isMountedRef.current = true;
     loadPublicKey();
-
     return () => {
       isMountedRef.current = false;
       if (brickControllerRef.current) {
-        try {
-          brickControllerRef.current.unmount();
-        } catch (e) {
-          console.log('Cleanup error:', e);
-        }
+        try { brickControllerRef.current.unmount(); } catch (e) {}
         brickControllerRef.current = null;
       }
     };
@@ -112,53 +112,36 @@ export const MercadoPagoCheckout = ({
   const loadPublicKey = async () => {
     if (!isMountedRef.current) return;
     setStatus('loading');
-
     try {
-      // Load SDK script if not already loaded
       if (!window.MercadoPago) {
         await loadScript('https://sdk.mercadopago.com/js/v2');
       }
-
       if (!isMountedRef.current) return;
-
-      // Get public key from backend
       const { data: keyData, error: keyError } = await supabase.functions.invoke('mp-get-public-key', {
         body: { slug: tenantSlug },
       });
-
       if (!isMountedRef.current) return;
-
-      // Check if we have public_key - if not, use checkout redirect as fallback
       if (keyError || !keyData?.public_key) {
-        // For package payments without booking, no redirect fallback
         if (!bookingId) {
           setErrorMessage('Erro ao carregar pagamento. Verifique se o Mercado Pago está conectado.');
           setStatus('error');
           return;
         }
-
         console.log('No public_key available, using checkout redirect fallback');
         setUseCheckoutRedirect(true);
-        
-        // Create checkout redirect URL
         const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('mp-create-checkout', {
           body: { booking_id: bookingId },
         });
-
         if (!isMountedRef.current) return;
-
         if (checkoutError || !checkoutData?.checkout_url) {
           throw new Error(checkoutData?.error || 'Erro ao criar checkout do Mercado Pago');
         }
-
         setCheckoutUrl(checkoutData.checkout_url);
         setStatus('method-select');
         return;
       }
-
       publicKeyRef.current = keyData.public_key;
       setStatus('method-select');
-
     } catch (error: any) {
       if (!isMountedRef.current) return;
       console.error('Error loading MP SDK:', error);
@@ -169,10 +152,7 @@ export const MercadoPagoCheckout = ({
 
   const loadScript = (src: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
+      if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
       const script = document.createElement('script');
       script.src = src;
       script.onload = () => resolve();
@@ -183,15 +163,10 @@ export const MercadoPagoCheckout = ({
 
   const handleSelectPaymentMethod = async (method: PaymentMethod) => {
     setPaymentMethod(method);
-
     if (method === 'card') {
-      // First set status to card-form to render the container
       setStatus('card-form');
-      // Wait for DOM to render the container, then initialize the brick
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          initializeCardBrick();
-        }, 50);
+        setTimeout(() => initializeCardBrick(), 50);
       });
     } else if (method === 'pix') {
       await processPixPayment();
@@ -200,8 +175,6 @@ export const MercadoPagoCheckout = ({
 
   const initializeCardBrick = useCallback(async () => {
     if (!isMountedRef.current) return;
-
-    // Check if container exists (should exist since status is 'card-form')
     const container = document.getElementById('cardPaymentBrick_container');
     if (!container) {
       console.error('Card payment container not found');
@@ -209,16 +182,10 @@ export const MercadoPagoCheckout = ({
       setStatus('error');
       return;
     }
-
     try {
-      const mp = new window.MercadoPago(publicKeyRef.current, {
-        locale: 'pt-BR',
-      });
-
+      const mp = new window.MercadoPago(publicKeyRef.current, { locale: 'pt-BR' });
       const bricksBuilder = mp.bricks();
-
       if (!isMountedRef.current) return;
-
       brickControllerRef.current = await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', {
         initialization: {
           amount: amount,
@@ -230,10 +197,7 @@ export const MercadoPagoCheckout = ({
           },
         },
         customization: {
-          paymentMethods: {
-            minInstallments: 1,
-            maxInstallments: 1, // Only à vista
-          },
+          paymentMethods: { minInstallments: 1, maxInstallments: 1 },
           visual: {
             style: {
               theme: 'dark',
@@ -264,7 +228,20 @@ export const MercadoPagoCheckout = ({
           onSubmit: async (formData: any) => {
             if (!isMountedRef.current) return;
             console.log('Payment form submitted:', formData);
-            await handleCardPaymentSubmit(formData);
+            // Use refs to get latest values (avoids stale closure)
+            const currentToken = turnstileTokenRef.current;
+            const currentAddress = billingAddressRef.current;
+            
+            if (!currentToken) {
+              setErrorMessage('Aguarde a verificação de segurança antes de pagar.');
+              setTurnstileKey(k => k + 1);
+              return;
+            }
+            if (!isBillingAddressComplete(currentAddress)) {
+              setErrorMessage('Preencha o endereço de cobrança completo.');
+              return;
+            }
+            await handleCardPaymentSubmitWithRefs(formData, currentToken, currentAddress);
           },
           onError: (error: any) => {
             if (!isMountedRef.current) return;
@@ -273,7 +250,6 @@ export const MercadoPagoCheckout = ({
           },
         },
       });
-
     } catch (error: any) {
       if (!isMountedRef.current) return;
       console.error('Error initializing card brick:', error);
@@ -282,22 +258,10 @@ export const MercadoPagoCheckout = ({
     }
   }, [amount, payer.email]);
 
-  const handleCardPaymentSubmit = async (formData: any) => {
+  const handleCardPaymentSubmitWithRefs = async (formData: any, token: string, address: BillingAddress) => {
     if (!isMountedRef.current) return;
-
-    if (!turnstileToken) {
-      setErrorMessage('Aguarde a verificação de segurança antes de pagar.');
-      return;
-    }
-
-    if (!isBillingAddressComplete(billingAddress)) {
-      setErrorMessage('Preencha o endereço de cobrança completo.');
-      return;
-    }
-
     setStatus('processing');
     setErrorMessage('');
-
     try {
       const { data, error } = await supabase.functions.invoke(
         isPackagePayment ? 'mp-process-package-payment' : 'mp-process-payment',
@@ -309,14 +273,14 @@ export const MercadoPagoCheckout = ({
                 token: formData.token,
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
-                cf_turnstile_token: turnstileToken,
+                cf_turnstile_token: token,
                 billing_address: {
-                  zip_code: billingAddress.zip_code,
-                  street_name: billingAddress.street_name,
-                  street_number: billingAddress.street_number,
-                  neighborhood: billingAddress.neighborhood,
-                  city: billingAddress.city,
-                  federal_unit: billingAddress.federal_unit,
+                  zip_code: address.zip_code,
+                  street_name: address.street_name,
+                  street_number: address.street_number,
+                  neighborhood: address.neighborhood,
+                  city: address.city,
+                  federal_unit: address.federal_unit,
                 },
                 payer: {
                   email: formData.payer?.email || payer.email,
@@ -329,14 +293,14 @@ export const MercadoPagoCheckout = ({
                 token: formData.token,
                 payment_method_id: formData.payment_method_id,
                 payment_type: 'card',
-                cf_turnstile_token: turnstileToken,
+                cf_turnstile_token: token,
                 billing_address: {
-                  zip_code: billingAddress.zip_code,
-                  street_name: billingAddress.street_name,
-                  street_number: billingAddress.street_number,
-                  neighborhood: billingAddress.neighborhood,
-                  city: billingAddress.city,
-                  federal_unit: billingAddress.federal_unit,
+                  zip_code: address.zip_code,
+                  street_name: address.street_name,
+                  street_number: address.street_number,
+                  neighborhood: address.neighborhood,
+                  city: address.city,
+                  federal_unit: address.federal_unit,
                 },
                 payer: {
                   email: formData.payer?.email || payer.email,
@@ -348,12 +312,9 @@ export const MercadoPagoCheckout = ({
               },
         }
       );
-
       if (!isMountedRef.current) return;
       if (error) throw new Error(getFunctionErrorMessage(error));
-
       console.log('Payment result:', data);
-
       if (data.status === 'approved') {
         setStatus('success');
         onSuccess(data);
@@ -363,11 +324,11 @@ export const MercadoPagoCheckout = ({
       } else {
         throw new Error(getStatusMessage(data.status, data.status_detail));
       }
-
     } catch (error: any) {
       if (!isMountedRef.current) return;
       console.error('Payment error:', error);
       setTurnstileToken(null);
+      setTurnstileKey(k => k + 1);
       setErrorMessage(error.message || 'Erro ao processar pagamento');
       setStatus('error');
       onError(error.message);
@@ -376,79 +337,44 @@ export const MercadoPagoCheckout = ({
 
   // State for payment polling
   const [paymentId, setPaymentId] = useState<string | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingAttemptsRef = useRef(0);
-  const MAX_POLLING_ATTEMPTS = 60; // 60 × 3s = 3 min
+  const MAX_POLLING_ATTEMPTS = 60;
 
-  // Poll for PIX payment status
   const pollPaymentStatus = useCallback(async (paymentIdToCheck: string) => {
     if (!isMountedRef.current) return;
-    
     pollingAttemptsRef.current += 1;
-    
-    // Timeout after max attempts
     if (pollingAttemptsRef.current > MAX_POLLING_ATTEMPTS) {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      if (pollingIntervalRef.current) { clearInterval(pollingIntervalRef.current); pollingIntervalRef.current = null; }
       setErrorMessage('Tempo esgotado aguardando confirmação do pagamento. Verifique seu app do banco.');
       setStatus('error');
       return;
     }
-    
     try {
-      const { data: rpcData, error } = await supabase
-        .rpc('get_payment_status', { p_payment_id: paymentIdToCheck });
-      
-      if (error) {
-        console.error('Error polling payment status:', error);
-        return;
-      }
-      
-      // Record not yet created, continue polling silently
+      const { data: rpcData, error } = await supabase.rpc('get_payment_status', { p_payment_id: paymentIdToCheck });
+      if (error) { console.error('Error polling payment status:', error); return; }
       if (!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) return;
       const payment = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-      
       if (payment.status === 'paid') {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
+        if (pollingIntervalRef.current) { clearInterval(pollingIntervalRef.current); pollingIntervalRef.current = null; }
         setStatus('success');
         onSuccess({ status: 'approved', payment_id: paymentIdToCheck });
       } else if (payment.status === 'failed' || payment.status === 'cancelled') {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
+        if (pollingIntervalRef.current) { clearInterval(pollingIntervalRef.current); pollingIntervalRef.current = null; }
         setErrorMessage('Pagamento não foi aprovado');
         setStatus('error');
       }
-    } catch (err) {
-      console.error('Polling error:', err);
-    }
+    } catch (err) { console.error('Polling error:', err); }
   }, [onSuccess]);
 
-  // Start polling when PIX is generated
   useEffect(() => {
     if (status === 'pix-waiting' && paymentId) {
       pollingAttemptsRef.current = 0;
-      
-      // Poll every 3 seconds
-      pollingIntervalRef.current = setInterval(() => {
-        pollPaymentStatus(paymentId);
-      }, 3000);
-      
-      // Also poll immediately
+      pollingIntervalRef.current = setInterval(() => { pollPaymentStatus(paymentId); }, 3000);
       pollPaymentStatus(paymentId);
     }
-    
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      if (pollingIntervalRef.current) { clearInterval(pollingIntervalRef.current); pollingIntervalRef.current = null; }
     };
   }, [status, paymentId, pollPaymentStatus]);
 
@@ -456,7 +382,6 @@ export const MercadoPagoCheckout = ({
     if (!isMountedRef.current) return;
     setStatus('processing');
     setErrorMessage('');
-
     try {
       const { data, error } = await supabase.functions.invoke(
         isPackagePayment ? 'mp-process-package-payment' : 'mp-process-payment',
@@ -466,40 +391,25 @@ export const MercadoPagoCheckout = ({
                 customer_package_id: customerPackageId,
                 payment_id: externalPaymentId,
                 payment_type: 'pix',
-                payer: {
-                  email: payer.email,
-                  identification: payer.identification,
-                },
+                payer: { email: payer.email, identification: payer.identification },
                 device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
               }
             : {
                 booking_id: bookingId,
                 payment_type: 'pix',
-                payer: {
-                  email: payer.email,
-                  identification: payer.identification,
-                },
+                payer: { email: payer.email, identification: payer.identification },
                 customer_package_id: customerPackageId || undefined,
                 package_amount_cents: packageAmountCents || undefined,
                 device_id: (window as any).MP_DEVICE_SESSION_ID || undefined,
               },
         }
       );
-
       if (!isMountedRef.current) return;
       if (error) throw new Error(getFunctionErrorMessage(error));
-
       console.log('PIX result:', data);
-
       if (data.pix) {
         setPixData(data.pix);
-        if (data.reused) {
-          console.log('PIX reutilizado (QR code existente)');
-        }
-        // Store the payment_id for polling
-        if (data.payment_id) {
-          setPaymentId(data.payment_id);
-        }
+        if (data.payment_id) setPaymentId(data.payment_id);
         setStatus('pix-waiting');
       } else if (data.status === 'approved') {
         setStatus('success');
@@ -507,7 +417,6 @@ export const MercadoPagoCheckout = ({
       } else {
         throw new Error('Não foi possível gerar o QR Code PIX');
       }
-
     } catch (error: any) {
       if (!isMountedRef.current) return;
       console.error('PIX error:', error);
@@ -547,7 +456,6 @@ export const MercadoPagoCheckout = ({
       cc_rejected_max_attempts: 'Limite de tentativas excedido',
       rejected: 'Pagamento rejeitado',
     };
-
     return messages[statusDetail || ''] || messages[status] || 'Pagamento não aprovado';
   };
 
@@ -556,11 +464,8 @@ export const MercadoPagoCheckout = ({
     setPaymentMethod(null);
     setPixData(null);
     setTurnstileToken(null);
-    if (brickControllerRef.current) {
-      try {
-        brickControllerRef.current.unmount();
-      } catch (e) {}
-    }
+    setTurnstileKey(k => k + 1);
+    if (brickControllerRef.current) { try { brickControllerRef.current.unmount(); } catch (e) {} }
     setStatus('method-select');
   };
 
@@ -568,11 +473,8 @@ export const MercadoPagoCheckout = ({
     setPaymentMethod(null);
     setPixData(null);
     setTurnstileToken(null);
-    if (brickControllerRef.current) {
-      try {
-        brickControllerRef.current.unmount();
-      } catch (e) {}
-    }
+    setTurnstileKey(k => k + 1);
+    if (brickControllerRef.current) { try { brickControllerRef.current.unmount(); } catch (e) {} }
     setStatus('method-select');
   };
 
@@ -614,7 +516,7 @@ export const MercadoPagoCheckout = ({
     );
   }
 
-  // Error state with retry
+  // Error state
   if (status === 'error') {
     return (
       <div className="text-center py-8">
@@ -623,67 +525,39 @@ export const MercadoPagoCheckout = ({
         </div>
         <h3 className="text-lg font-semibold mb-2">Erro no pagamento</h3>
         <p className="text-muted-foreground text-sm mb-4">{errorMessage}</p>
-        <Button onClick={retryPayment} variant="outline">
-          Tentar novamente
-        </Button>
+        <Button onClick={retryPayment} variant="outline">Tentar novamente</Button>
       </div>
     );
   }
 
   // Payment method selection
   if (status === 'method-select') {
-    // If using checkout redirect (no public_key), show redirect button
     if (useCheckoutRedirect && checkoutUrl) {
       return (
         <div className="space-y-4">
-          {/* Payment info */}
           <div className="flex items-center justify-between p-3 bg-secondary/50 border border-border rounded-xl">
             <span className="text-sm text-muted-foreground">{serviceName}</span>
-            <span className="font-semibold text-primary">
-              R$ {amount.toFixed(2)}
-            </span>
+            <span className="font-semibold text-primary">R$ {amount.toFixed(2)}</span>
           </div>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Você será redirecionado para concluir o pagamento.
-          </p>
-
-          <Button 
-            onClick={() => window.location.href = checkoutUrl}
-            className="w-full gap-2"
-            size="lg"
-          >
-            <CreditCard className="h-5 w-5" />
-            Pagar agora
+          <p className="text-center text-sm text-muted-foreground">Você será redirecionado para concluir o pagamento.</p>
+          <Button onClick={() => window.location.href = checkoutUrl} className="w-full gap-2" size="lg">
+            <CreditCard className="h-5 w-5" /> Pagar agora
           </Button>
-
-          {/* Security badge */}
           <div className="flex items-center justify-center gap-4 pt-1">
-            <div className="flex items-center gap-1.5 text-muted-foreground/60">
-              <Lock className="h-3 w-3" />
-              <span className="text-[11px]">Criptografado</span>
-            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground/60"><Lock className="h-3 w-3" /><span className="text-[11px]">Criptografado</span></div>
             <div className="w-px h-3 bg-border" />
-            <div className="flex items-center gap-1.5 text-muted-foreground/60">
-              <Shield className="h-3 w-3" />
-              <span className="text-[11px]">Pagamento seguro</span>
-            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground/60"><Shield className="h-3 w-3" /><span className="text-[11px]">Pagamento seguro</span></div>
           </div>
         </div>
       );
     }
 
-    // Helper to render price with discount
     const renderPrice = () => {
       if (onlineDiscountPercent > 0 && originalAmountCents) {
         return (
           <div className="text-right">
-            <span className="text-sm text-muted-foreground line-through mr-2">
-              R$ {(originalAmountCents / 100).toFixed(2)}
-            </span>
-            <span className="font-semibold text-emerald-500">
-              R$ {amount.toFixed(2)}
-            </span>
+            <span className="text-sm text-muted-foreground line-through mr-2">R$ {(originalAmountCents / 100).toFixed(2)}</span>
+            <span className="font-semibold text-emerald-500">R$ {amount.toFixed(2)}</span>
             <p className="text-xs text-emerald-500">{onlineDiscountPercent}% de desconto online</p>
           </div>
         );
@@ -691,48 +565,29 @@ export const MercadoPagoCheckout = ({
       return <span className="font-semibold text-primary">R$ {amount.toFixed(2)}</span>;
     };
 
-    // Normal inline payment selection
     return (
       <div className="space-y-4">
-        {/* Payment info */}
         <div className="flex items-center justify-between p-3 bg-secondary/50 border border-border rounded-xl">
           <span className="text-sm text-muted-foreground">{serviceName}</span>
           {renderPrice()}
         </div>
-
         <p className="text-center text-sm text-muted-foreground">Escolha a forma de pagamento:</p>
-
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => handleSelectPaymentMethod('card')}
-            className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary/80 hover:border-primary/50 transition-all"
-          >
+          <button onClick={() => handleSelectPaymentMethod('card')} className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary/80 hover:border-primary/50 transition-all">
             <CreditCard className="h-8 w-8 text-primary" />
             <span className="text-sm font-medium">Cartão de Crédito</span>
             <span className="text-xs text-muted-foreground">À vista</span>
           </button>
-
-          <button
-            onClick={() => handleSelectPaymentMethod('pix')}
-            className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary/80 hover:border-primary/50 transition-all"
-          >
+          <button onClick={() => handleSelectPaymentMethod('pix')} className="flex flex-col items-center gap-2 p-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary/80 hover:border-primary/50 transition-all">
             <QrCode className="h-8 w-8 text-primary" />
             <span className="text-sm font-medium">PIX</span>
             <span className="text-xs text-muted-foreground">Instantâneo</span>
           </button>
         </div>
-
-        {/* Security badge */}
         <div className="flex items-center justify-center gap-4 pt-1">
-          <div className="flex items-center gap-1.5 text-muted-foreground/60">
-            <Lock className="h-3 w-3" />
-            <span className="text-[11px]">Criptografado</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground/60"><Lock className="h-3 w-3" /><span className="text-[11px]">Criptografado</span></div>
           <div className="w-px h-3 bg-border" />
-          <div className="flex items-center gap-1.5 text-muted-foreground/60">
-            <Shield className="h-3 w-3" />
-            <span className="text-[11px]">Pagamento seguro</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground/60"><Shield className="h-3 w-3" /><span className="text-[11px]">Pagamento seguro</span></div>
         </div>
       </div>
     );
@@ -742,7 +597,6 @@ export const MercadoPagoCheckout = ({
   if (status === 'pix-waiting' && pixData) {
     return (
       <div className="space-y-4">
-        {/* Payment info */}
         <div className="flex items-center justify-between p-3 bg-secondary/50 border border-border rounded-xl">
           <div className="flex items-center gap-3">
             <QrCode className="h-5 w-5 text-muted-foreground" />
@@ -750,85 +604,43 @@ export const MercadoPagoCheckout = ({
           </div>
           {onlineDiscountPercent > 0 && originalAmountCents ? (
             <div className="text-right">
-              <span className="text-sm text-muted-foreground line-through mr-2">
-                R$ {(originalAmountCents / 100).toFixed(2)}
-              </span>
+              <span className="text-sm text-muted-foreground line-through mr-2">R$ {(originalAmountCents / 100).toFixed(2)}</span>
               <span className="font-semibold text-emerald-500">R$ {amount.toFixed(2)}</span>
             </div>
           ) : (
             <span className="font-semibold text-primary">R$ {amount.toFixed(2)}</span>
           )}
         </div>
-
         <div className="text-center">
           <p className="text-sm font-medium mb-4">Escaneie o QR Code ou copie o código PIX:</p>
-          
-          {/* QR Code */}
           {pixData.qr_code_base64 && (
             <div className="inline-block p-4 bg-white rounded-xl mb-4">
-              <img 
-                src={`data:image/png;base64,${pixData.qr_code_base64}`} 
-                alt="QR Code PIX" 
-                className="w-48 h-48"
-              />
+              <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="QR Code PIX" className="w-48 h-48" />
             </div>
           )}
-
-          {/* Copy code button */}
-          <Button 
-            onClick={copyPixCode} 
-            variant="outline" 
-            className="w-full gap-2"
-          >
-            {copied ? (
-              <>
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                Código copiado!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copiar código PIX
-              </>
-            )}
+          <Button onClick={copyPixCode} variant="outline" className="w-full gap-2">
+            {copied ? (<><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Código copiado!</>) : (<><Copy className="h-4 w-4" /> Copiar código PIX</>)}
           </Button>
-
-          <p className="text-xs text-muted-foreground mt-4">
-            Após o pagamento, a confirmação pode levar alguns segundos.
-          </p>
+          <p className="text-xs text-muted-foreground mt-4">Após o pagamento, a confirmação pode levar alguns segundos.</p>
         </div>
-
-        {/* Back button */}
-        <Button onClick={goBackToMethodSelect} variant="ghost" className="w-full">
-          Voltar e escolher outra forma de pagamento
-        </Button>
-
-        {/* Security badge */}
+        <Button onClick={goBackToMethodSelect} variant="ghost" className="w-full">Voltar e escolher outra forma de pagamento</Button>
         <div className="flex items-center justify-center gap-4 pt-1">
-          <div className="flex items-center gap-1.5 text-muted-foreground/60">
-            <Lock className="h-3 w-3" />
-            <span className="text-[11px]">Criptografado</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground/60"><Lock className="h-3 w-3" /><span className="text-[11px]">Criptografado</span></div>
           <div className="w-px h-3 bg-border" />
-          <div className="flex items-center gap-1.5 text-muted-foreground/60">
-            <Shield className="h-3 w-3" />
-            <span className="text-[11px]">Pagamento seguro</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground/60"><Shield className="h-3 w-3" /><span className="text-[11px]">Pagamento seguro</span></div>
         </div>
       </div>
     );
   }
 
-  // PIX processing state - show skeleton while QR code is being generated
+  // PIX processing state
   if (status === 'processing' && paymentMethod === 'pix') {
     return (
       <div className="flex flex-col items-center gap-4 py-8">
-        {/* Skeleton do QR Code */}
         <div className="relative">
           <div className="w-48 h-48 bg-muted rounded-lg animate-pulse flex items-center justify-center">
             <QrCode className="w-12 h-12 text-muted-foreground/30" />
           </div>
-          {/* Overlay com spinner */}
           <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
@@ -837,7 +649,6 @@ export const MercadoPagoCheckout = ({
           <p className="text-sm font-medium text-foreground">Gerando QR Code PIX...</p>
           <p className="text-xs text-muted-foreground">Aguarde um momento</p>
         </div>
-        {/* Skeleton do código copia-e-cola */}
         <div className="w-full max-w-sm space-y-2">
           <div className="h-10 bg-muted rounded animate-pulse" />
           <div className="h-9 bg-muted rounded animate-pulse" />
@@ -846,7 +657,7 @@ export const MercadoPagoCheckout = ({
     );
   }
 
-  // Card form state (card-form, ready, or processing with card method)
+  // Card form state
   if (status === 'card-form' || status === 'ready' || (status === 'processing' && paymentMethod === 'card')) {
     return (
       <div className="space-y-4">
@@ -858,9 +669,7 @@ export const MercadoPagoCheckout = ({
           </div>
           {onlineDiscountPercent > 0 && originalAmountCents ? (
             <div className="text-right">
-              <span className="text-sm text-muted-foreground line-through mr-2">
-                R$ {(originalAmountCents / 100).toFixed(2)}
-              </span>
+              <span className="text-sm text-muted-foreground line-through mr-2">R$ {(originalAmountCents / 100).toFixed(2)}</span>
               <span className="font-semibold text-emerald-500">R$ {amount.toFixed(2)}</span>
               <p className="text-xs text-emerald-500">{onlineDiscountPercent}% off online</p>
             </div>
@@ -873,8 +682,7 @@ export const MercadoPagoCheckout = ({
         {errorMessage && (
           <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
             <p className="text-sm text-red-400 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              {errorMessage}
+              <AlertCircle className="h-4 w-4" /> {errorMessage}
             </p>
           </div>
         )}
@@ -889,44 +697,42 @@ export const MercadoPagoCheckout = ({
 
         {/* Step 1: Billing Address */}
         <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Etapa 1 — Endereço de cobrança
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Informe o endereço vinculado ao seu cartão de crédito.
-          </p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Etapa 1 — Endereço de cobrança</p>
+          <p className="text-xs text-muted-foreground">Informe o endereço vinculado ao seu cartão de crédito.</p>
         </div>
         <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
 
-        {/* Step 2: Card data — only show when address is complete */}
+        {/* Step 2: Card data */}
         <div className="space-y-1 pt-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Etapa 2 — Dados do cartão
-          </p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Etapa 2 — Dados do cartão</p>
           {!isBillingAddressComplete(billingAddress) && (
-            <p className="text-xs text-amber-500">
-              Preencha o endereço acima para liberar o formulário do cartão.
-            </p>
+            <p className="text-xs text-amber-500">Preencha o endereço acima para liberar o formulário do cartão.</p>
           )}
         </div>
 
-        {/* Card Payment Brick container — dimmed until address is filled */}
-        <div 
-          id="cardPaymentBrick_container" 
+        <div
+          id="cardPaymentBrick_container"
           className={`mp-checkout-container transition-opacity ${!isBillingAddressComplete(billingAddress) ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}
         />
 
-        {/* Turnstile verification — immediately above pay button */}
+        {/* Turnstile - always present, key for reset */}
         <TurnstileWidget
-          onVerify={(token) => setTurnstileToken(token)}
-          onExpire={() => setTurnstileToken(null)}
-          onError={() => setTurnstileToken(null)}
+          key={turnstileKey}
+          onVerify={(token) => {
+            console.log('[TURNSTILE] Token received');
+            setTurnstileToken(token);
+          }}
+          onExpire={() => {
+            console.log('[TURNSTILE] Token expired');
+            setTurnstileToken(null);
+          }}
+          onError={() => {
+            console.log('[TURNSTILE] Error');
+            setTurnstileToken(null);
+          }}
         />
 
-        {/* Back button */}
-        <Button onClick={goBackToMethodSelect} variant="ghost" className="w-full">
-          Voltar e escolher outra forma de pagamento
-        </Button>
+        <Button onClick={goBackToMethodSelect} variant="ghost" className="w-full">Voltar e escolher outra forma de pagamento</Button>
 
         {/* Processing overlay */}
         {status === 'processing' && (
@@ -940,20 +746,13 @@ export const MercadoPagoCheckout = ({
 
         {/* Security badge */}
         <div className="flex items-center justify-center gap-4 pt-1">
-          <div className="flex items-center gap-1.5 text-muted-foreground/60">
-            <Lock className="h-3 w-3" />
-            <span className="text-[11px]">Criptografado</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground/60"><Lock className="h-3 w-3" /><span className="text-[11px]">Criptografado</span></div>
           <div className="w-px h-3 bg-border" />
-          <div className="flex items-center gap-1.5 text-muted-foreground/60">
-            <Shield className="h-3 w-3" />
-            <span className="text-[11px]">Pagamento seguro</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground/60"><Shield className="h-3 w-3" /><span className="text-[11px]">Pagamento seguro</span></div>
         </div>
       </div>
     );
   }
 
-  // Fallback - shouldn't reach here normally
   return null;
 };

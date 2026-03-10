@@ -20,6 +20,14 @@ export interface SubscriptionCardPaymentProps {
   customerPhone: string;
   customerEmail: string;
   customerCpf?: string;
+  // Address fields
+  addressCep?: string;
+  addressStreet?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  addressNeighborhood?: string;
+  addressCity?: string;
+  addressState?: string;
   onSuccess: (subscriptionId?: string) => void;
   onBack: () => void;
 }
@@ -28,7 +36,6 @@ type Status = 'loading' | 'card-form' | 'ready' | 'processing' | 'success' | 'er
 
 const getFunctionErrorMessage = (error: any): string => {
   if (!error) return 'Erro ao processar assinatura';
-
   const context = error.context;
   if (typeof context === 'string' && context.trim()) {
     try {
@@ -40,7 +47,6 @@ const getFunctionErrorMessage = (error: any): string => {
       return context;
     }
   }
-
   return error.message || 'Erro ao processar assinatura';
 };
 
@@ -54,15 +60,26 @@ export function SubscriptionCardPayment({
   customerPhone,
   customerEmail,
   customerCpf,
+  addressCep,
+  addressStreet,
+  addressNumber,
+  addressComplement,
+  addressNeighborhood,
+  addressCity,
+  addressState,
   onSuccess,
   onBack,
 }: SubscriptionCardPaymentProps) {
   const [status, setStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
   const brickControllerRef = useRef<any>(null);
   const publicKeyRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
+  // Ref to always have latest turnstile token in Brick callback
+  const turnstileTokenRef = useRef<string | null>(null);
+  turnstileTokenRef.current = turnstileToken;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -93,19 +110,15 @@ export function SubscriptionCardPayment({
         await loadScript('https://sdk.mercadopago.com/js/v2');
       }
       if (!isMountedRef.current) return;
-
       const { data, error } = await supabase.functions.invoke('mp-get-public-key', {
         body: { slug: tenantSlug },
       });
-
       if (!isMountedRef.current) return;
       if (error || !data?.public_key) {
         throw new Error('Chave pública do Mercado Pago não encontrada');
       }
-
       publicKeyRef.current = data.public_key;
       setStatus('card-form');
-
       requestAnimationFrame(() => {
         setTimeout(() => initializeCardBrick(), 50);
       });
@@ -118,19 +131,16 @@ export function SubscriptionCardPayment({
 
   const initializeCardBrick = useCallback(async () => {
     if (!isMountedRef.current || !publicKeyRef.current) return;
-
     const container = document.getElementById('subscriptionCardBrick_container');
     if (!container) {
       setErrorMessage('Erro ao carregar formulário');
       setStatus('error');
       return;
     }
-
     try {
       const mp = new window.MercadoPago(publicKeyRef.current, { locale: 'pt-BR' });
       const bricksBuilder = mp.bricks();
       if (!isMountedRef.current) return;
-
       brickControllerRef.current = await bricksBuilder.create('cardPayment', 'subscriptionCardBrick_container', {
         initialization: {
           amount: priceCents / 100,
@@ -145,10 +155,7 @@ export function SubscriptionCardPayment({
           },
         },
         customization: {
-          paymentMethods: {
-            minInstallments: 1,
-            maxInstallments: 1,
-          },
+          paymentMethods: { minInstallments: 1, maxInstallments: 1 },
           visual: {
             style: {
               theme: 'dark',
@@ -177,7 +184,14 @@ export function SubscriptionCardPayment({
           },
           onSubmit: async (formData: any) => {
             if (!isMountedRef.current) return;
-            await handleCardSubmit(formData);
+            // Use ref to get latest token (avoids stale closure)
+            const currentToken = turnstileTokenRef.current;
+            if (!currentToken) {
+              setErrorMessage('Aguarde a verificação de segurança antes de assinar.');
+              setTurnstileKey(k => k + 1);
+              return;
+            }
+            await handleCardSubmitWithToken(formData, currentToken);
           },
           onError: (error: any) => {
             if (!isMountedRef.current) return;
@@ -193,17 +207,10 @@ export function SubscriptionCardPayment({
     }
   }, [priceCents, customerEmail]);
 
-  const handleCardSubmit = async (formData: any) => {
+  const handleCardSubmitWithToken = async (formData: any, token: string) => {
     if (!isMountedRef.current) return;
-
-    if (!turnstileToken) {
-      setErrorMessage('Aguarde a verificação de segurança antes de assinar.');
-      return;
-    }
-
     setStatus('processing');
     setErrorMessage('');
-
     try {
       const { data, error } = await supabase.functions.invoke('mp-create-subscription', {
         body: {
@@ -214,14 +221,20 @@ export function SubscriptionCardPayment({
           customer_email: customerEmail,
           customer_cpf: customerCpf,
           card_token_id: formData.token,
-          cf_turnstile_token: turnstileToken,
+          cf_turnstile_token: token,
+          // Address fields
+          address_cep: addressCep,
+          address_street: addressStreet,
+          address_number: addressNumber,
+          address_complement: addressComplement,
+          address_neighborhood: addressNeighborhood,
+          address_city: addressCity,
+          address_state: addressState,
         },
       });
-
       if (!isMountedRef.current) return;
       if (error) throw new Error(getFunctionErrorMessage(error));
       if (data?.error) throw new Error(data.error);
-
       if (data?.activated) {
         const subId = data?.subscription_id || data?.customer_subscription_id;
         setStatus('success');
@@ -237,6 +250,7 @@ export function SubscriptionCardPayment({
       if (!isMountedRef.current) return;
       console.error('Subscription payment error:', err);
       setTurnstileToken(null);
+      setTurnstileKey(k => k + 1);
       setErrorMessage(err.message || 'Erro ao processar assinatura');
       setStatus('error');
     }
@@ -245,6 +259,7 @@ export function SubscriptionCardPayment({
   const retry = () => {
     setErrorMessage('');
     setTurnstileToken(null);
+    setTurnstileKey(k => k + 1);
     if (brickControllerRef.current) {
       try { brickControllerRef.current.unmount(); } catch {}
     }
@@ -277,12 +292,8 @@ export function SubscriptionCardPayment({
         <h3 className="text-xl font-semibold mb-2">Erro no pagamento</h3>
         <p className="text-muted-foreground text-sm mb-6 max-w-xs mx-auto">{errorMessage}</p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={retry} className="rounded-xl px-6">
-            Tentar novamente
-          </Button>
-          <Button onClick={onBack} variant="ghost" className="rounded-xl">
-            Voltar
-          </Button>
+          <Button onClick={retry} className="rounded-xl px-6">Tentar novamente</Button>
+          <Button onClick={onBack} variant="ghost" className="rounded-xl">Voltar</Button>
         </div>
       </div>
     );
@@ -334,12 +345,14 @@ export function SubscriptionCardPayment({
         </div>
       )}
 
-      {/* Turnstile verification */}
-      <TurnstileWidget
-        onVerify={(token) => setTurnstileToken(token)}
-        onExpire={() => setTurnstileToken(null)}
-        onError={() => setTurnstileToken(null)}
-      />
+      {/* Error message inline */}
+      {errorMessage && status !== 'processing' && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <p className="text-sm text-red-400 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" /> {errorMessage}
+          </p>
+        </div>
+      )}
 
       {/* Card form container */}
       <div
@@ -348,16 +361,31 @@ export function SubscriptionCardPayment({
         style={{ display: status === 'processing' ? 'none' : 'block' }}
       />
 
+      {/* Turnstile - key for reset */}
+      <TurnstileWidget
+        key={turnstileKey}
+        onVerify={(token) => {
+          console.log('[TURNSTILE] Subscription token received');
+          setTurnstileToken(token);
+        }}
+        onExpire={() => {
+          console.log('[TURNSTILE] Subscription token expired');
+          setTurnstileToken(null);
+        }}
+        onError={() => {
+          console.log('[TURNSTILE] Subscription error');
+          setTurnstileToken(null);
+        }}
+      />
+
       {/* Security footer */}
       <div className="flex items-center justify-center gap-4 pt-1">
         <div className="flex items-center gap-1.5 text-muted-foreground/60">
-          <Lock className="h-3 w-3" />
-          <span className="text-[11px]">Criptografado</span>
+          <Lock className="h-3 w-3" /><span className="text-[11px]">Criptografado</span>
         </div>
         <div className="w-px h-3 bg-border" />
         <div className="flex items-center gap-1.5 text-muted-foreground/60">
-          <Shield className="h-3 w-3" />
-          <span className="text-[11px]">Pagamento seguro</span>
+          <Shield className="h-3 w-3" /><span className="text-[11px]">Pagamento seguro</span>
         </div>
       </div>
 
@@ -366,8 +394,7 @@ export function SubscriptionCardPayment({
         onClick={onBack}
         className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto transition-colors text-sm"
       >
-        <ChevronLeft className="h-4 w-4" />
-        Voltar
+        <ChevronLeft className="h-4 w-4" /> Voltar
       </button>
     </div>
   );
