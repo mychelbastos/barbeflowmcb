@@ -117,6 +117,25 @@ export function BookingDetailsModal({
     setPaymentInfo(payRes.data || null);
   }, [booking?.id, open, tenantId]);
 
+  // Load related bookings for unified comanda
+  useEffect(() => {
+    if (!booking || !open) {
+      setRelatedBookings([]);
+      return;
+    }
+    const checkRelated = async () => {
+      try {
+        const { data } = await supabase.rpc("get_related_bookings", {
+          p_booking_id: booking.id,
+        });
+        setRelatedBookings(data && data.length > 1 ? (data as any[]) : []);
+      } catch {
+        setRelatedBookings([]);
+      }
+    };
+    checkRelated();
+  }, [booking?.id, open]);
+
   useEffect(() => {
     if (!booking || !open) {
       setCustomerNotes(null);
