@@ -109,7 +109,25 @@ export function PackagePurchaseFlow({ tenant, pkg, onSuccess, onCancel, onSchedu
     setEmail('');
     setCpf('');
     setCustomerFound(false);
+    setBillingAddress({ zip_code: '', street_name: '', street_number: '', neighborhood: '', city: '', federal_unit: '' });
     setStep('phone');
+  };
+
+  const handleDataContinue = () => {
+    if (!name || !email || !cpf) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast({ title: "E-mail inválido", description: "Verifique o e-mail digitado.", variant: "destructive" });
+      return;
+    }
+    if (!isValidCpf(cpf)) {
+      toast({ title: "CPF inválido", description: "Verifique o CPF digitado.", variant: "destructive" });
+      return;
+    }
+    setStep('address');
   };
 
   const handlePurchase = async () => {
