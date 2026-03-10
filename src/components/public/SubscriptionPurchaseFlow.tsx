@@ -249,7 +249,9 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
         )}
 
         {/* Step: Unified Checkout — Address + Card Brick + Turnstile + Security */}
-        {formStep === 'checkout' && (
+        {formStep === 'checkout' && (() => {
+          const addressComplete = isBillingAddressComplete(billingAddress);
+          return (
           <div className="space-y-4">
             {/* Customer identification */}
             <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
@@ -268,35 +270,97 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
               </div>
             </div>
 
-            {/* Billing address */}
-            <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
-
-            {/* Card Payment — only visible when address is complete */}
-            <div className={!isBillingAddressComplete(billingAddress) ? 'opacity-40 pointer-events-none' : ''}>
-              <SubscriptionCardPayment
-                tenantSlug={tenant.slug}
-                tenantId={tenant.id}
-                planId={selectedPlan.id}
-                planName={selectedPlan.name}
-                priceCents={selectedPlan.price_cents}
-                customerName={name.trim()}
-                customerPhone={phone}
-                customerEmail={email.trim()}
-                customerCpf={cpf.replace(/\D/g, '')}
-                addressCep={billingAddress.zip_code.replace(/\D/g, '')}
-                addressStreet={billingAddress.street_name}
-                addressNumber={billingAddress.street_number}
-                addressNeighborhood={billingAddress.neighborhood}
-                addressCity={billingAddress.city}
-                addressState={billingAddress.federal_unit}
-                onSuccess={handlePaymentSuccess}
-                onBack={() => setFormStep('data')}
-              />
+            {/* Mini stepper */}
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-1.5 ${checkoutSubStep === 'address' ? 'text-primary' : 'text-emerald-500'}`}>
+                <div className={`w-2 h-2 rounded-full ${checkoutSubStep === 'address' ? 'bg-primary' : 'bg-emerald-500'}`} />
+                <span className="text-xs font-medium">Endereço</span>
+              </div>
+              <div className={`flex-1 h-px ${checkoutSubStep === 'card' ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
+              <div className={`flex items-center gap-1.5 ${checkoutSubStep === 'card' ? 'text-primary' : 'text-zinc-600'}`}>
+                <div className={`w-2 h-2 rounded-full ${checkoutSubStep === 'card' ? 'bg-primary' : 'bg-zinc-800'}`} />
+                <span className="text-xs font-medium">Pagamento</span>
+              </div>
             </div>
 
-            {!isBillingAddressComplete(billingAddress) && (
-              <p className="text-xs text-amber-500 text-center">Preencha o endereço de cobrança acima para liberar o pagamento.</p>
+            {/* Step 1: Address */}
+            {checkoutSubStep === 'address' ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">1</div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide">Endereço de Cobrança</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Informe o endereço vinculado ao seu cartão de crédito.</p>
+                <BillingAddressForm value={billingAddress} onChange={setBillingAddress} />
+                <Button
+                  onClick={() => {
+                    setCheckoutSubStep('card');
+                    setTimeout(() => cardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                  }}
+                  disabled={!addressComplete}
+                  className="w-full h-12 rounded-xl font-medium gap-2"
+                >
+                  Continuar para pagamento <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center">
+                    <Check className="h-3.5 w-3.5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Endereço de Cobrança</h3>
+                </div>
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 flex justify-between items-center">
+                  <div className="text-sm">
+                    <p className="text-foreground">{billingAddress.street_name}, {billingAddress.street_number}</p>
+                    <p className="text-muted-foreground text-xs">{billingAddress.neighborhood} · {billingAddress.city}/{billingAddress.federal_unit} · {formatCep(billingAddress.zip_code)}</p>
+                  </div>
+                  <button onClick={() => setCheckoutSubStep('address')} className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+                    <Pencil className="h-3 w-3" /> Editar
+                  </button>
+                </div>
+              </div>
             )}
+
+            {/* Step 2: Card Payment */}
+            <div ref={cardSectionRef}>
+              {checkoutSubStep === 'card' ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">2</div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide">Dados do Cartão</h3>
+                  </div>
+                  <SubscriptionCardPayment
+                    tenantSlug={tenant.slug}
+                    tenantId={tenant.id}
+                    planId={selectedPlan.id}
+                    planName={selectedPlan.name}
+                    priceCents={selectedPlan.price_cents}
+                    customerName={name.trim()}
+                    customerPhone={phone}
+                    customerEmail={email.trim()}
+                    customerCpf={cpf.replace(/\D/g, '')}
+                    addressCep={billingAddress.zip_code.replace(/\D/g, '')}
+                    addressStreet={billingAddress.street_name}
+                    addressNumber={billingAddress.street_number}
+                    addressNeighborhood={billingAddress.neighborhood}
+                    addressCity={billingAddress.city}
+                    addressState={billingAddress.federal_unit}
+                    onSuccess={handlePaymentSuccess}
+                    onBack={() => setFormStep('data')}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2 opacity-40 pointer-events-none select-none">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center">2</div>
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados do Cartão</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">🔒 Preencha o endereço acima para liberar o pagamento.</p>
+                </div>
+              )}
+            </div>
 
             {/* Terms */}
             <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground/50">
@@ -305,7 +369,8 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
               <a href="/legal/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     );
   }
