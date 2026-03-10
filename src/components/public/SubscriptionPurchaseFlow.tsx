@@ -348,6 +348,8 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
                     addressNeighborhood={billingAddress.neighborhood}
                     addressCity={billingAddress.city}
                     addressState={billingAddress.federal_unit}
+                    hideSummary
+                    hideBack
                     onSuccess={handlePaymentSuccess}
                     onBack={() => setFormStep('data')}
                   />
@@ -361,13 +363,6 @@ export function SubscriptionPurchaseFlow({ tenant, plans }: SubscriptionPurchase
                   <p className="text-xs text-muted-foreground">🔒 Preencha o endereço acima para liberar o pagamento.</p>
                 </div>
               )}
-            </div>
-
-            {/* Terms */}
-            <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground/50">
-              <a href="/legal/termos-de-uso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
-              <span>·</span>
-              <a href="/legal/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
             </div>
           </div>
           );

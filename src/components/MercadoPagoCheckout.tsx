@@ -826,6 +826,13 @@ export const MercadoPagoCheckout = ({
           <div className="w-px h-3 bg-border" />
           <div className="flex items-center gap-1.5 text-muted-foreground/60"><Shield className="h-3 w-3" /><span className="text-[11px]">Pagamento seguro</span></div>
         </div>
+
+        {/* Terms & Privacy */}
+        <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground/50">
+          <a href="/legal/termos-de-uso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
+          <span>·</span>
+          <a href="/legal/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+        </div>
       </div>
     );
   }

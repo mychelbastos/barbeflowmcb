@@ -28,6 +28,8 @@ export interface SubscriptionCardPaymentProps {
   addressNeighborhood?: string;
   addressCity?: string;
   addressState?: string;
+  hideSummary?: boolean;
+  hideBack?: boolean;
   onSuccess: (subscriptionId?: string) => void;
   onBack: () => void;
 }
@@ -67,6 +69,8 @@ export function SubscriptionCardPayment({
   addressNeighborhood,
   addressCity,
   addressState,
+  hideSummary = false,
+  hideBack = false,
   onSuccess,
   onBack,
 }: SubscriptionCardPaymentProps) {
@@ -317,24 +321,26 @@ export function SubscriptionCardPayment({
   return (
     <div className="space-y-5">
       {/* Plan summary header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/30 p-4">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-8 translate-x-8" />
-        <div className="flex items-center justify-between relative">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <CreditCard className="h-5 w-5 text-primary" />
+      {!hideSummary && (
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/30 p-4">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-8 translate-x-8" />
+          <div className="flex items-center justify-between relative">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">{planName}</h3>
+                <p className="text-xs text-muted-foreground">Assinatura mensal</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-sm">{planName}</h3>
-              <p className="text-xs text-muted-foreground">Assinatura mensal</p>
+            <div className="text-right">
+              <span className="text-xl font-bold">R$ {priceFormatted}</span>
+              <span className="text-xs text-muted-foreground block">/mês</span>
             </div>
-          </div>
-          <div className="text-right">
-            <span className="text-xl font-bold">R$ {priceFormatted}</span>
-            <span className="text-xs text-muted-foreground block">/mês</span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Processing overlay */}
       {status === 'processing' && (
@@ -389,13 +395,22 @@ export function SubscriptionCardPayment({
         </div>
       </div>
 
+      {/* Terms & Privacy */}
+      <div className="flex items-center justify-center gap-3 text-[11px] text-muted-foreground/50">
+        <a href="/legal/termos-de-uso" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termos</a>
+        <span>·</span>
+        <a href="/legal/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+      </div>
+
       {/* Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto transition-colors text-sm"
-      >
-        <ChevronLeft className="h-4 w-4" /> Voltar
-      </button>
+      {!hideBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto transition-colors text-sm"
+        >
+          <ChevronLeft className="h-4 w-4" /> Voltar
+        </button>
+      )}
     </div>
   );
 }
