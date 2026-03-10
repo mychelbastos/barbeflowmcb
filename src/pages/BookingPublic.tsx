@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { PackagePurchaseFlow } from "@/components/public/PackagePurchaseFlow";
 import { BenefitBadge } from "@/components/public/BenefitBadge";
 import { OrderBumpSection, type OrderBumpProduct } from "@/components/public/OrderBumpSection";
+import { WhatsAppContactButton } from "@/components/public/WhatsAppContactButton";
 import InstallPWA from "@/components/InstallPWA";
 import { LoyaltyWidget } from "@/components/public/LoyaltyWidget";
 
