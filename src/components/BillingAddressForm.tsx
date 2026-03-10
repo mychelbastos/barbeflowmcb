@@ -28,17 +28,16 @@ const UF_LIST = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
   "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
 ];
+export const formatCep = (raw: string): string => {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length > 5) return digits.slice(0, 5) + "-" + digits.slice(5);
+  return digits;
+};
 
 export function BillingAddressForm({ value, onChange }: BillingAddressFormProps) {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState(false);
   const numberInputRef = useRef<HTMLInputElement>(null);
-
-export const formatCep = (raw: string): string => {
-    const digits = raw.replace(/\D/g, "").slice(0, 8);
-    if (digits.length > 5) return digits.slice(0, 5) + "-" + digits.slice(5);
-    return digits;
-  };
 
   const update = (partial: Partial<BillingAddress>) =>
     onChange({ ...value, ...partial });
