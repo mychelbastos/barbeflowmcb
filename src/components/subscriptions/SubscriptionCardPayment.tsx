@@ -396,12 +396,14 @@ export function SubscriptionCardPayment({
       </div>
 
       {/* Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto transition-colors text-sm"
-      >
-        <ChevronLeft className="h-4 w-4" /> Voltar
-      </button>
+      {!hideBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mx-auto transition-colors text-sm"
+        >
+          <ChevronLeft className="h-4 w-4" /> Voltar
+        </button>
+      )}
     </div>
   );
 }
