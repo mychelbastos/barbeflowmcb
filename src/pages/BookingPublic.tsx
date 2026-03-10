@@ -1762,6 +1762,7 @@ END:VCALENDAR`;
                   )}
                 </div>
               ) : (
+                <>
                 <div className="grid grid-cols-4 gap-2">
                   {allTimeSlots.map((slot) => (
                     <button
@@ -1788,6 +1789,7 @@ END:VCALENDAR`;
                     />
                   </div>
                 )}
+                </>
               )}
             </div>
             
