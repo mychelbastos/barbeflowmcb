@@ -272,6 +272,8 @@ export const MercadoPagoCheckout = ({
     if (!isMountedRef.current) return;
     setStatus('processing');
     setErrorMessage('');
+    setPaymentError(null);
+    setPaymentPending(null);
     try {
       const { data, error } = await supabase.functions.invoke(
         isPackagePayment ? 'mp-process-package-payment' : 'mp-process-payment',
@@ -325,12 +327,22 @@ export const MercadoPagoCheckout = ({
       if (!isMountedRef.current) return;
       if (error) throw new Error(getFunctionErrorMessage(error));
       console.log('Payment result:', data);
+
+      // Parse structured error/pending from backend
+      const parsed = parsePaymentResult(data);
+
       if (data.status === 'approved') {
         setStatus('success');
         onSuccess(data);
-      } else if (data.status === 'pending' || data.status === 'in_process') {
+      } else if (parsed.pending) {
+        setPaymentPending(parsed.pending);
         setStatus('pending');
         onPending?.(data);
+      } else if (parsed.error) {
+        setPaymentError(parsed.error);
+        setTurnstileToken(null);
+        setTurnstileKey(k => k + 1);
+        setStatus('ready');
       } else {
         throw new Error(getStatusMessage(data.status, data.status_detail));
       }
@@ -339,9 +351,12 @@ export const MercadoPagoCheckout = ({
       console.error('Payment error:', error);
       setTurnstileToken(null);
       setTurnstileKey(k => k + 1);
-      setErrorMessage(error.message || 'Erro ao processar pagamento');
-      setStatus('error');
-      onError(error.message);
+      setPaymentError({
+        message: error.message || 'Erro ao processar pagamento.',
+        action: 'Verifique os dados e tente novamente.',
+        severity: 'retry',
+      });
+      setStatus('ready');
     }
   };
 
