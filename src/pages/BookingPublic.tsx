@@ -891,6 +891,16 @@ const BookingPublic = () => {
     } catch (error: any) {
       console.error('Error creating booking:', error);
 
+      if (error?.type === 'ADVANCE_DAYS_EXCEEDED') {
+        toast({
+          title: 'Prazo de agendamento excedido',
+          description: error.message || 'A data selecionada está além do prazo permitido.',
+          variant: 'destructive',
+        });
+        setStep(3); // Go back to date picker
+        return;
+      }
+
       if (error?.type === 'FORCED_ONLINE_PAYMENT' && allowOnlinePayment && !packageCoveredService && !subscriptionCoveredService) {
         setForcedOnlinePayment(true);
         setPaymentMethod('online');
