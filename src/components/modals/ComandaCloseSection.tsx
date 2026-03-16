@@ -162,23 +162,6 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
         <Lock className="h-4 w-4" /> Fechar Comanda
       </h4>
 
-      {hasUnpaid && (
-        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            ⚠️ Existem itens pendentes. Ao fechar com pendência, o débito será registrado.
-          </p>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <Checkbox
-              checked={acceptDebt}
-              onCheckedChange={(v) => setAcceptDebt(!!v)}
-            />
-            <span className="text-xs text-muted-foreground">
-              Fechar com pendência (registrar débito)
-            </span>
-          </label>
-        </div>
-      )}
-
       {/* Tip Section */}
       <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-3">
         <h5 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -207,8 +190,24 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
             </Button>
           ))}
         </div>
-
       </div>
+
+      {hasUnpaid && (
+        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+            ⚠️ Existem itens pendentes. Ao fechar com pendência, o débito será registrado.
+          </p>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Checkbox
+              checked={acceptDebt}
+              onCheckedChange={(v) => setAcceptDebt(!!v)}
+            />
+            <span className="text-xs text-muted-foreground">
+              Fechar com pendência (registrar débito)
+            </span>
+          </label>
+        </div>
+      )}
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
