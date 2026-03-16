@@ -61,6 +61,7 @@ const SOURCE_LABELS: Record<string, string> = {
   withdrawal: "Sangria",
   expense: "Despesa",
   business_expense: "Despesa",
+  tip: "Gorjeta",
 };
 
 type CashSession = {

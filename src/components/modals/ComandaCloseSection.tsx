@@ -6,9 +6,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Lock, Loader2, CheckCircle2, Unlock } from "lucide-react";
+import { Lock, Loader2, CheckCircle2, Banknote, Smartphone, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import type { BookingItem } from "./ComandaItemsSection";
 
 interface Props {
@@ -20,21 +21,49 @@ interface Props {
   onClose: () => void;
 }
 
+const TIP_METHODS = [
+  { value: "cash", label: "Dinheiro", icon: Banknote },
+  { value: "pix", label: "PIX", icon: Smartphone },
+  { value: "credit_card", label: "Cartão", icon: CreditCard },
+] as const;
+
+const QUICK_TIPS = [500, 1000, 2000]; // cents
+
 export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed, commissionBasis, onClose }: Props) {
   const [closing, setClosing] = useState(false);
   const [acceptDebt, setAcceptDebt] = useState(false);
+  const [tipValue, setTipValue] = useState("");
+  const [tipMethod, setTipMethod] = useState("cash");
 
   const hasUnpaid = items.some(i => i.paid_status === "unpaid");
   const allSettled = !hasUnpaid;
 
+  const tipCents = Math.round(parseFloat(tipValue || "0") * 100);
+
+  const handleQuickTip = (cents: number) => {
+    const currentCents = tipCents;
+    if (currentCents === cents) {
+      setTipValue("");
+    } else {
+      setTipValue((cents / 100).toFixed(2));
+    }
+  };
+
   const handleClose = async () => {
     setClosing(true);
     try {
-      const { data, error } = await supabase.rpc("close_comanda_with_commissions", {
+      const rpcParams: any = {
         p_booking_id: bookingId,
         p_tenant_id: tenantId,
         p_commission_basis: commissionBasis || "theoretical",
-      });
+      };
+
+      if (tipCents > 0) {
+        rpcParams.p_tip_cents = tipCents;
+        rpcParams.p_tip_payment_method = tipMethod;
+      }
+
+      const { data, error } = await supabase.rpc("close_comanda_with_commissions", rpcParams);
 
       if (error) throw error;
 
@@ -47,12 +76,17 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
       const totalComm = result?.total_commission_cents || 0;
       const commFormatted = (totalComm / 100).toFixed(2);
       const tokensCreated = result?.subscription_tokens?.tokens_created || 0;
+      const resultTip = result?.tip_cents || 0;
 
-      toast.success(
-        snaps > 0
-          ? `Comanda fechada — ${snaps} comissão(ões) gerada(s): R$ ${commFormatted}`
-          : "Comanda fechada com sucesso"
-      );
+      let msg = snaps > 0
+        ? `Comanda fechada — ${snaps} comissão(ões): R$ ${commFormatted}`
+        : "Comanda fechada com sucesso";
+
+      if (resultTip > 0) {
+        msg += ` | Gorjeta: R$ ${(resultTip / 100).toFixed(2)} 💰`;
+      }
+
+      toast.success(msg);
 
       if (tokensCreated > 0) {
         toast.info(`💰 ${tokensCreated} ficha(s) de comissão de assinatura registrada(s)`);
@@ -152,6 +186,61 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
         </div>
       )}
 
+      {/* Tip Section */}
+      <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-3">
+        <h5 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          💰 Gorjeta <span className="text-muted-foreground font-normal">(opcional)</span>
+        </h5>
+
+        <CurrencyInput
+          value={tipValue}
+          onChange={setTipValue}
+          placeholder="0,00"
+          className="h-9 text-sm"
+        />
+
+        {/* Quick tip buttons */}
+        <div className="flex gap-2">
+          {QUICK_TIPS.map(cents => (
+            <Button
+              key={cents}
+              type="button"
+              variant={tipCents === cents ? "default" : "outline"}
+              size="sm"
+              className="flex-1 h-8 text-xs"
+              onClick={() => handleQuickTip(cents)}
+            >
+              R$ {(cents / 100).toFixed(0)}
+            </Button>
+          ))}
+        </div>
+
+        {/* Payment method for tip */}
+        {tipCents > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-[11px] text-muted-foreground">Método da gorjeta:</span>
+            <div className="flex gap-1.5">
+              {TIP_METHODS.map(m => {
+                const Icon = m.icon;
+                return (
+                  <Button
+                    key={m.value}
+                    type="button"
+                    variant={tipMethod === m.value ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 h-8 text-xs gap-1"
+                    onClick={() => setTipMethod(m.value)}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {m.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
@@ -160,7 +249,7 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
             disabled={closing || (hasUnpaid && !acceptDebt)}
           >
             {closing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Fechar Comanda
+            Fechar Comanda{tipCents > 0 ? ` + Gorjeta R$ ${(tipCents / 100).toFixed(2)}` : ""}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -169,6 +258,7 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
             <AlertDialogDescription>
               Após fechar, a edição será travada e as comissões serão geradas automaticamente.
               {hasUnpaid && " O débito pendente será registrado no saldo do cliente."}
+              {tipCents > 0 && ` Gorjeta de R$ ${(tipCents / 100).toFixed(2)} será registrada.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
