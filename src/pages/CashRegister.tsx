@@ -510,6 +510,7 @@ export default function CashRegister() {
   const totalOut = entries.filter(e => e.kind === "expense" || e.source === "withdrawal")
     .reduce((s, e) => s + e.amount_cents, 0);
   const currentBalance = session ? session.opening_amount_cents + totalIn - totalOut : 0;
+  const totalTips = entries.filter(e => e.source === "tip").reduce((s, e) => s + e.amount_cents, 0);
 
   // Group entries by payment method
   const byMethod = entries.reduce((acc, e) => {
