@@ -16,6 +16,7 @@ import { NoTenantState } from "@/components/NoTenantState";
 import { AvailabilityBlocksManager } from "@/components/AvailabilityBlocksManager";
 import LegalSettingsSection from "@/components/settings/LegalSettingsSection";
 import { supabase } from "@/integrations/supabase/client";
+import { WhatsAppMessagesSection } from "@/components/settings/WhatsAppMessagesSection";
 
 
 import { useToast } from "@/hooks/use-toast";
