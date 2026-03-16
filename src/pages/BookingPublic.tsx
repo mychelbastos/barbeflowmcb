@@ -1771,13 +1771,25 @@ END:VCALENDAR`;
               </span>
             </div>
             
+            {/* Advance days info badge */}
+            {effectiveMaxAdvanceDays > 0 && (
+              <div className="flex items-center gap-2 p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-xl mb-4 text-xs text-zinc-400">
+                <Calendar className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
+                <span>
+                  {isSubscriber
+                    ? `Assinante: agenda disponível para os próximos ${effectiveMaxAdvanceDays} dias`
+                    : `Agenda disponível para os próximos ${effectiveMaxAdvanceDays} dias`}
+                </span>
+              </div>
+            )}
+
             {/* Calendar */}
             <div className="mb-6">
               <CalendarRac
                 value={selectedCalendarDate}
                 onChange={handleDateSelect}
                 minValue={today(getLocalTimeZone())}
-                maxValue={maxAdvanceDays > 0 ? today(getLocalTimeZone()).add({ days: maxAdvanceDays }) : undefined}
+                maxValue={effectiveMaxAdvanceDays > 0 ? today(getLocalTimeZone()).add({ days: effectiveMaxAdvanceDays }) : undefined}
                 isDateUnavailable={(date) => {
                   const dateStr = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
                   return blockedDates.has(dateStr);
