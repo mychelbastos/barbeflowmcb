@@ -2035,7 +2035,7 @@ END:VCALENDAR`;
                   }
                   const priceCents = selectedServiceData?.price_cents || 0;
                   const tenantSettings = (tenant?.settings || {}) as Record<string, any>;
-                  const step5DiscPct = paymentMethod === 'online' ? (tenantSettings.online_discount_percent || 0) : 0;
+                  const step5DiscPct = paymentMethod === 'online' ? (getOnlineDiscount(tenantSettings, priceCents).discountPercent) : 0;
                   const step5DiscCents = step5DiscPct > 0 ? Math.round(priceCents * step5DiscPct / 100) : 0;
                   const step5FinalCents = priceCents - step5DiscCents;
                   if (step5DiscCents > 0) {
