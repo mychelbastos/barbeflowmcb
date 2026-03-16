@@ -1828,10 +1828,13 @@ END:VCALENDAR`;
         {step === 4 && allowOnlinePayment && (() => {
           const tenantSettings = (tenant?.settings || {}) as Record<string, any>;
           const onlineDiscountPercent = tenantSettings.online_discount_percent || 0;
+          const pixDiscountPercent = parseFloat(tenantSettings.pix_discount_percent) || 0;
+          const cardDiscountPercent = parseFloat(tenantSettings.card_discount_percent) || 0;
           const showCancellationForfeit = tenantSettings.show_cancellation_forfeit || false;
           const cancellationForfeitHours = tenantSettings.cancellation_forfeit_hours || 24;
           const noShowForfeitPercent = tenantSettings.no_show_forfeit_percent ?? 30;
-          const hasDiscount = onlineDiscountPercent > 0;
+          const hasDiscount = onlineDiscountPercent > 0 || pixDiscountPercent > 0 || cardDiscountPercent > 0;
+          const showPerMethod = hasPerMethodDiscount(tenantSettings);
 
           const originalPriceCents = selectedServiceData?.price_cents || 0;
           let baseForPayment = originalPriceCents;
@@ -1839,8 +1842,14 @@ END:VCALENDAR`;
           if (isPrepayPartial) {
             baseForPayment = Math.round(originalPriceCents * prepaymentPercentage / 100);
           }
-          const discountCents = hasDiscount ? Math.round(baseForPayment * onlineDiscountPercent / 100) : 0;
-          const onlinePriceCents = baseForPayment - discountCents;
+          
+          // General discount (used when no per-method distinction)
+          const generalDisc = getOnlineDiscount(tenantSettings, baseForPayment);
+          const pixDisc = getOnlineDiscount(tenantSettings, baseForPayment, 'pix');
+          const cardDisc = getOnlineDiscount(tenantSettings, baseForPayment, 'card');
+          // Use best discount for display on the main button
+          const bestDisc = pixDisc.discountCents >= cardDisc.discountCents ? pixDisc : cardDisc;
+          const displayDisc = hasDiscount ? bestDisc : generalDisc;
 
           return (
           <div className="animate-in fade-in duration-300">
