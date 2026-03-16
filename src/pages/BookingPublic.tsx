@@ -20,6 +20,7 @@ import { Calendar as CalendarRac } from "@/components/ui/calendar-rac";
 import { MercadoPagoCheckout } from "@/components/MercadoPagoCheckout";
 import { CustomerBookingsModal } from "@/components/modals/CustomerBookingsModal";
 import { Badge } from "@/components/ui/badge";
+import { getOnlineDiscount, hasAnyOnlineDiscount, hasPerMethodDiscount } from "@/utils/onlineDiscount";
 import { 
   Calendar, 
   Clock, 
@@ -41,7 +42,8 @@ import {
   Search,
   X,
   Filter,
-  ChevronDown
+  ChevronDown,
+  Tag
 } from "lucide-react";
 import { PublicSubscriptionPlans } from "@/components/subscriptions/PublicSubscriptionPlans";
 import { MyPackagesSection } from "@/components/public/MyPackagesSection";
