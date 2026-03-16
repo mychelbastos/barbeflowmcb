@@ -2231,23 +2231,37 @@ END:VCALENDAR`;
               )}
 
               {/* Total order value when order bump items are selected */}
-              {orderBumpItems.length > 0 && !subscriptionCoveredService && !packageCoveredService && (
+              {orderBumpItems.length > 0 && !subscriptionCoveredService && !packageCoveredService && (() => {
+                const tenantSettings = (tenant?.settings || {}) as Record<string, any>;
+                const svcCents = selectedServiceData?.price_cents || 0;
+                const orderDiscPct = paymentMethod === 'online' ? getOnlineDiscount(tenantSettings, svcCents).discountPercent : 0;
+                const orderDiscCents = orderDiscPct > 0 ? Math.round(svcCents * orderDiscPct / 100) : 0;
+                const bumpTotal = orderBumpItems.reduce((s, p) => s + p.sale_price_cents, 0);
+                const totalCents = svcCents - orderDiscCents + bumpTotal;
+                return (
                 <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-zinc-500">Serviço</span>
-                    <span className="text-zinc-300">R$ {((selectedServiceData?.price_cents || 0) / 100).toFixed(2)}</span>
+                    <span className="text-zinc-300">R$ {(svcCents / 100).toFixed(2)}</span>
                   </div>
+                  {orderDiscCents > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" />Desconto online ({orderDiscPct}%)</span>
+                      <span className="text-emerald-400">-R$ {(orderDiscCents / 100).toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-zinc-500">Produtos ({orderBumpItems.length})</span>
-                    <span className="text-zinc-300">R$ {(orderBumpItems.reduce((s, p) => s + p.sale_price_cents, 0) / 100).toFixed(2)}</span>
+                    <span className="text-zinc-300">R$ {(bumpTotal / 100).toFixed(2)}</span>
                   </div>
                   <div className="h-px bg-zinc-800" />
                   <div className="flex items-center justify-between text-sm font-semibold">
                     <span className="text-zinc-300">Total</span>
-                    <span className="text-emerald-400">R$ {(((selectedServiceData?.price_cents || 0) + orderBumpItems.reduce((s, p) => s + p.sale_price_cents, 0)) / 100).toFixed(2)}</span>
+                    <span className="text-emerald-400">R$ {(totalCents / 100).toFixed(2)}</span>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               <div className="pt-4 space-y-3">
                 <Button 
