@@ -23,19 +23,12 @@ interface Props {
   onClose: () => void;
 }
 
-const TIP_METHODS = [
-  { value: "cash", label: "Dinheiro", icon: Banknote },
-  { value: "pix", label: "PIX", icon: Smartphone },
-  { value: "credit_card", label: "Cartão", icon: CreditCard },
-] as const;
-
 const QUICK_TIPS = [500, 1000, 2000]; // cents
 
-export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed, commissionBasis, onClose }: Props) {
+export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed, commissionBasis, paymentMethod, onClose }: Props) {
   const [closing, setClosing] = useState(false);
   const [acceptDebt, setAcceptDebt] = useState(false);
   const [tipValue, setTipValue] = useState("");
-  const [tipMethod, setTipMethod] = useState("cash");
 
   const hasUnpaid = items.some(i => i.paid_status === "unpaid");
   const allSettled = !hasUnpaid;
