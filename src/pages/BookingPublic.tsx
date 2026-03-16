@@ -1032,6 +1032,12 @@ END:VCALENDAR`;
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
+  // Compute effective max advance days based on subscriber status
+  const effectiveMaxAdvanceDays = useMemo(() => {
+    if (isSubscriber && maxAdvanceDaysSubscriber > 0) return maxAdvanceDaysSubscriber;
+    return maxAdvanceDays;
+  }, [isSubscriber, maxAdvanceDays, maxAdvanceDaysSubscriber]);
+
   const selectedServiceData = useMemo(() => services.find(s => s.id === selectedService), [services, selectedService]);
   const selectedStaffData = useMemo(() => staff.find(s => s.id === selectedStaff), [staff, selectedStaff]);
 
