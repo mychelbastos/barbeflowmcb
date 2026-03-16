@@ -265,7 +265,7 @@ const BookingPublic = () => {
       setRequirePrepayment(settings.require_prepayment || false);
       setPrepaymentPercentage(settings.prepayment_percentage || 0);
       setMaxAdvanceDays(settings.max_advance_days || 0);
-
+      setMaxAdvanceDaysSubscriber(settings.max_advance_days_subscriber || 0);
       // Compute blocked dates from blocks
       const blocked = new Set<string>();
       if (data.blocks) {
