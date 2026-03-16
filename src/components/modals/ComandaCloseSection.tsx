@@ -6,7 +6,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Lock, Loader2, CheckCircle2, Banknote, Smartphone, CreditCard } from "lucide-react";
+import { Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -18,6 +18,8 @@ interface Props {
   items: BookingItem[];
   comandaClosed: boolean;
   commissionBasis?: string;
+  /** Predominant payment method from the comanda (e.g. "cash", "pix", "credit_card") */
+  paymentMethod?: string;
   onClose: () => void;
 }
 
