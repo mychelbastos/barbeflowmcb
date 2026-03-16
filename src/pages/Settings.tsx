@@ -177,6 +177,7 @@ export default function Settings() {
       extra_slot_duration: 5,
       cancellation_hours: 2,
       max_advance_days: 30,
+      max_advance_days_subscriber: 7,
       cycle_reminders_enabled: true,
       cycle_reminder_3d: true,
       cycle_reminder_1d: true,
