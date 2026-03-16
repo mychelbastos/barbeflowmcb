@@ -611,6 +611,17 @@ export default function CashRegister() {
                 <p className="text-lg font-bold">{entries.length}</p>
               </CardContent>
             </Card>
+            {totalTips > 0 && (
+              <Card className="col-span-2 md:col-span-1">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base">💰</span>
+                    <span className="text-xs text-muted-foreground">Gorjetas</span>
+                  </div>
+                  <p className="text-lg font-bold text-amber-400">{fmt(totalTips)}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Actions */}
