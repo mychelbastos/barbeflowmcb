@@ -210,30 +210,6 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
           ))}
         </div>
 
-        {/* Payment method for tip */}
-        {tipCents > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[11px] text-muted-foreground">Método da gorjeta:</span>
-            <div className="flex gap-1.5">
-              {TIP_METHODS.map(m => {
-                const Icon = m.icon;
-                return (
-                  <Button
-                    key={m.value}
-                    type="button"
-                    variant={tipMethod === m.value ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1 h-8 text-xs gap-1"
-                    onClick={() => setTipMethod(m.value)}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {m.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       <AlertDialog>
