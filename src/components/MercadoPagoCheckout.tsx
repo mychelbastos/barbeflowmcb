@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2, Lock, Shield, ChevronRight, Pencil } from 'lucide-react';
+import { Loader2, CreditCard, AlertCircle, Check, QrCode, Copy, CheckCircle2, Lock, Shield, ChevronRight, Pencil, Tag } from 'lucide-react';
 import { formatCep } from '@/components/BillingAddressForm';
 import { toast } from '@/hooks/use-toast';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
