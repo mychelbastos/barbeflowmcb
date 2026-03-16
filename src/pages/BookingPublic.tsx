@@ -689,6 +689,7 @@ const BookingPublic = () => {
     setOrderBumpItems([]);
     setLoyaltyData(null);
     setUseLoyaltyReward(false);
+    setIsSubscriber(false);
     setStep(1);
   };
 
