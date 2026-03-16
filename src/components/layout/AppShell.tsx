@@ -83,6 +83,7 @@ import { ptBR } from "date-fns/locale";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { BookingModal } from "@/components/modals/BookingModal";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
+import { ClearCacheButton } from "@/components/ClearCacheButton";
 
 import { motion, AnimatePresence } from "framer-motion";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
@@ -594,7 +595,8 @@ export default function AppShell() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <ClearCacheButton compact />
                 <PushNotificationToggle tenantId={currentTenant?.id} compact />
                 <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums">
                   {format(new Date(), "dd/MM", { locale: ptBR })}
@@ -666,7 +668,8 @@ export default function AppShell() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <ClearCacheButton />
                   <PushNotificationToggle tenantId={currentTenant?.id} />
                   <motion.div whileHover={{ scale: 1.04, transition: { type: "spring", stiffness: 300, damping: 20 } }} whileTap={{ scale: 0.94, transition: { duration: 0.08 } }}>
                     <Button 
