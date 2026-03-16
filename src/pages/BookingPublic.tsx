@@ -151,6 +151,8 @@ const BookingPublic = () => {
   
   // Availability settings
   const [maxAdvanceDays, setMaxAdvanceDays] = useState<number>(0);
+  const [maxAdvanceDaysSubscriber, setMaxAdvanceDaysSubscriber] = useState<number>(0);
+  const [isSubscriber, setIsSubscriber] = useState(false);
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
   
   // Customer bookings modal
@@ -263,7 +265,7 @@ const BookingPublic = () => {
       setRequirePrepayment(settings.require_prepayment || false);
       setPrepaymentPercentage(settings.prepayment_percentage || 0);
       setMaxAdvanceDays(settings.max_advance_days || 0);
-
+      setMaxAdvanceDaysSubscriber(settings.max_advance_days_subscriber || 0);
       // Compute blocked dates from blocks
       const blocked = new Set<string>();
       if (data.blocks) {
@@ -556,7 +558,11 @@ const BookingPublic = () => {
         });
       });
       const todayStr = new Date().toISOString().split('T')[0];
-      (benefitsData.subscriptions || []).forEach((sub: any) => {
+      const subs = benefitsData.subscriptions || [];
+      const hasActiveSub = subs.length > 0;
+      setIsSubscriber(hasActiveSub);
+
+      subs.forEach((sub: any) => {
         const allowedStaffIds = (sub.plan_staff || []).map((ps: any) => ps.staff_id);
         
         // First, map services from usage records (active period)
@@ -687,6 +693,7 @@ const BookingPublic = () => {
     setOrderBumpItems([]);
     setLoyaltyData(null);
     setUseLoyaltyReward(false);
+    setIsSubscriber(false);
     setStep(1);
   };
 
@@ -884,6 +891,16 @@ const BookingPublic = () => {
     } catch (error: any) {
       console.error('Error creating booking:', error);
 
+      if (error?.type === 'ADVANCE_DAYS_EXCEEDED') {
+        toast({
+          title: 'Prazo de agendamento excedido',
+          description: error.message || 'A data selecionada está além do prazo permitido.',
+          variant: 'destructive',
+        });
+        setStep(3); // Go back to date picker
+        return;
+      }
+
       if (error?.type === 'FORCED_ONLINE_PAYMENT' && allowOnlinePayment && !packageCoveredService && !subscriptionCoveredService) {
         setForcedOnlinePayment(true);
         setPaymentMethod('online');
@@ -1024,6 +1041,12 @@ END:VCALENDAR`;
     
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
+
+  // Compute effective max advance days based on subscriber status
+  const effectiveMaxAdvanceDays = useMemo(() => {
+    if (isSubscriber && maxAdvanceDaysSubscriber > 0) return maxAdvanceDaysSubscriber;
+    return maxAdvanceDays;
+  }, [isSubscriber, maxAdvanceDays, maxAdvanceDaysSubscriber]);
 
   const selectedServiceData = useMemo(() => services.find(s => s.id === selectedService), [services, selectedService]);
   const selectedStaffData = useMemo(() => staff.find(s => s.id === selectedStaff), [staff, selectedStaff]);
@@ -1758,13 +1781,25 @@ END:VCALENDAR`;
               </span>
             </div>
             
+            {/* Advance days info badge */}
+            {effectiveMaxAdvanceDays > 0 && (
+              <div className="flex items-center gap-2 p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-xl mb-4 text-xs text-zinc-400">
+                <Calendar className="h-3.5 w-3.5 text-primary/60 flex-shrink-0" />
+                <span>
+                  {isSubscriber
+                    ? `Assinante: agenda disponível para os próximos ${effectiveMaxAdvanceDays} dias`
+                    : `Agenda disponível para os próximos ${effectiveMaxAdvanceDays} dias`}
+                </span>
+              </div>
+            )}
+
             {/* Calendar */}
             <div className="mb-6">
               <CalendarRac
                 value={selectedCalendarDate}
                 onChange={handleDateSelect}
                 minValue={today(getLocalTimeZone())}
-                maxValue={maxAdvanceDays > 0 ? today(getLocalTimeZone()).add({ days: maxAdvanceDays }) : undefined}
+                maxValue={effectiveMaxAdvanceDays > 0 ? today(getLocalTimeZone()).add({ days: effectiveMaxAdvanceDays }) : undefined}
                 isDateUnavailable={(date) => {
                   const dateStr = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
                   return blockedDates.has(dateStr);

@@ -88,6 +88,7 @@ const settingsSchema = z.object({
   extra_slot_duration: z.number().min(5).max(60),
   cancellation_hours: z.number().min(0).max(48),
   max_advance_days: z.number().min(0).max(365),
+  max_advance_days_subscriber: z.number().min(0).max(365),
   subscription_grace_hours: z.number().min(0).max(168),
   cycle_reminders_enabled: z.boolean(),
   cycle_reminder_3d: z.boolean(),
@@ -176,6 +177,7 @@ export default function Settings() {
       extra_slot_duration: 5,
       cancellation_hours: 2,
       max_advance_days: 30,
+      max_advance_days_subscriber: 7,
       cycle_reminders_enabled: true,
       cycle_reminder_3d: true,
       cycle_reminder_1d: true,
@@ -347,6 +349,7 @@ export default function Settings() {
       extra_slot_duration: settings.extra_slot_duration ?? 5,
       cancellation_hours: settings.cancellation_hours ?? 2,
       max_advance_days: settings.max_advance_days ?? 30,
+      max_advance_days_subscriber: settings.max_advance_days_subscriber ?? 7,
       subscription_grace_hours: settings.subscription_grace_hours ?? 48,
       cycle_reminders_enabled: settings.cycle_reminders_enabled !== false,
       cycle_reminder_3d: reminderDays.includes(3),
@@ -1019,28 +1022,58 @@ export default function Settings() {
                   </div>
 
                   {/* Advance Booking Limit */}
-                  <FormField
-                    control={settingsForm.control}
-                    name="max_advance_days"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Limite de Agendamento Antecipado (dias)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min={0} 
-                            max={365}
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Quantos dias à frente o cliente pode agendar. Ex: 30 = cliente pode agendar até 30 dias no futuro. Use 0 para ilimitado.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <Separator className="my-2" />
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <CalendarOff className="h-4 w-4" />
+                    Prazo de Agendamento
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={settingsForm.control}
+                      name="max_advance_days"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cliente normal (dias)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0} 
+                              max={365}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Clientes sem assinatura ativa. Use 0 para ilimitado.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={settingsForm.control}
+                      name="max_advance_days_subscriber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cliente assinante (dias)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0} 
+                              max={365}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Clientes com assinatura ativa no plano. Use 0 para ilimitado.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <Separator className="my-4" />
 
