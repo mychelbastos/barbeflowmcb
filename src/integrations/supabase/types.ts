@@ -261,6 +261,7 @@ export type Database = {
           starts_at: string
           status: string
           tenant_id: string
+          tip_cents: number | null
           updated_at: string
         }
         Insert: {
@@ -280,6 +281,7 @@ export type Database = {
           starts_at: string
           status?: string
           tenant_id: string
+          tip_cents?: number | null
           updated_at?: string
         }
         Update: {
@@ -299,6 +301,7 @@ export type Database = {
           starts_at?: string
           status?: string
           tenant_id?: string
+          tip_cents?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -365,6 +368,7 @@ export type Database = {
           source: string | null
           staff_id: string | null
           tenant_id: string
+          tip_cents: number | null
           updated_at: string | null
         }
         Insert: {
@@ -385,6 +389,7 @@ export type Database = {
           source?: string | null
           staff_id?: string | null
           tenant_id: string
+          tip_cents?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -405,6 +410,7 @@ export type Database = {
           source?: string | null
           staff_id?: string | null
           tenant_id?: string
+          tip_cents?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3413,14 +3419,25 @@ export type Database = {
         Args: { p_endpoint: string; p_ip: string; p_tenant_id?: string }
         Returns: boolean
       }
-      close_comanda_with_commissions: {
-        Args: {
-          p_booking_id: string
-          p_commission_basis?: string
-          p_tenant_id: string
-        }
-        Returns: Json
-      }
+      close_comanda_with_commissions:
+        | {
+            Args: {
+              p_booking_id: string
+              p_commission_basis?: string
+              p_tenant_id: string
+              p_tip_cents?: number
+              p_tip_payment_method?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_booking_id: string
+              p_commission_basis?: string
+              p_tenant_id: string
+            }
+            Returns: Json
+          }
       conclude_unified_bookings: {
         Args: {
           p_booking_ids: string[]

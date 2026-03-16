@@ -61,6 +61,7 @@ const SOURCE_LABELS: Record<string, string> = {
   withdrawal: "Sangria",
   expense: "Despesa",
   business_expense: "Despesa",
+  tip: "Gorjeta",
 };
 
 type CashSession = {
@@ -509,6 +510,7 @@ export default function CashRegister() {
   const totalOut = entries.filter(e => e.kind === "expense" || e.source === "withdrawal")
     .reduce((s, e) => s + e.amount_cents, 0);
   const currentBalance = session ? session.opening_amount_cents + totalIn - totalOut : 0;
+  const totalTips = entries.filter(e => e.source === "tip").reduce((s, e) => s + e.amount_cents, 0);
 
   // Group entries by payment method
   const byMethod = entries.reduce((acc, e) => {
@@ -609,6 +611,17 @@ export default function CashRegister() {
                 <p className="text-lg font-bold">{entries.length}</p>
               </CardContent>
             </Card>
+            {totalTips > 0 && (
+              <Card className="col-span-2 md:col-span-1">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-base">💰</span>
+                    <span className="text-xs text-muted-foreground">Gorjetas</span>
+                  </div>
+                  <p className="text-lg font-bold text-amber-400">{fmt(totalTips)}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Actions */}
