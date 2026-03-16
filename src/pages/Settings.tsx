@@ -88,6 +88,7 @@ const settingsSchema = z.object({
   extra_slot_duration: z.number().min(5).max(60),
   cancellation_hours: z.number().min(0).max(48),
   max_advance_days: z.number().min(0).max(365),
+  max_advance_days_subscriber: z.number().min(0).max(365),
   subscription_grace_hours: z.number().min(0).max(168),
   cycle_reminders_enabled: z.boolean(),
   cycle_reminder_3d: z.boolean(),
