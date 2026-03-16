@@ -53,7 +53,7 @@ export function ComandaCloseSection({ bookingId, tenantId, items, comandaClosed,
 
       if (tipCents > 0) {
         rpcParams.p_tip_cents = tipCents;
-        rpcParams.p_tip_payment_method = paymentMethod || "cash";
+        rpcParams.p_tip_payment_method = "cash";
       }
 
       const { data, error } = await supabase.rpc("close_comanda_with_commissions", rpcParams);
