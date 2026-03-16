@@ -83,6 +83,7 @@ import { ptBR } from "date-fns/locale";
 import { useBookingModal } from "@/hooks/useBookingModal";
 import { BookingModal } from "@/components/modals/BookingModal";
 import { PushNotificationToggle } from "@/components/PushNotificationToggle";
+import { ClearCacheButton } from "@/components/ClearCacheButton";
 
 import { motion, AnimatePresence } from "framer-motion";
 import logoBranca from "@/assets/modoGESTOR_branca.png";
