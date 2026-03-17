@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface UseAdminAuthOptions {
-  /** If true, redirects non-admins away. If false, just checks status silently. */
   redirect?: boolean;
 }
 
@@ -11,17 +11,19 @@ export function useAdminAuth({ redirect = true }: UseAdminAuthOptions = {}) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (redirect) navigate("/app/login");
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
+    if (authLoading) return;
 
+    if (!user) {
+      if (redirect) navigate("/app/login");
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
+    const check = async () => {
       const { data, error } = await supabase.rpc("is_platform_admin");
       if (error || !data) {
         if (redirect) navigate("/app/dashboard");
@@ -29,12 +31,11 @@ export function useAdminAuth({ redirect = true }: UseAdminAuthOptions = {}) {
         setLoading(false);
         return;
       }
-
       setIsAdmin(true);
       setLoading(false);
     };
     check();
-  }, [navigate, redirect]);
+  }, [user, authLoading, navigate, redirect]);
 
   return { isAdmin, loading };
 }

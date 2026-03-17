@@ -138,7 +138,7 @@ export function useSubscription() {
     } finally {
       setLoading(false);
     }
-  }, [isExempt, tenantLoaded, currentTenant]);
+  }, [isExempt, tenantLoaded, currentTenant, session]);
 
   useEffect(() => {
     checkSubscription();
