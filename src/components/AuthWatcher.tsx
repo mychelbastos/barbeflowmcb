@@ -26,7 +26,7 @@ export default function AuthWatcher() {
           .from("onboarding_progress")
           .select("questionnaire_completed, onboarding_completed, onboarding_skipped")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (progress && !progress.onboarding_skipped) {
           if (!progress.questionnaire_completed) {

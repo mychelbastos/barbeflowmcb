@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "./useTenant";
+import { useAuth } from "./useAuth";
 
 export interface SubscriptionData {
   subscribed: boolean;
@@ -83,6 +84,7 @@ const EXEMPT_TENANT_SLUGS = ["barbeariaws", "barberflow", "adrianoalves"];
 
 export function useSubscription() {
   const { currentTenant } = useTenant();
+  const { session } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -95,7 +97,6 @@ export function useSubscription() {
   const checkSubscription = useCallback(async () => {
     if (!tenantLoaded) return;
     // Don't call if no active session
-    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       setSubscription({ subscribed: false, status: "none" });
       setLoading(false);
@@ -137,7 +138,7 @@ export function useSubscription() {
     } finally {
       setLoading(false);
     }
-  }, [isExempt, tenantLoaded, currentTenant]);
+  }, [isExempt, tenantLoaded, currentTenant, session]);
 
   useEffect(() => {
     checkSubscription();

@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DateRangeProvider } from "@/contexts/DateRangeContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { TenantProvider } from "@/providers/TenantProvider";
 import { isDashboardDomain, isPublicDomain, isPreviewOrLocal, isCustomDomain } from "@/lib/hostname";
 
 // Public page — loaded eagerly (main public page, must load instantly)
@@ -77,7 +79,16 @@ import { useLocation } from "react-router-dom";
 import { checkConsentOnLoad } from "@/utils/consent";
 import { initTracking, trackPageView } from "@/lib/tracking";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,       // 2 min default
+      refetchOnWindowFocus: false,      // Avoid bursts when switching tabs
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 8000),
+    },
+  },
+});
 
 const showPublic = isPublicDomain() || isPreviewOrLocal() || isCustomDomain();
 const showDashboard = isDashboardDomain() || isPreviewOrLocal();
@@ -123,95 +134,99 @@ const App = () => {
   return (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <RouteTracker />
-          <Suspense fallback={null}>
-            <AuthWatcher />
-          </Suspense>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public routes - modogestor.com.br */}
-              {showPublic && (
-                <>
-                  {/* On custom domains, root shows the booking page directly */}
-                  <Route path="/" element={isCustomDomain() ? <BookingPublic /> : <Landing />} />
-                  <Route path="/termos" element={<Terms />} />
-                  <Route path="/privacidade" element={<Privacy />} />
-                  <Route path="/reembolso" element={<Reembolso />} />
-                  <Route path="/dpa" element={<DPA />} />
-                  <Route path="/termos-agendamento" element={<TermosAgendamento />} />
-                  <Route path="/:slug" element={<BookingPublic />} />
-                  <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
-                  <Route path="/:slug/pacote/retorno" element={<PackagePaymentReturn />} />
-                  <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
-                </>
-              )}
+      <AuthProvider>
+        <TenantProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ScrollToTop />
+              <RouteTracker />
+              <Suspense fallback={null}>
+                <AuthWatcher />
+              </Suspense>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* Public routes - modogestor.com.br */}
+                  {showPublic && (
+                    <>
+                      {/* On custom domains, root shows the booking page directly */}
+                      <Route path="/" element={isCustomDomain() ? <BookingPublic /> : <Landing />} />
+                      <Route path="/termos" element={<Terms />} />
+                      <Route path="/privacidade" element={<Privacy />} />
+                      <Route path="/reembolso" element={<Reembolso />} />
+                      <Route path="/dpa" element={<DPA />} />
+                      <Route path="/termos-agendamento" element={<TermosAgendamento />} />
+                      <Route path="/:slug" element={<BookingPublic />} />
+                      <Route path="/:slug/pagamento/retorno" element={<PaymentReturn />} />
+                      <Route path="/:slug/pacote/retorno" element={<PackagePaymentReturn />} />
+                      <Route path="/:slug/subscription/callback" element={<SubscriptionCallback />} />
+                    </>
+                  )}
 
-              {/* Dashboard routes */}
-              {showDashboard && (
-                <>
-                  <Route path={`${dashPrefix}/login`} element={<Login />} />
-                  <Route path={`${dashPrefix}/register`} element={<Login />} />
-                  <Route path={`${dashPrefix}/forgot-password`} element={<ForgotPassword />} />
-                  <Route path={`${dashPrefix}/reset-password`} element={<ResetPassword />} />
+                  {/* Dashboard routes */}
+                  {showDashboard && (
+                    <>
+                      <Route path={`${dashPrefix}/login`} element={<Login />} />
+                      <Route path={`${dashPrefix}/register`} element={<Login />} />
+                      <Route path={`${dashPrefix}/forgot-password`} element={<ForgotPassword />} />
+                      <Route path={`${dashPrefix}/reset-password`} element={<ResetPassword />} />
+                      
+                      <Route path={`${dashPrefix}/onboarding`} element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                      <Route path={`${dashPrefix}/questionnaire`} element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
+                      <Route path={`${dashPrefix}/onboarding-wizard`} element={<ProtectedRoute><OnboardingWizard /></ProtectedRoute>} />
+                      
+                      <Route path={dashPrefix || '/'} element={<ProtectedAppShell />}>
+                        <Route path={dashPrefix ? 'dashboard' : 'dashboard'} element={<Dashboard />} />
+                        <Route path="bookings" element={<Bookings />} />
+                        <Route path="services" element={<Services />} />
+                        <Route path="packages" element={<PackagesPage />} />
+                        <Route path="subscription-plans" element={<Navigate to={`${dashPrefix}/subscriptions/plans`} replace />} />
+                        <Route path="subscriptions/plans" element={<SubscriptionPlansPage />} />
+                        <Route path="subscriptions/members" element={<SubscriptionMembers />} />
+                        <Route path="subscriptions/receivables" element={<SubscriptionReceivables />} />
+                        <Route path="subscriptions/calendar" element={<SubscriptionCalendar />} />
+                        <Route path="subscriptions/delinquents" element={<SubscriptionDelinquents />} />
+                        <Route path="staff" element={<Staff />} />
+                        <Route path="customers" element={<Customers />} />
+                        <Route path="recurring-clients" element={<RecurringClients />} />
+                        <Route path="finance" element={<Finance />} />
+                        <Route path="commissions" element={<CommissionsPage />} />
+                        
+                        <Route path="caixa" element={<CashRegister />} />
+                        <Route path="products" element={<Products />} />
+                        <Route path="reports" element={<Reports />} />
+                        <Route path="alta-performance" element={<HighPerformance />} />
+                        <Route path="settings" element={<Settings />} />
+                      </Route>
+                    </>
+                  )}
+
+                  {/* Admin routes */}
+                  {showDashboard && (
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="tenants" element={<AdminTenants />} />
+                      <Route path="tenants/:id" element={<AdminTenantDetail />} />
+                      <Route path="analytics" element={<AdminAnalytics />} />
+                      <Route path="onboarding" element={<AdminOnboarding />} />
+                      <Route path="billing" element={<AdminBilling />} />
+                    </Route>
+                  )}
+
+                  {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
+                  {isDashboardDomain() && (
+                    <Route path="/" element={<Login />} />
+                  )}
                   
-                  <Route path={`${dashPrefix}/onboarding`} element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                  <Route path={`${dashPrefix}/questionnaire`} element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
-                  <Route path={`${dashPrefix}/onboarding-wizard`} element={<ProtectedRoute><OnboardingWizard /></ProtectedRoute>} />
-                  
-                  <Route path={dashPrefix || '/'} element={<ProtectedAppShell />}>
-                    <Route path={dashPrefix ? 'dashboard' : 'dashboard'} element={<Dashboard />} />
-                    <Route path="bookings" element={<Bookings />} />
-                    <Route path="services" element={<Services />} />
-                    <Route path="packages" element={<PackagesPage />} />
-                    <Route path="subscription-plans" element={<Navigate to={`${dashPrefix}/subscriptions/plans`} replace />} />
-                    <Route path="subscriptions/plans" element={<SubscriptionPlansPage />} />
-                    <Route path="subscriptions/members" element={<SubscriptionMembers />} />
-                    <Route path="subscriptions/receivables" element={<SubscriptionReceivables />} />
-                    <Route path="subscriptions/calendar" element={<SubscriptionCalendar />} />
-                    <Route path="subscriptions/delinquents" element={<SubscriptionDelinquents />} />
-                    <Route path="staff" element={<Staff />} />
-                    <Route path="customers" element={<Customers />} />
-                    <Route path="recurring-clients" element={<RecurringClients />} />
-                    <Route path="finance" element={<Finance />} />
-                    <Route path="commissions" element={<CommissionsPage />} />
-                    
-                    <Route path="caixa" element={<CashRegister />} />
-                    <Route path="products" element={<Products />} />
-                    <Route path="reports" element={<Reports />} />
-                    <Route path="alta-performance" element={<HighPerformance />} />
-                    <Route path="settings" element={<Settings />} />
-                  </Route>
-                </>
-              )}
-
-              {/* Admin routes */}
-              {showDashboard && (
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="tenants" element={<AdminTenants />} />
-                  <Route path="tenants/:id" element={<AdminTenantDetail />} />
-                  <Route path="analytics" element={<AdminAnalytics />} />
-                  <Route path="onboarding" element={<AdminOnboarding />} />
-                  <Route path="billing" element={<AdminBilling />} />
-                </Route>
-              )}
-
-              {/* On dashboard domain, redirect root to login (handled by AuthWatcher if logged in) */}
-              {isDashboardDomain() && (
-                <Route path="/" element={<Login />} />
-              )}
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          <CookieBanner />
-        </BrowserRouter>
-      </TooltipProvider>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+              <CookieBanner />
+            </BrowserRouter>
+          </TooltipProvider>
+        </TenantProvider>
+      </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
   );
