@@ -116,7 +116,6 @@ export function PackageCustomersList() {
 
       setCustomerPackages(cps);
       setPackages(pkgRes.data || []);
-      setCustomers(custRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
