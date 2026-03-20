@@ -79,6 +79,7 @@ export function PackageCustomersList() {
   const [assigning, setAssigning] = useState(false);
   const [customers, setCustomers] = useState<{id: string; name: string; phone: string}[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (currentTenant) loadData();
