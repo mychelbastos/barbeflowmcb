@@ -111,7 +111,7 @@ function CustomerSearchSelect({ tenantId, value, onChange }: { tenantId: string;
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (search.length < 2) { setResults([]); return; }
+    if (search.length < 3) { setResults([]); return; }
     timerRef.current = setTimeout(async () => {
       setSearching(true);
       const { data } = await supabase.rpc('search_customers_quick', {
@@ -121,7 +121,7 @@ function CustomerSearchSelect({ tenantId, value, onChange }: { tenantId: string;
       });
       setResults((data as Customer[]) || []);
       setSearching(false);
-    }, 300);
+    }, 800);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [search, tenantId]);
 
@@ -130,10 +130,10 @@ function CustomerSearchSelect({ tenantId, value, onChange }: { tenantId: string;
       <Label>Cliente</Label>
       <div className="relative">
         <Input
-          placeholder="Buscar por nome ou telefone (mín. 2 letras)..."
+          placeholder="Buscar por nome ou telefone (mín. 3 letras)..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => { if (search.length >= 2) setOpen(true); }}
+          onFocus={() => { if (search.length >= 3) setOpen(true); }}
         />
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
       </div>

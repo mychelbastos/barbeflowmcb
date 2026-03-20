@@ -470,7 +470,7 @@ export function BookingModal() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const searchCustomers = useCallback((name: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (!name || name.length < 2 || !currentTenant) {
+    if (!name || name.length < 3 || !currentTenant) {
       setCustomerSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -549,7 +549,7 @@ export function BookingModal() {
       } finally {
         setSearchingCustomers(false);
       }
-    }, 300);
+    }, 800);
   }, [currentTenant]);
 
   const selectCustomer = (customer: CustomerSuggestion) => {

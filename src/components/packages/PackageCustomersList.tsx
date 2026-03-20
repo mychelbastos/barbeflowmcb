@@ -508,14 +508,14 @@ export function PackageCustomersList() {
             <div className="space-y-2">
               <Label>Cliente *</Label>
               <Input
-                placeholder="Buscar por nome ou telefone (mín. 2 letras)..."
+                placeholder="Buscar por nome ou telefone (mín. 3 letras)..."
                 value={customerSearch}
                 onChange={(e) => {
                   setCustomerSearch(e.target.value);
                   // Server-side search with debounce
                   if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
                   const q = e.target.value;
-                  if (!q || q.length < 2 || !currentTenant) {
+                  if (!q || q.length < 3 || !currentTenant) {
                     setCustomers([]);
                     return;
                   }
@@ -526,10 +526,10 @@ export function PackageCustomersList() {
                       p_limit: 10,
                     });
                     setCustomers(data || []);
-                  }, 400);
+                  }, 800);
                 }}
               />
-              {customerSearch.length >= 2 && customers.length > 0 && (
+              {customerSearch.length >= 3 && customers.length > 0 && (
                 <div className="max-h-40 overflow-y-auto border border-border rounded-lg divide-y divide-border">
                   {customers.map(c => (
                       <button

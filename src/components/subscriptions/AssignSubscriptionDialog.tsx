@@ -56,7 +56,7 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    if (!value || value.length < 2 || !currentTenant) {
+    if (!value || value.length < 3 || !currentTenant) {
       setCustomers([]);
       return;
     }
@@ -67,7 +67,7 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
         p_limit: 10,
       });
       setCustomers(data || []);
-    }, 400);
+    }, 800);
   };
 
   const handleAssign = async () => {
@@ -185,7 +185,7 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Buscar cliente</Label>
-              <Input placeholder="Nome ou telefone (mín. 2 letras)" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)} />
+              <Input placeholder="Nome ou telefone (mín. 3 letras)" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)} />
               <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
