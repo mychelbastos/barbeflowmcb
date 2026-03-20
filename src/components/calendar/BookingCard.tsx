@@ -17,6 +17,7 @@ interface BookingCardProps {
   onClick: () => void;
   isRecurring?: boolean;
   hasOverlap?: boolean;
+  isSecondary?: boolean;
 }
 
 export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: BookingCardProps) {
