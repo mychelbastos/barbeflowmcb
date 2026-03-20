@@ -20,7 +20,7 @@ interface BookingCardProps {
   isSecondary?: boolean;
 }
 
-export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: BookingCardProps) {
+export function BookingCard({ booking, onClick, isRecurring, hasOverlap, isSecondary }: BookingCardProps) {
   const startTime = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
   const endTime = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
   const style = statusStyles[booking.status] || statusStyles.confirmed;
@@ -28,7 +28,7 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: Booki
   return (
     <button
       onClick={onClick}
-      className={`w-full h-full rounded-lg px-2 py-1 text-left transition-all hover:brightness-110 cursor-pointer flex flex-col justify-center gap-0 overflow-hidden ${style} ${hasOverlap ? 'ring-1 ring-amber-500/50 ring-inset' : ''}`}
+      className={`w-full h-full rounded-lg px-2 py-1 text-left transition-all hover:brightness-110 cursor-pointer flex flex-col justify-center gap-0 overflow-hidden ${style} ${hasOverlap ? 'ring-1 ring-amber-500/50 ring-inset' : ''} ${isSecondary ? 'border-l-0 border-dashed border border-border opacity-80' : ''}`}
     >
       <div className="flex items-center gap-1 min-w-0">
         {hasOverlap && (
@@ -37,6 +37,11 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: Booki
         <p className="text-[11px] font-semibold text-foreground truncate leading-tight">
           {booking.customer?.name || "Cliente"}
         </p>
+        {isSecondary && (
+          <span className="flex-shrink-0 text-[8px] font-bold bg-sky-500/20 text-sky-400 px-1 rounded leading-tight">
+            Extra
+          </span>
+        )}
         {isRecurring && (
           <span className="flex-shrink-0 text-[8px] font-bold bg-violet-500/20 text-violet-400 px-1 rounded leading-tight">
             Fixo
@@ -55,6 +60,7 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap }: Booki
       </div>
       <p className="text-[10px] text-muted-foreground truncate leading-tight">
         {booking.service?.name}
+        {isSecondary && booking.main_staff_name && ` (c/ ${booking.main_staff_name})`}
       </p>
       <p className="text-[10px] text-muted-foreground/70 leading-tight">
         {startTime} - {endTime}
