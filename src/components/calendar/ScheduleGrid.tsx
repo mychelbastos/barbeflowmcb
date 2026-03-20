@@ -336,9 +336,19 @@ export function ScheduleGrid({
             >
               <BookingCard
                 booking={booking}
-                onClick={() => onBookingClick(booking)}
+                onClick={() => {
+                  // For secondary bookings, resolve to original booking for the modal
+                  if (booking.staff_role === 'secondary') {
+                    const originalId = booking.id.replace(/^secondary-/, '').replace(/-[^-]+$/, '');
+                    const originalBooking = bookings.find(b => b.id === originalId);
+                    onBookingClick(originalBooking || booking);
+                  } else {
+                    onBookingClick(booking);
+                  }
+                }}
                 isRecurring={recurringCustomerIds?.has(booking.customer_id)}
                 hasOverlap={colInfo.hasOverlap}
+                isSecondary={booking.staff_role === 'secondary'}
               />
             </div>
           );
