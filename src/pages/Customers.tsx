@@ -120,10 +120,16 @@ export default function Customers() {
 
   // Debounce search
   useEffect(() => {
+    // Clear immediately when input is cleared
+    if (!searchTerm) {
+      setDebouncedSearch('');
+      setPage(0);
+      return;
+    }
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setPage(0);
-    }, 300);
+    }, 800);
     return () => clearTimeout(debounceTimer.current);
   }, [searchTerm]);
 

@@ -130,10 +130,10 @@ function CustomerSearchSelect({ tenantId, value, onChange }: { tenantId: string;
       <Label>Cliente</Label>
       <div className="relative">
         <Input
-          placeholder="Buscar por nome ou telefone (mín. 2 letras)..."
+          placeholder="Buscar por nome ou telefone (mín. 3 letras)..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => { if (search.length >= 2) setOpen(true); }}
+          onFocus={() => { if (search.length >= 3) setOpen(true); }}
         />
         {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
       </div>

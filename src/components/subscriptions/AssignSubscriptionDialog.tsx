@@ -56,7 +56,7 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    if (!value || value.length < 2 || !currentTenant) {
+    if (!value || value.length < 3 || !currentTenant) {
       setCustomers([]);
       return;
     }
@@ -67,7 +67,7 @@ export function AssignSubscriptionDialog({ open, onOpenChange, onAssigned }: Ass
         p_limit: 10,
       });
       setCustomers(data || []);
-    }, 400);
+    }, 800);
   };
 
   const handleAssign = async () => {
