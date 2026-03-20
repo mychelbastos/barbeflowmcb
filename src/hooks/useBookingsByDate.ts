@@ -38,6 +38,10 @@ export interface BookingData {
   service: { name: string; color: string | null; duration_minutes: number; price_cents: number } | null;
   staff: { name: string; color: string | null } | null;
   customer: { name: string; phone: string } | null;
+  /** 'primary' (default) or 'secondary' — indicates if this booking is shown because the staff is a secondary provider */
+  staff_role?: 'primary' | 'secondary';
+  /** For secondary bookings, the name of the primary staff member */
+  main_staff_name?: string;
 }
 
 export interface BlockData {
