@@ -32,8 +32,9 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap, isSecon
     ? allItems.filter(item => item.staff_id === currentStaffId)
     : allItems;
 
-  // Fallback: if no items matched (e.g. items not loaded yet), show main service
-  const hasItems = myItems.length > 0;
+  // Only fallback to booking.service?.name when there are NO all_items at all (data not loaded)
+  // If all_items exists but none match this staff, show nothing (don't show wrong service)
+  const showFallback = allItems.length === 0;
 
   return (
     <button
@@ -70,7 +71,7 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap, isSecon
       </div>
 
       {/* Show filtered service items for this staff column */}
-      {hasItems ? (
+      {myItems.length > 0 ? (
         <div className="flex flex-col gap-0">
           {myItems.map((item, i) => (
             <p key={i} className="text-[10px] text-muted-foreground truncate leading-tight">
@@ -81,11 +82,11 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap, isSecon
             </p>
           ))}
         </div>
-      ) : (
+      ) : showFallback ? (
         <p className="text-[10px] text-muted-foreground truncate leading-tight">
           {booking.service?.name}
         </p>
-      )}
+      ) : null}
 
       {/* If secondary, show main staff name */}
       {isSecondary && booking.main_staff_name && (
