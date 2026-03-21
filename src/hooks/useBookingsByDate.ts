@@ -24,6 +24,15 @@ export interface Schedule {
   active: boolean;
 }
 
+export interface BookingItemData {
+  title: string;
+  type: string;
+  staff_name: string | null;
+  staff_id: string | null;
+  price_cents: number;
+  paid_status: string;
+}
+
 export interface BookingData {
   id: string;
   starts_at: string;
@@ -42,6 +51,8 @@ export interface BookingData {
   staff_role?: 'primary' | 'secondary';
   /** For secondary bookings, the name of the primary staff member */
   main_staff_name?: string;
+  /** All booking_items for this booking (services, products, extras) */
+  all_items?: BookingItemData[];
 }
 
 export interface BlockData {
