@@ -263,7 +263,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
 
       // Attach all_items to secondary bookings
       const enrichedSecondary = (secondaryMapped || []).map((b: BookingData) => {
-        const originalId = b.id.replace(/^secondary-/, '').replace(/-[^-]+$/, '');
+        const originalId = b.original_booking_id || b.id;
         return {
           ...b,
           all_items: itemsByBookingId[originalId] || [],
