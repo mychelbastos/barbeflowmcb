@@ -23,7 +23,6 @@ interface BookingCardProps {
 
 export function BookingCard({ booking, onClick, isRecurring, hasOverlap, isSecondary, currentStaffId }: BookingCardProps) {
   const startTime = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
-  const endTime = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
   const style = statusStyles[booking.status] || statusStyles.confirmed;
 
   // Filter items for this staff column, or show all if no currentStaffId
@@ -31,6 +30,12 @@ export function BookingCard({ booking, onClick, isRecurring, hasOverlap, isSecon
   const myItems = currentStaffId
     ? allItems.filter(item => item.staff_id === currentStaffId)
     : allItems;
+
+  // Calculate end time: use staff-specific duration if available
+  const myDuration = myItems.reduce((sum, i) => sum + (i.duration_minutes || 0), 0);
+  const endTime = myDuration > 0
+    ? formatInTimeZone(new Date(new Date(booking.starts_at).getTime() + myDuration * 60 * 1000), TZ, "HH:mm")
+    : formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
 
   // Only fallback to booking.service?.name when there are NO all_items at all (data not loaded)
   // If all_items exists but none match this staff, show nothing (don't show wrong service)

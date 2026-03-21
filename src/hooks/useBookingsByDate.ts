@@ -31,6 +31,7 @@ export interface BookingItemData {
   staff_id: string | null;
   price_cents: number;
   paid_status: string;
+  duration_minutes: number | null;
 }
 
 export interface BookingData {
@@ -238,9 +239,22 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
       if (allBookingIds.length > 0) {
         const { data: itemsData } = await supabase
           .from("booking_items")
-          .select("booking_id, title, type, staff_id, unit_price_cents, paid_status, staff:staff(name)")
+          .select("booking_id, title, type, staff_id, ref_id, unit_price_cents, paid_status, staff:staff(name)")
           .in("booking_id", allBookingIds)
           .in("type", ["service", "extra_service"]);
+
+        // Fetch service durations for items that reference a service
+        const serviceRefIds = [...new Set((itemsData || []).map((i: any) => i.ref_id).filter(Boolean))];
+        let serviceDurations: Record<string, number> = {};
+        if (serviceRefIds.length > 0) {
+          const { data: servicesData } = await supabase
+            .from("services")
+            .select("id, duration_minutes")
+            .in("id", serviceRefIds);
+          for (const s of (servicesData || [])) {
+            serviceDurations[s.id] = s.duration_minutes;
+          }
+        }
         
         for (const item of (itemsData || [])) {
           if (!itemsByBookingId[item.booking_id]) itemsByBookingId[item.booking_id] = [];
@@ -251,6 +265,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
             staff_id: item.staff_id,
             price_cents: item.unit_price_cents,
             paid_status: item.paid_status,
+            duration_minutes: item.ref_id ? (serviceDurations[item.ref_id] || null) : null,
           });
         }
       }

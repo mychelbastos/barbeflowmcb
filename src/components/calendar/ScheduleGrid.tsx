@@ -176,13 +176,30 @@ export function ScheduleGrid({
 
   const SLOT_HEIGHT = 48; // px per slot
 
+  // Helper: compute staff-specific duration from all_items
+  function getStaffDurationMinutes(booking: BookingData, staffId: string): number | null {
+    const items = booking.all_items || [];
+    const myItems = items.filter(i => i.staff_id === staffId);
+    if (myItems.length === 0) return null;
+    const totalDuration = myItems.reduce((sum, i) => sum + (i.duration_minutes || 0), 0);
+    return totalDuration > 0 ? totalDuration : null;
+  }
+
   // Helper: convert a booking's time to pixel position relative to grid start
-  function getBookingPosition(booking: BookingData): { top: number; height: number } {
+  function getBookingPosition(booking: BookingData, staffId?: string): { top: number; height: number } {
     const bStart = formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm");
-    const bEnd = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
     const startMins = timeToMinutes(bStart);
-    const endMins = timeToMinutes(bEnd);
     const startOfDayMins = timeRange.startHour * 60;
+
+    // Calculate end time: use staff-specific duration if available
+    let endMins: number;
+    const myDuration = staffId ? getStaffDurationMinutes(booking, staffId) : null;
+    if (myDuration && myDuration > 0) {
+      endMins = startMins + myDuration;
+    } else {
+      const bEnd = formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm");
+      endMins = timeToMinutes(bEnd);
+    }
 
     const clampedStart = Math.max(startMins, startOfDayMins);
     const clampedEnd = Math.min(endMins, timeRange.endHour * 60);
@@ -193,8 +210,18 @@ export function ScheduleGrid({
   }
 
   // Detect overlapping bookings and assign columns (Google Calendar style)
-  function assignColumns(bookingList: BookingData[]): Map<string, { col: number; totalCols: number; hasOverlap: boolean }> {
+  function assignColumns(bookingList: BookingData[], staffId: string): Map<string, { col: number; totalCols: number; hasOverlap: boolean }> {
     const result = new Map<string, { col: number; totalCols: number; hasOverlap: boolean }>();
+
+    // Helper to get effective end minutes for a booking in this staff column
+    function getEffectiveEndMins(booking: BookingData): number {
+      const myDuration = getStaffDurationMinutes(booking, staffId);
+      if (myDuration && myDuration > 0) {
+        const bStart = timeToMinutes(formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm"));
+        return bStart + myDuration;
+      }
+      return timeToMinutes(formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm"));
+    }
 
     const sorted = [...bookingList].sort((a, b) => {
       const aStart = timeToMinutes(formatInTimeZone(new Date(a.starts_at), TZ, "HH:mm"));
@@ -208,7 +235,7 @@ export function ScheduleGrid({
 
     for (const booking of sorted) {
       const bStart = timeToMinutes(formatInTimeZone(new Date(booking.starts_at), TZ, "HH:mm"));
-      const bEnd = timeToMinutes(formatInTimeZone(new Date(booking.ends_at), TZ, "HH:mm"));
+      const bEnd = getEffectiveEndMins(booking);
 
       if (currentGroup.length === 0 || bStart < currentGroupEnd) {
         currentGroup.push(booking);
@@ -246,7 +273,7 @@ export function ScheduleGrid({
   const renderStaffColumn = (member: StaffMember) => {
     const totalHeight = slots.length * SLOT_HEIGHT;
     const staffBookings = bookingsByStaff[member.id] || [];
-    const columnAssignments = assignColumns(staffBookings);
+    const columnAssignments = assignColumns(staffBookings, member.id);
 
     return (
       <div key={member.id} className="flex-1 min-w-[160px] relative" style={{ height: `${totalHeight}px` }}>
@@ -317,7 +344,7 @@ export function ScheduleGrid({
 
         {/* Overlay: absolutely positioned booking cards */}
         {staffBookings.map((booking) => {
-          const { top, height } = getBookingPosition(booking);
+          const { top, height } = getBookingPosition(booking, member.id);
           const colInfo = columnAssignments.get(booking.id) || { col: 0, totalCols: 1, hasOverlap: false };
           const widthPercent = 100 / colInfo.totalCols;
           const leftPercent = colInfo.col * widthPercent;
