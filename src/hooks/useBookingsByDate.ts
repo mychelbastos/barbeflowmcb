@@ -228,6 +228,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
             staff_id: entry.calendar_staff_id,
             staff_role: 'secondary' as const,
             main_staff_name: original.staff?.name || null,
+            original_booking_id: original.id,
           });
         }
       }
