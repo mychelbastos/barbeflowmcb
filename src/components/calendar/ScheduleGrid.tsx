@@ -273,7 +273,7 @@ export function ScheduleGrid({
   const renderStaffColumn = (member: StaffMember) => {
     const totalHeight = slots.length * SLOT_HEIGHT;
     const staffBookings = bookingsByStaff[member.id] || [];
-    const columnAssignments = assignColumns(staffBookings);
+    const columnAssignments = assignColumns(staffBookings, member.id);
 
     return (
       <div key={member.id} className="flex-1 min-w-[160px] relative" style={{ height: `${totalHeight}px` }}>
