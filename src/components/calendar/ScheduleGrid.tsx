@@ -338,10 +338,8 @@ export function ScheduleGrid({
                 booking={booking}
                 currentStaffId={member.id}
                 onClick={() => {
-                  // For secondary bookings, resolve to original booking for the modal
-                  if (booking.staff_role === 'secondary') {
-                    const originalId = booking.id.replace(/^secondary-/, '').replace(/-[^-]+$/, '');
-                    const originalBooking = bookings.find(b => b.id === originalId);
+                  if (booking.staff_role === 'secondary' && booking.original_booking_id) {
+                    const originalBooking = bookings.find(b => b.id === booking.original_booking_id);
                     onBookingClick(originalBooking || booking);
                   } else {
                     onBookingClick(booking);

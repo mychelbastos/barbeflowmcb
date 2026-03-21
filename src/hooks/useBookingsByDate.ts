@@ -51,6 +51,8 @@ export interface BookingData {
   staff_role?: 'primary' | 'secondary';
   /** For secondary bookings, the name of the primary staff member */
   main_staff_name?: string;
+  /** The real booking ID (same as id for primary, original UUID for secondary) */
+  original_booking_id?: string;
   /** All booking_items for this booking (services, products, extras) */
   all_items?: BookingItemData[];
 }
@@ -226,6 +228,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
             staff_id: entry.calendar_staff_id,
             staff_role: 'secondary' as const,
             main_staff_name: original.staff?.name || null,
+            original_booking_id: original.id,
           });
         }
       }
@@ -260,7 +263,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
 
       // Attach all_items to secondary bookings
       const enrichedSecondary = (secondaryMapped || []).map((b: BookingData) => {
-        const originalId = b.id.replace(/^secondary-/, '').replace(/-[^-]+$/, '');
+        const originalId = b.original_booking_id || b.id;
         return {
           ...b,
           all_items: itemsByBookingId[originalId] || [],
