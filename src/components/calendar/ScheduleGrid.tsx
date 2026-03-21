@@ -336,6 +336,7 @@ export function ScheduleGrid({
             >
               <BookingCard
                 booking={booking}
+                currentStaffId={member.id}
                 onClick={() => {
                   // For secondary bookings, resolve to original booking for the modal
                   if (booking.staff_role === 'secondary') {
