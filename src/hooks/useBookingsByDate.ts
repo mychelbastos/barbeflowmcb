@@ -31,6 +31,7 @@ export interface BookingItemData {
   staff_id: string | null;
   price_cents: number;
   paid_status: string;
+  duration_minutes: number | null;
 }
 
 export interface BookingData {
