@@ -3581,6 +3581,7 @@ export type Database = {
           customer_phone: string
           ends_at: string
           main_staff_name: string
+          my_duration_minutes: number
           notes: string
           service_color: string
           service_duration: number
