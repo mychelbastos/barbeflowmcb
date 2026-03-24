@@ -387,6 +387,7 @@ export function useBookingsByDate(tenantId: string | undefined, date: Date) {
         service_id: rc.service_id || "",
         customer_package_id: null,
         customer_subscription_id: null,
+        has_conflict: false,
         service: rc.service || { name: "Horário Fixo", color: null, duration_minutes: rc.duration_minutes, price_cents: 0 },
         staff: null,
         customer: rc.customer,
