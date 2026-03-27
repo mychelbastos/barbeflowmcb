@@ -85,7 +85,11 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
-export function CommissionsTab() {
+interface CommissionsTabProps {
+  subscriptionTotals?: SubscriptionCommissionTotals | null;
+}
+
+export function CommissionsTab({ subscriptionTotals }: CommissionsTabProps) {
   const { currentTenant } = useTenant();
   const { dateRange } = useDateRange();
   const [details, setDetails] = useState<CommissionDetail[]>([]);
