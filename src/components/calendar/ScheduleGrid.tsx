@@ -289,9 +289,10 @@ export function ScheduleGrid({
           });
 
           if (slotType === "off" || slotType === "past") {
+            const isFullHour = timeToMinutes(slotTime) % 60 === 0;
             return (
               <div key={slotTime} style={{ height: `${SLOT_HEIGHT}px` }}
-                className="bg-muted/30 border-b border-border/20" />
+                className={`bg-muted/30 ${isFullHour ? 'border-b border-border/50' : 'border-b border-border/15'}`} />
             );
           }
 
