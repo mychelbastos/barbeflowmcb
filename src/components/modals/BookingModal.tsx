@@ -55,7 +55,7 @@ const bookingFormSchema = z.object({
   ),
   customer_email: z.string().email("Email inválido").optional().or(z.literal("")),
   service_id: z.string().min(1, "Serviço é obrigatório"),
-  staff_id: z.string().optional(),
+  staff_id: z.string().min(1, "Selecione um profissional"),
   date: z.string().min(1, "Data é obrigatória"),
   time: z.string().min(1, "Horário é obrigatório"),
   extra_slots: z.number().min(0).optional(),
