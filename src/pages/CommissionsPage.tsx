@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { CommissionsTab } from "@/components/CommissionsTab";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
@@ -11,9 +11,14 @@ import { format } from "date-fns";
 
 export default function CommissionsPage() {
   usePageTitle("Comissões");
-  const { dateRange } = useDateRange();
+  const { dateRange, setPreset } = useDateRange();
   const [showHistory, setShowHistory] = useState(false);
   const [subscriptionTotals, setSubscriptionTotals] = useState<SubscriptionCommissionTotals | null>(null);
+
+  // Default to "Este Mês" when entering the commissions page
+  useEffect(() => {
+    setPreset("month");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const periodStart = format(dateRange.from, "yyyy-MM-dd");
   const periodEnd = format(dateRange.to, "yyyy-MM-dd");
