@@ -505,6 +505,7 @@ export function BookingDetailsModal({
                   onItemsChange={handleRefresh}
                   comandaClosed={comandaClosed}
                   bookingStartsAt={booking.starts_at}
+                  bookingStaffId={booking.staff_id}
                 />
               )}
             </>

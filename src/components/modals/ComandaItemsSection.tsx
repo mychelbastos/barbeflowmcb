@@ -553,7 +553,7 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
             <CommandList>
               <CommandEmpty>Nenhum serviço encontrado</CommandEmpty>
               <CommandGroup heading="Serviços">
-                {services.map(s => (
+                {filteredServices.map(s => (
                   <CommandItem
                     key={s.id}
                     onSelect={() => swapServiceItemId && swapMainService(swapServiceItemId, s)}

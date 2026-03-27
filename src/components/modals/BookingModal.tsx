@@ -1010,7 +1010,7 @@ export function BookingModal() {
                               <SelectValue placeholder="Selecione um serviço" />
                             </SelectTrigger>
                             <SelectContent>
-                              {services.map((svc) => {
+                              {(staffServiceIds ? services.filter(s => staffServiceIds.includes(s.id)) : services).map((svc) => {
                                 const alreadyCount = additionalServices.filter(a => a.service_id === svc.id).length
                                   + (form.getValues("service_id") === svc.id ? 1 : 0);
                                 return (
