@@ -326,11 +326,12 @@ export function ScheduleGrid({
             );
           }
 
+          const isFullHourFree = timeToMinutes(slotTime) % 60 === 0;
           return (
             <div
               key={slotTime}
               style={{ height: `${SLOT_HEIGHT}px` }}
-              className="group/slot border-b border-border/20 hover:bg-primary/5 cursor-pointer transition-colors relative"
+              className={`group/slot hover:bg-primary/5 cursor-pointer transition-colors relative ${isFullHourFree ? 'border-b border-border/50' : 'border-b border-border/15'}`}
               onClick={() => handleSlotClick(member.id, slotTime)}
             >
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity pointer-events-none">
