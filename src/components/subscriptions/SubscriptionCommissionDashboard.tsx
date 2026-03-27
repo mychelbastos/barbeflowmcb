@@ -45,9 +45,16 @@ interface SubscriptionSummary {
   staff_breakdown: StaffBreakdown[];
 }
 
+export interface SubscriptionCommissionTotals {
+  totalTokens: number;
+  totalEstimatedCents: number;
+  byStaff: Record<string, { tokens: number; estimatedCents: number }>;
+}
+
 interface Props {
   periodStart?: string;
   periodEnd?: string;
+  onTotalsChange?: (totals: SubscriptionCommissionTotals) => void;
 }
 
 export function SubscriptionCommissionDashboard({ periodStart, periodEnd }: Props) {
