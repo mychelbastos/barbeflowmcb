@@ -3473,6 +3473,14 @@ export type Database = {
         Args: { p_endpoint: string; p_ip: string; p_tenant_id?: string }
         Returns: boolean
       }
+      check_service_coverage: {
+        Args: {
+          p_customer_id: string
+          p_service_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       close_comanda_with_commissions:
         | {
             Args: {
@@ -3542,6 +3550,16 @@ export type Database = {
         Returns: Json
       }
       get_booking_total: { Args: { p_booking_id: string }; Returns: Json }
+      get_customer_covered_services: {
+        Args: { p_customer_id: string; p_tenant_id: string }
+        Returns: {
+          service_id: string
+          service_name: string
+          sessions_remaining: number
+          source: string
+          source_name: string
+        }[]
+      }
       get_customer_stats: {
         Args: { p_tenant_id: string }
         Returns: {
