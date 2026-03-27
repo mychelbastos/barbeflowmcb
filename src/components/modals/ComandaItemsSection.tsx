@@ -82,9 +82,18 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
       setProducts(prodRes.data || []);
       setServices(svcRes.data || []);
       setStaffList(staffRes.data || []);
+
+      // Load staff_services to filter available services
+      if (bookingStaffId) {
+        const { data } = await supabase
+          .from('staff_services')
+          .select('service_id')
+          .eq('staff_id', bookingStaffId);
+        setStaffServiceIds(data && data.length > 0 ? data.map(d => d.service_id) : null);
+      }
     };
     load();
-  }, [tenantId]);
+  }, [tenantId, bookingStaffId]);
 
   const fmt = (cents: number) => `R$ ${(cents / 100).toFixed(2)}`;
   const effectivePrice = (item: BookingItem) => item.total_price_cents - (item.discount_cents || 0);
