@@ -36,6 +36,16 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Clock, Package, Repeat, AlertTriangle, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const bookingFormSchema = z.object({
   customer_name: z.string().min(1, "Nome é obrigatório"),
