@@ -348,9 +348,9 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
                         ))}
                       </CommandGroup>
                     )}
-                    {services.length > 0 && (
+                    {filteredServices.length > 0 && (
                       <CommandGroup heading="Serviços extras">
-                        {services.map(s => (
+                        {filteredServices.map(s => (
                           <CommandItem key={`s-${s.id}`} onSelect={() => addItem("extra_service", s)} className="cursor-pointer">
                             <Scissors className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                             <span className="flex-1 truncate">{s.name}</span>
