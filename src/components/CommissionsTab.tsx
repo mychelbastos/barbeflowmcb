@@ -111,7 +111,7 @@ export function CommissionsTab() {
         .order("booking_date", { ascending: false });
 
       if (error) throw error;
-      setDetails((data || []) as CommissionDetail[]);
+      setDetails((data || []) as unknown as CommissionDetail[]);
     } catch (err) {
       console.error(err);
     } finally {
