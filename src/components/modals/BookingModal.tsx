@@ -123,6 +123,8 @@ export function BookingModal() {
   const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
   const [staffServiceIds, setStaffServiceIds] = useState<string[] | null>(null);
   const classifiedSlotsRef = useRef<Array<AvailableSlot & { hasConflict: boolean }>>([]);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<BookingFormData | null>(null);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
