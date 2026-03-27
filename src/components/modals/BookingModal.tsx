@@ -866,10 +866,13 @@ export function BookingModal() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(allowedServiceIds
-                          ? services.filter(s => allowedServiceIds.includes(s.id))
-                          : services
-                        ).map((service) => {
+                        {(() => {
+                          let filtered = allowedServiceIds
+                            ? services.filter(s => allowedServiceIds.includes(s.id))
+                            : services;
+                          if (staffServiceIds) filtered = filtered.filter(s => staffServiceIds.includes(s.id));
+                          return filtered;
+                        })().map((service) => {
                           const benefit = serviceBenefitsMap.get(service.id);
                           return (
                             <SelectItem key={service.id} value={service.id}>
