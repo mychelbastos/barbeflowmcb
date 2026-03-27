@@ -555,6 +555,7 @@ export type Database = {
           id: string
           item_title: string
           item_type: string
+          payment_source: string | null
           staff_id: string
           tenant_id: string
         }
@@ -568,6 +569,7 @@ export type Database = {
           id?: string
           item_title: string
           item_type: string
+          payment_source?: string | null
           staff_id: string
           tenant_id: string
         }
@@ -581,6 +583,7 @@ export type Database = {
           id?: string
           item_title?: string
           item_type?: string
+          payment_source?: string | null
           staff_id?: string
           tenant_id?: string
         }
@@ -3252,6 +3255,27 @@ export type Database = {
       }
     }
     Views: {
+      commission_details: {
+        Row: {
+          base_amount_cents: number | null
+          booking_date: string | null
+          booking_id: string | null
+          booking_item_id: string | null
+          commission_cents: number | null
+          commission_percent: number | null
+          commission_type: string | null
+          created_at: string | null
+          customer_name: string | null
+          id: string | null
+          item_title: string | null
+          item_type: string | null
+          payment_source: string | null
+          staff_id: string | null
+          staff_name: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
       staff_calendar_bookings: {
         Row: {
           booking_id: string | null
