@@ -53,6 +53,7 @@ export function BookingDetailsModal({
   onEdit, onStatusChange, showActions = false, tenantSettings,
 }: Props) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [customerNotes, setCustomerNotes] = useState<string | null>(null);
   const [customerBalance, setCustomerBalance] = useState<number>(0);
   const [bookingItems, setBookingItems] = useState<BookingItem[]>([]);
