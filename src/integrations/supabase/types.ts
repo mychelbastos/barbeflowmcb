@@ -163,7 +163,7 @@ export type Database = {
           staff_id: string | null
           tenant_id: string
           title: string
-          total_price_cents: number
+          total_price_cents: number | null
           type: string
           unit_price_cents: number
         }
@@ -182,7 +182,7 @@ export type Database = {
           staff_id?: string | null
           tenant_id: string
           title: string
-          total_price_cents?: number
+          total_price_cents?: number | null
           type: string
           unit_price_cents?: number
         }
@@ -201,7 +201,7 @@ export type Database = {
           staff_id?: string | null
           tenant_id?: string
           title?: string
-          total_price_cents?: number
+          total_price_cents?: number | null
           type?: string
           unit_price_cents?: number
         }
@@ -3509,6 +3509,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_block_and_cancel_bookings: {
+        Args: {
+          p_cancel_bookings?: boolean
+          p_ends_at: string
+          p_notify_customers?: boolean
+          p_reason?: string
+          p_staff_id: string
+          p_starts_at: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       create_booking_if_available:
         | {
             Args: {
@@ -3668,6 +3680,25 @@ export type Database = {
       merge_customers: {
         Args: { p_keep_id: string; p_remove_id: string; p_tenant_id: string }
         Returns: Json
+      }
+      preview_block_conflicts: {
+        Args: {
+          p_ends_at: string
+          p_staff_id: string
+          p_starts_at: string
+          p_tenant_id: string
+        }
+        Returns: {
+          booking_id: string
+          customer_name: string
+          customer_phone: string
+          ends_at: string
+          has_subscription: boolean
+          service_name: string
+          staff_name: string
+          starts_at: string
+          status: string
+        }[]
       }
       record_local_payment_for_booking: {
         Args: {
