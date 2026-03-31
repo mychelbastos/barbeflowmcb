@@ -3635,6 +3635,7 @@ export type Database = {
           all_items: Json
           booking_id: string
           comanda_status: string
+          created_via: string
           customer_name: string
           customer_phone: string
           ends_at: string

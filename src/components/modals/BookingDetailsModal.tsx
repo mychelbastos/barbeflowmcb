@@ -88,7 +88,7 @@ export function BookingDetailsModal({
         .eq("booking_id", booking.id)
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: true }),
-      supabase.from("bookings").select("comanda_status").eq("id", booking.id).single(),
+      supabase.from("bookings").select("comanda_status, created_via").eq("id", booking.id).single(),
       supabase.from("payments")
         .select("id, amount_cents, status, refund_cents, refund_status, forfeit_percent, external_id")
         .eq("booking_id", booking.id)
@@ -311,7 +311,26 @@ export function BookingDetailsModal({
                   </p>
                 )}
               </div>
-              <Badge variant={status.variant} className="text-[10px]">{status.label}</Badge>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <Badge variant={status.variant} className="text-[10px]">{status.label}</Badge>
+                {booking.created_via && (
+                  <Badge
+                    variant="outline"
+                    className={
+                      booking.created_via === 'public'
+                        ? "text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-500 border-blue-500/20"
+                        : booking.created_via === 'recurring'
+                        ? "text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-500 border-purple-500/20"
+                        : "text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-border"
+                    }
+                  >
+                    {booking.created_via === 'public' ? '🌐 Online'
+                     : booking.created_via === 'recurring' ? '🔄 Recorrente'
+                     : booking.created_via === 'whatsapp' ? '💬 WhatsApp'
+                     : '🏪 Barbearia'}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
