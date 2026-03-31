@@ -328,6 +328,11 @@ export function BookingDetailsModal({
                      : booking.created_via === 'recurring' ? '🔄 Recorrente'
                      : booking.created_via === 'whatsapp' ? '💬 WhatsApp'
                      : '🏪 Barbearia'}
+                    {booking.created_at && (
+                      <span className="ml-1 opacity-70">
+                        {format(new Date(booking.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                      </span>
+                    )}
                   </Badge>
                 )}
               </div>
