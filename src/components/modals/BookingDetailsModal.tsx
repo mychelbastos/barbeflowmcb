@@ -88,7 +88,7 @@ export function BookingDetailsModal({
         .eq("booking_id", booking.id)
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: true }),
-      supabase.from("bookings").select("comanda_status").eq("id", booking.id).single(),
+      supabase.from("bookings").select("comanda_status, created_via").eq("id", booking.id).single(),
       supabase.from("payments")
         .select("id, amount_cents, status, refund_cents, refund_status, forfeit_percent, external_id")
         .eq("booking_id", booking.id)
