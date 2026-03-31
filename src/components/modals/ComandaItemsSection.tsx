@@ -114,7 +114,7 @@ export function ComandaItemsSection({ bookingId, tenantId, items, onItemsChange,
       unit_price_cents: unitPrice,
       total_price_cents: unitPrice,
       purchase_price_cents: type === "product" ? (item.purchase_price_cents || 0) : 0,
-      staff_id: null,
+      staff_id: bookingStaffId || null,
       paid_status: "unpaid",
     });
     if (error) {
